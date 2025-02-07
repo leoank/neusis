@@ -1,6 +1,12 @@
 # Creating Your User Configuration
 
-Copy the example user directory structure from `homes/shsingh` to get started:
+Fork and check out this repository.
+
+## Steps
+
+1. Create your user config directory: `homes/<your-username>`
+
+Copy the example user directory structure from `homes/shsingh` to your new user config directory to get started:
 
 ```
 shsingh/
@@ -9,11 +15,8 @@ shsingh/
 └── machines/
     ├── oppy.nix
     └── spirit.nix
+
 ```
-
-## Steps
-
-1. Create your directory: `homes/<your-username>`
 
 2. Replace the SSH public key in `id_ed25519.pub` with your own public key (which is in your `~/.ssh/id_ed25519.pub`)
 
