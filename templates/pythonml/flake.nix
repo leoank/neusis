@@ -86,7 +86,7 @@
                 unset SOURCE_DATE_EPOCH
               '';
               shellHook = ''
-                export LD_LIBRARY_PATH=$NIX_LD_LIBRARY_PATH:$LD_LIBRARY_PATH
+                export LD_LIBRARY_PATH=$NIX_LD_LIBRARY_PATH:"/run/opengl-driver/lib":$LD_LIBRARY_PATH
                 export PYTHON_KEYRING_BACKEND=keyring.backends.fail.Keyring
                 export CUDA_PATH=${pkgs.cudaPackages.cudatoolkit}
                 runHook venvShellHook

@@ -40,7 +40,7 @@
     ../common/bootloader_systemd.nix
 
     # oppy networking config
-    ./network.nix
+    #./network.nix
   ];
 
   # FHS
@@ -83,6 +83,7 @@
   ];
   environment.shells = [ pkgs.zsh ];
   programs.zsh.enable = true;
+  programs.fish.enable = true;
 
   # Networking
   networking.hostName = "oppy";
@@ -116,7 +117,7 @@
     };
 
     amunoz = {
-      shell = pkgs.zsh;
+      shell = pkgs.fish;
       isNormalUser = true;
       initialPassword = "changeme";
       # passwordFile = config.age.secrets.karkinos_pass.path;
@@ -155,6 +156,126 @@
       ];
     };
 
+    jarevalo = {
+      shell = pkgs.bash;
+      isNormalUser = true;
+      initialPassword = "changeme";
+      # passwordFile = config.age.secrets.karkinos_pass.path;
+      description = "John";
+      extraGroups = [
+        "networkmanager"
+        "wheel"
+        "libvirtd"
+        "qemu-libvirtd"
+        "input"
+        "podman"
+        "docker"
+      ];
+      openssh.authorizedKeys.keyFiles = [
+        ../../homes/jarevalo/id_ed25519.pub
+      ];
+    };
+
+    shsingh = {
+      shell = pkgs.bash;
+      isNormalUser = true;
+      initialPassword = "changeme";
+      # passwordFile = config.age.secrets.karkinos_pass.path;
+      description = "Shantanu";
+      extraGroups = [
+        "networkmanager"
+        "wheel"
+        "libvirtd"
+        "qemu-libvirtd"
+        "input"
+        "podman"
+        "docker"
+      ];
+      openssh.authorizedKeys.keyFiles = [
+        ../../homes/shsingh/id_ed25519.pub
+      ];
+    };
+
+    jewald = {
+      shell = pkgs.bash;
+      isNormalUser = true;
+      initialPassword = "changeme";
+      # passwordFile = config.age.secrets.karkinos_pass.path;
+      description = "Jess";
+      extraGroups = [
+        "networkmanager"
+        "wheel"
+        "libvirtd"
+        "qemu-libvirtd"
+        "input"
+        "podman"
+        "docker"
+      ];
+      openssh.authorizedKeys.keyFiles = [
+        ../../homes/jewald/id_ed25519.pub
+      ];
+    };
+
+    rshen = {
+      shell = pkgs.bash;
+      isNormalUser = true;
+      initialPassword = "changeme";
+      # passwordFile = config.age.secrets.karkinos_pass.path;
+      description = "Runxi";
+      extraGroups = [
+        "networkmanager"
+        "wheel"
+        "libvirtd"
+        "qemu-libvirtd"
+        "input"
+        "podman"
+        "docker"
+      ];
+      openssh.authorizedKeys.keyFiles = [
+        ../../homes/rshen/id_ed25519.pub
+      ];
+    };
+
+    jfredinh = {
+      shell = pkgs.bash;
+      isNormalUser = true;
+      initialPassword = "changeme";
+      # passwordFile = config.age.secrets.karkinos_pass.path;
+      description = "Johan";
+      extraGroups = [
+        "networkmanager"
+        "wheel"
+        "libvirtd"
+        "qemu-libvirtd"
+        "input"
+        "podman"
+        "docker"
+      ];
+      openssh.authorizedKeys.keyFiles = [
+        ../../homes/jfredinh/id_ed25519.pub
+      ];
+    };
+
+    akalinin = {
+      shell = pkgs.bash;
+      isNormalUser = true;
+      initialPassword = "changeme";
+      # passwordFile = config.age.secrets.karkinos_pass.path;
+      description = "Alex";
+      extraGroups = [
+        "networkmanager"
+        "wheel"
+        "libvirtd"
+        "qemu-libvirtd"
+        "input"
+        "podman"
+        "docker"
+      ];
+      openssh.authorizedKeys.keyFiles = [
+        ../../homes/akalinin/id_ed25519.pub
+      ];
+    };
+
   };
 
   home-manager = {
@@ -182,6 +303,47 @@
         imports = [
           inputs.agenix.homeManagerModules.default
           ../../homes/ngogober/machines/oppy.nix
+        ];
+      };
+      jarevalo = {
+        imports = [
+          inputs.agenix.homeManagerModules.default
+          ../../homes/jarevalo/machines/oppy.nix
+        ];
+      };
+
+      shsingh = {
+        imports = [
+          inputs.agenix.homeManagerModules.default
+          ../../homes/shsingh/machines/oppy.nix
+        ];
+      };
+
+      jewald = {
+        imports = [
+          inputs.agenix.homeManagerModules.default
+          ../../homes/jewald/machines/oppy.nix
+        ];
+      };
+
+      rshen = {
+        imports = [
+          inputs.agenix.homeManagerModules.default
+          ../../homes/rshen/machines/oppy.nix
+        ];
+      };
+
+      jfredinh = {
+        imports = [
+          inputs.agenix.homeManagerModules.default
+          ../../homes/jfredinh/machines/oppy.nix
+        ];
+      };
+
+      akalinin = {
+        imports = [
+          inputs.agenix.homeManagerModules.default
+          ../../homes/akalinin/machines/oppy.nix
         ];
       };
     };
