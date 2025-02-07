@@ -18,7 +18,7 @@
     })
     (import ../../common/dev/git.nix {
       username = "Nodar Gogoberidze";
-      userEmail = "ngogober@broadinstitute.org";
+      userEmail = "gnodar01@gmail.com";
       id_ed25519_pub = builtins.readFile ../id_ed25519.pub;
     })
     ../../common/secrets
