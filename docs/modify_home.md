@@ -8,7 +8,7 @@ However that process is time-consuming, and requires the admin to manually appro
 
 Instead you can use `home-manager` to iteratively modify your `home.nix` and rebuild locally to see the changes.
 
-To enable this, you will first need to make an entry in `neusis/flake.nix` allowing you access to `home-manger`. Copy-pase one of the entries already there, and replace the necessary parts specific to your `<username>` and `<machine>`. A standard entry will look like this:
+To enable this, you will first need to make an entry in `neusis/flake.nix` allowing you access to `home-manger`. Copy-paste one of the entries already there, under `homeConfigurations`, and replace the necessary parts specific to your `<username>` and `<machine>`. A standard entry will look like this:
 
 
 ```
@@ -34,6 +34,8 @@ nix-shell -p home-manager
 home-manager switch --flake .#<username>@<machine>
 exit
 ```
+
+Note that the `#` symbol above in `.#<username>@<machine>` does not denote a comment. It is part of the syntax to the `home-manager switch --flake` command.
 
 Again, make sure to replace with your actual `username` and the `machine` you're targeting (e.g. `oppy` or `spirit`).
 
