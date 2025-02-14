@@ -9,6 +9,8 @@
     initExtraFirst = "source $HOME/neusis/homes/ngogober/.p10k.zsh";
     initExtra = ''
       ZVM_INSERT_MODE_CURSOR=$ZVM_CURSOR_BLOCK
+      # zsh-vi-mode overrides ^R, so we re-source
+      zvm_after_init_commands+=('source <(fzf --zsh)')
     '';
     plugins = [
       {
