@@ -13,7 +13,6 @@
       hexyl
       # pkgs for zsh cusotomizations
       zsh-powerlevel10k
-      zsh-vi-mode
       meslo-lgs-nf
     ];
   };

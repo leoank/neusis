@@ -7,6 +7,9 @@
     #enableAutosuggestions = true;
     enableCompletion = true;
     initExtraFirst = "source $HOME/neusis/homes/ngogober/.p10k.zsh";
+    initExtra = ''
+      ZVM_INSERT_MODE_CURSOR=$ZVM_CURSOR_BLOCK
+    '';
     plugins = [
       {
         name = "zsh-powerlevel10k";
@@ -23,6 +26,11 @@
           sha256 = "1lzrn0n4fxfcgg65v0qhnj7wnybybqzs4adz7xsrkgmcsr0ii8b7";
         };
       }
+      {
+        name = "vi-mode";
+        src = pkgs.zsh-vi-mode;
+        file = "share/zsh-vi-mode/zsh-vi-mode.plugin.zsh";
+      }
     ];
     shellAliases = {
       #ll = "ls -al";
@@ -34,6 +42,7 @@
       ttt = "eza --tree --all --classify=auto --icons=auto --level=3";
       tttt = "eza --tree --all --classify=auto --icons=auto --level=4";
     };
+    oh-my-zsh.enable = lib.mkForce false;
   };
   programs.fzf = {
     enable = true;
