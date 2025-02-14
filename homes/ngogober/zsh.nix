@@ -6,7 +6,7 @@
     #autocd = true;
     #enableAutosuggestions = true;
     enableCompletion = true;
-    initExtraFirst = ".p10k.zsh";
+    initExtraFirst = "source $HOME/neusis/homes/ngogober/.p10k.zsh";
     plugins = [
       {
         name = "zsh-powerlevel10k";
