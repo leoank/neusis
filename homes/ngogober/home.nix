@@ -11,6 +11,7 @@
       #exa
       eza # better maintained than exa
       hexyl
+      bat
       # pkgs for zsh cusotomizations
       zsh-powerlevel10k
       meslo-lgs-nf
