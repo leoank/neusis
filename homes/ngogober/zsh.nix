@@ -17,8 +17,8 @@
     shellAliases = {
       #ll = "ls -al";
       ".." = "cd ..";
-      l = "eza --all --icons=auto --classify=auto";
-      ll = "eza --long --all --git --header --icons=auto --classify=auto";
+      l = lib.mkForce "eza --all --icons=auto --classify=auto";
+      ll = lib.mkForce "eza --long --all --git --header --icons=auto --classify=auto";
       t = "eza --oneline --all --icons=auto --classify=auto";
       tt = "eza --tree --all --classify=auto --icons=auto --level=2";
       ttt = "eza --tree --all --classify=auto --icons=auto --level=3";
