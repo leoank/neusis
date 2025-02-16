@@ -74,20 +74,26 @@ endif
 "colorscheme default
 " needed for default vim colorscheme
 set notermguicolors
-"
+
+" when search hight pattern match
+set incsearch
+
+" when inserting bracket, briefly jump to matching one
+set showmatch
+
 " turn syntax highlighting on.
 syntax on
-"
+
 " visual mode highlight color
 " run "hi" command for all color groups
 hi Visual ctermfg=238 ctermbg=117
-"
+
 " highlight 81st column
 set colorcolumn=81
-"
+
 " set appropriate color for column highlight
 highlight ColorColumn ctermbg=0
-"
+
 " set highlight color
 hi Search ctermfg=238 ctermbg=117
 
