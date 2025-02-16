@@ -44,7 +44,13 @@
       ttt = "eza --tree --all --classify=auto --icons=auto --level=3";
       tttt = "eza --tree --all --classify=auto --icons=auto --level=4";
     };
-    oh-my-zsh.enable = lib.mkForce false;
+    # enable only to get tab completion file picker and highlighting
+    # everything else dont' want or handled directly by programs.zsh.plugins
+    oh-my-zsh = lib.mkForce {
+      enable = true;
+      theme = "";
+      plugins = [];
+    };
   };
   programs.fzf = {
     enable = true;
