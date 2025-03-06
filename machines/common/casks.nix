@@ -1,5 +1,6 @@
 { }:
 [
+  "fiji"
   "hammerspoon"
   "aerospace"
   "wezterm"

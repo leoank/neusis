@@ -5,25 +5,10 @@ if wezterm.config_builder then
 	config = wezterm.config_builder()
 end
 
--- font config
-config.font = wezterm.font_with_fallback({
-	"IosevkaTerm Nerd Font Mono",
-	"RobotoMono Nerd Font",
-	"Roboto Mono",
-})
-
-config.font_size = 10
 config.default_cursor_style = "BlinkingBlock"
-
-config.color_scheme = "Catppuccin Mocha"
-config.window_background_opacity = 0.8
 
 -- title bar
 config.window_decorations = "RESIZE"
-
-config.window_frame = {
-	font_size = 10,
-}
 
 if wezterm.target_triple == "x86_64-pc-windows-msvc" then
 	-- wezterm on windows config
