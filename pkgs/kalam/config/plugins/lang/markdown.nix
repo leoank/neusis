@@ -1,8 +1,5 @@
-{ pkgs, helpers, ... }:
+{ pkgs, ... }:
 {
-  extraPackages = with pkgs; [
-    marksman
-  ];
 
   plugins = {
     render-markdown.enable = true;
@@ -16,7 +13,6 @@
     };
 
     lsp.servers = {
-      marksman.enable = true;
 
       ltex = {
         enable = true;

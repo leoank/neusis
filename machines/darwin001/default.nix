@@ -56,7 +56,14 @@
   # Configure homebrew
   homebrew = {
     enable = true;
-    brews = [ "pixi" ]; # Example of brew
+    masApps = {
+      Xcode = 497799835;
+      "Microsoft Outlook" = 985367838;
+    };
+    brews = [
+      "pixi"
+      "gnu-sed"
+    ]; # Example of brew
     taps = map (key: builtins.replaceStrings [ "homebrew-" ] [ "" ] key) (
       builtins.attrNames config.nix-homebrew.taps
     );

@@ -11,4 +11,5 @@
   "bitwarden"
   "docker"
   "zoom"
+  "vlc"
 ]

@@ -1,0 +1,68 @@
+[project]
+name = "yourproject"
+version = "0.1.0"
+description = "Description of your project"
+readme = "README.md"
+authors = [
+    { name = "Your name", email = "you@web.com" }
+]
+requires-python = ">=3.10"
+dependencies = [
+  "triton",
+  "setuptools",
+  "matplotlib>=3.10.1",
+  "pandas>=2.2.3",
+  "cuda-python>=12.8.0",
+]
+
+[project.optional-dependencies]
+cpu = [
+  "torch",
+  "torchvision",
+]
+cu124 = [
+  "torch",
+  "torchvision",
+]
+dev = [
+  "ipython",
+  "marimo",
+  "pytest",
+  "ruff",
+  "marimo"
+]
+
+[tool.uv]
+conflicts = [
+  [
+    { extra = "cpu" },
+    { extra = "cu124" },
+  ],
+]
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cpu", extra = "cpu" },
+  { index = "pytorch-cu124", extra = "cu124" },
+]
+torchvision = [
+  { index = "pytorch-cpu", extra = "cpu" },
+  { index = "pytorch-cu124", extra = "cu124" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu124"
+url = "https://download.pytorch.org/whl/cu124"
+explicit = true
+
+[project.scripts]
+cellir = "cellir.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
