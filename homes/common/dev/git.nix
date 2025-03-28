@@ -9,6 +9,7 @@
   home.file.".ssh/allowed_signers".text = "* ${id_ed25519_pub}";
   programs.git = {
     enable = true;
+    lfs.enable = true;
     userName = username;
     userEmail = userEmail;
     extraConfig = {

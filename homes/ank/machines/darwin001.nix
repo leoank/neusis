@@ -19,6 +19,7 @@
       userEmail = "ank@leoank.me";
       id_ed25519_pub = builtins.readFile ../id_ed25519.pub;
     })
+    ../../common/themes
   ];
 
   home.packages = with pkgs; [

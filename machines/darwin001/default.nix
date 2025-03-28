@@ -56,7 +56,14 @@
   # Configure homebrew
   homebrew = {
     enable = true;
-    brews = [ ]; # Example of brew
+    masApps = {
+      Xcode = 497799835;
+      "Microsoft Outlook" = 985367838;
+    };
+    brews = [
+      "pixi"
+      "gnu-sed"
+    ]; # Example of brew
     taps = map (key: builtins.replaceStrings [ "homebrew-" ] [ "" ] key) (
       builtins.attrNames config.nix-homebrew.taps
     );
@@ -72,7 +79,7 @@
   home-manager = {
     useGlobalPkgs = true;
     # Look into why enabling this break shell for starship
-    # useUserPackages = true;
+    useUserPackages = true;
     extraSpecialArgs = { inherit inputs outputs; };
     users.kumarank = {
       imports = [

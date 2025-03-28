@@ -14,21 +14,7 @@
     # If you want to use modules from other flakes (such as nixos-hardware):
     inputs.hardware.nixosModules.common-pc-ssd
     inputs.home-manager.nixosModule
-    outputs.nixosModules.sunshine
-    # inputs.nixos-nvidia-vgpu.nixosModules.nvidia-vgpu
-    # {
-    #   # boot.kernelPackages = pkgs.linuxPackages_6_1;
-    #   hardware.nvidia.vgpu = {
-    #     pinKernel = true;
-    #     copyVGPUProfiles = {
-    #       "26B1:0000"="26B1:170B";
-    #     };
-    #     enable = true;
-    #     fastapi-dls = {
-    #       enable = true;
-    #     };
-    #   };
-    # }
+    #outputs.nixosModules.sunshine
 
     # Import your generated (nixos-generate-config) hardware configuration
     ./hardware-configuration.nix
@@ -41,6 +27,7 @@
     ../common/zfs.nix
 
     # You can also split up your configuration and import pieces of it here:
+    ../common/grub_bootloader.nix
     ../common/networking.nix
     ../common/printing.nix
     ../common/gpu/nvidia.nix
@@ -66,7 +53,7 @@
   services.xserver.desktopManager.gnome.enable = true;
 
   # Enable sunshine
-  modules.services.sunshine.enable = true;
+  #modules.services.sunshine.enable = true;
 
   # enable ollama
   services.ollama = {
@@ -148,6 +135,26 @@
         ../../homes/ank/id_rsa.pub
         ../../homes/ank/id_ed25519.pub
         ../../homes/ank/id2_ed25519.pub
+      ];
+    };
+
+    ngogober = {
+      shell = pkgs.zsh;
+      isNormalUser = true;
+      initialPassword = "changeme";
+      # passwordFile = config.age.secrets.karkinos_pass.path;
+      description = "Nodar";
+      extraGroups = [
+        "networkmanager"
+        "wheel"
+        "libvirtd"
+        "qemu-libvirtd"
+        "input"
+        "podman"
+        "docker"
+      ];
+      openssh.authorizedKeys.keyFiles = [
+        ../../homes/ngogober/id_ed25519.pub
       ];
     };
 
@@ -287,6 +294,12 @@
         imports = [
           inputs.agenix.homeManagerModules.default
           ../../homes/ank/machines/karkinos.nix
+        ];
+      };
+      ngogober = {
+        imports = [
+          inputs.agenix.homeManagerModules.default
+          ../../homes/ngogober/machines/oppy.nix
         ];
       };
       niv = {

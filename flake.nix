@@ -44,7 +44,7 @@
 
     # darwin inputs
     darwin = {
-      url = "github:LnL7/nix-darwin/master";
+      url = "github:LnL7/nix-darwin/nix-darwin-24.11";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     nix-homebrew = {
@@ -190,7 +190,33 @@
           pkgs = pkgsFor.x86_64-linux;
           extraSpecialArgs = { inherit inputs outputs; };
           # > Our main home-manager configuration file <
-          modules = [ ./homes/ank/machines/karkinos.nix ];
+          modules = [
+
+            inputs.agenix.homeManagerModules.default
+            ./homes/ank/machines/karkinos.nix
+          ];
+        };
+
+        "ank@oppy" = lib.homeManagerConfiguration {
+          pkgs = pkgsFor.x86_64-linux;
+          extraSpecialArgs = { inherit inputs outputs; };
+          # > Our main home-manager configuration file <
+          modules = [
+
+            inputs.agenix.homeManagerModules.default
+            ./homes/ank/machines/oppy.nix
+          ];
+        };
+
+        "ngogober@oppy" = lib.homeManagerConfiguration {
+          pkgs = pkgsFor.x86_64-linux;
+          extraSpecialArgs = { inherit inputs outputs; };
+          # > Our main home-manager configuration file <
+          modules = [
+
+            inputs.agenix.homeManagerModules.default
+            ./homes/ngogober/machines/oppy.nix
+          ];
         };
 
         "ank@chiral" = lib.homeManagerConfiguration {
@@ -199,7 +225,6 @@
           # > Our main home-manager configuration file <
           modules = [
             inputs.agenix.homeManagerModules.default
-            inputs.stylix.homeManagerModules.stylix
             ./homes/ank/machines/chiral.nix
           ];
         };

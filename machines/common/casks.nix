@@ -1,5 +1,6 @@
 { }:
 [
+  "fiji"
   "hammerspoon"
   "aerospace"
   "wezterm"
@@ -10,4 +11,5 @@
   "bitwarden"
   "docker"
   "zoom"
+  "vlc"
 ]
