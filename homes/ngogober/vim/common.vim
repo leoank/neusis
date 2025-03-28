@@ -1,6 +1,6 @@
 " common to vim (~/.vimrc vi .vimrc) neovim (~/.config/nvim/init.vim via
 " nvim_init.vim)
-source ~/superhome/config/vim/base.vim
+source ~/.vim/base.vim
 
 " ':set' vs 'set'
 " https://vi.stackexchange.com/questions/6778/what-is-the-difference-between-set-and-set-commands-with-or-without-a-leading
