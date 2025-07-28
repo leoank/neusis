@@ -1,0 +1,20 @@
+site_name: neusis
+
+nav:
+  - Home: index.md
+  - Architecture: architecture/architecture.md
+  - User Setup:
+    - Getting Started: user_setup/getting_started.md
+    - User Management: user_setup/user_management.md
+  - Development:
+    - Environment Setup: development/environment_setup.md
+
+markdown_extensions:
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.tabbed
+  - pymdownx.snippets
+  - admonition
+
+plugins:
+  - search
