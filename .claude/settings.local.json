@@ -10,7 +10,9 @@
       "Bash(gh pr diff:*)",
       "Bash(gh pr edit:*)",
       "Bash(git commit:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(gh repo view:*)",
+      "Bash(gh api:*)"
     ],
     "deny": [],
     "ask": [],

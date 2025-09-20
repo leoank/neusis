@@ -9,8 +9,13 @@
 
     # Create ephemeral tailscale connections with custom vm hostName
     neusis.tailscale = lib.mkForce {
-      isPersistent = false;
+      isPersistent = true;
       hostName = "diskoTest${config.networking.hostName}";
+      persistent_authkey_file = ../../secrets/common/persistent_cslab_mesh.age;
+      clientIdFile = ../../secrets/common/persistent_tsapiid.age;
+      clientSecretFile = ../../secrets/common/persistent_tsapikey.age;
+      disableKeyExpiry = true;
+      tailnetOrg = "shntnu.github";
     };
 
     #virtualisation.qemu.consoles = [ "console=ttyS0" ];

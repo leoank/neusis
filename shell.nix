@@ -20,14 +20,19 @@
       nix
       home-manager
       git
-      disko
-      nixos-anywhere
       uv
 
       inputs.agenix.packages.${system}.default
       ssh-to-age
       gnupg
       age
+
+      # Documentation tools
+      markdownlint-cli
+    ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
+      # Linux-only tools for NixOS deployment
+      disko
+      nixos-anywhere
     ];
   };
 }

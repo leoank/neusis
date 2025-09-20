@@ -49,9 +49,13 @@
     isPersistent = true;
     hostName = "oppy";
     forceHostName = true;
+    persistent_authkey_file = ../../secrets/common/persistent_cslab_mesh.age;
+    clientIdFile = ../../secrets/common/persistent_tsapiid.age;
+    clientSecretFile = ../../secrets/common/persistent_tsapikey.age;
     disableKeyExpiry = true;
+    tailnetOrg = "shntnu.github";
   };
-
+  
   # https://nixos.wiki/wiki/FAQ/When_do_I_update_stateVersion
   system.stateVersion = "25.05";
 }
