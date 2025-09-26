@@ -16,5 +16,12 @@
       zsh-powerlevel10k
       meslo-lgs-nf
     ];
+
+    file = {
+      ".vimrc".source = ./vim/.vimrc;
+      ".vim/vim_plugins.vim".source = ./vim/vim_plugins.vim;
+      ".vim/common.vim".source = ./vim/common.vim;
+      ".vim/base.vim".source = ./vim/base.vim;
+    };
   };
 }
