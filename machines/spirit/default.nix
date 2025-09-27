@@ -187,13 +187,13 @@
       amunoz = {
         imports = [
           inputs.agenix.homeManagerModules.default
-          ../../homes/amunoz/machines/oppy.nix
+          ../../homes/amunoz/machines/spirit.nix
         ];
       };
       ngogober = {
         imports = [
           inputs.agenix.homeManagerModules.default
-          ../../homes/ngogober/machines/oppy.nix
+          ../../homes/ngogober/machines/spirit.nix
         ];
       };
     };

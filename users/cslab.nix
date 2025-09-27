@@ -59,19 +59,6 @@
       };
     }
     {
-      username = "jarevalo";
-      fullName = "John";
-      shell = pkgs.zsh;
-      sshKeys = [
-        ../homes/jarevalo/id_ed25519.pub
-      ];
-      homeModules = {
-        oppy = [
-          ../homes/jarevalo/machines/oppy.nix
-        ];
-      };
-    }
-    {
       username = "shsingh";
       fullName = "Shantanu";
       shell = pkgs.zsh;
@@ -120,19 +107,6 @@
       homeModules = {
         oppy = [
           ../homes/jfredinh/machines/oppy.nix
-        ];
-      };
-    }
-    {
-      username = "akalinin";
-      fullName = "Alex";
-      shell = pkgs.zsh;
-      sshKeys = [
-        ../homes/akalinin/id_ed25519.pub
-      ];
-      homeModules = {
-        oppy = [
-          ../homes/akalinin/machines/oppy.nix
         ];
       };
     }

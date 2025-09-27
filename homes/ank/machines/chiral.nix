@@ -25,7 +25,7 @@
     ../../common/themes
   ];
 
-  programs.zsh.initExtra = ''
+  programs.zsh.initContent = ''
     export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/wsl/lib
   '';
 

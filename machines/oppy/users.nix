@@ -91,26 +91,6 @@
       ];
     };
 
-    jarevalo = {
-      shell = pkgs.bash;
-      isNormalUser = true;
-      initialPassword = "changeme";
-      # passwordFile = config.age.secrets.karkinos_pass.path;
-      description = "John";
-      extraGroups = [
-        "networkmanager"
-        "wheel"
-        "libvirtd"
-        "qemu-libvirtd"
-        "input"
-        "podman"
-        "docker"
-      ];
-      openssh.authorizedKeys.keyFiles = [
-        ../../homes/jarevalo/id_ed25519.pub
-      ];
-    };
-
     shsingh = {
       shell = pkgs.bash;
       isNormalUser = true;
@@ -191,26 +171,6 @@
       ];
     };
 
-    akalinin = {
-      shell = pkgs.bash;
-      isNormalUser = true;
-      initialPassword = "changeme";
-      # passwordFile = config.age.secrets.karkinos_pass.path;
-      description = "Alex";
-      extraGroups = [
-        "networkmanager"
-        "wheel"
-        "libvirtd"
-        "qemu-libvirtd"
-        "input"
-        "podman"
-        "docker"
-      ];
-      openssh.authorizedKeys.keyFiles = [
-        ../../homes/akalinin/id_ed25519.pub
-      ];
-    };
-
   };
 
   home-manager = {
@@ -228,28 +188,25 @@
           ../../homes/ank/machines/oppy.nix
         ];
       };
+      
       amunoz = {
         imports = [
           inputs.agenix.homeManagerModules.default
           ../../homes/amunoz/machines/oppy.nix
         ];
       };
+
       ngogober = {
         imports = [
           inputs.agenix.homeManagerModules.default
           ../../homes/ngogober/machines/oppy.nix
         ];
       };
+
       spathak = {
         imports = [
           inputs.agenix.homeManagerModules.default
           ../../homes/spathak/machines/oppy.nix
-        ];
-      };
-      jarevalo = {
-        imports = [
-          inputs.agenix.homeManagerModules.default
-          ../../homes/jarevalo/machines/oppy.nix
         ];
       };
 
@@ -281,12 +238,6 @@
         ];
       };
 
-      akalinin = {
-        imports = [
-          inputs.agenix.homeManagerModules.default
-          ../../homes/akalinin/machines/oppy.nix
-        ];
-      };
     };
   };
 }

@@ -202,7 +202,12 @@
               nixpkgs = self.inputs.nixpkgs;
               overlays = self.outputs.overlays;
             };
-            userConfig = import ./users/all.nix { inherit self; };
+            # FIXME: Hardcoded x86_64-linux breaks Darwin/ARM support
+            # See https://github.com/leoank/neusis/pull/32#discussion_r2373029616
+            userConfig = import ./users/all.nix {
+              inherit self;
+              pkgs = import self.inputs.nixpkgs { system = "x86_64-linux"; };
+            };
             specialArgs = { inherit (self) inputs outputs; };
           };
 

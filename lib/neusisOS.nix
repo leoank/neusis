@@ -230,11 +230,11 @@ rec {
         lib.lists.flatten ((builtins.map (user: userAndMachineSet' user) allUsers))
       );
     in
-    builtins.mapAttrs (name: value: {
-      name = inputs.home-manager.lib.homeManagerConfiguration {
-        pkgs = machinesRegistry.${builtins.tail lib.strings.splitString "@" name};
+    builtins.mapAttrs (name: value: 
+      inputs.home-manager.lib.homeManagerConfiguration {
+        pkgs = machinesRegistry.${lib.last (lib.strings.splitString "@" name)};
         extraSpecialArgs = specialArgs;
         modules = value;
-      };
-    }) userAndMachineSet;
+      }
+    ) userAndMachineSet;
 }

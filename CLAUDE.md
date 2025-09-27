@@ -11,11 +11,13 @@ Neusis is a NixOS/nix-darwin flake-based configuration management system for Lin
 ### Building System Configurations
 
 For NixOS (Linux) machines:
+
 ```bash
 nixos-rebuild switch --flake .#<machine-name>
 ```
 
 For Darwin (macOS) machines:
+
 ```bash
 darwin-rebuild switch --flake .#darwin001
 ```
@@ -23,18 +25,23 @@ darwin-rebuild switch --flake .#darwin001
 Available machines: `oppy`, `spirit`, `karkinos`, `chiral` (Linux), `darwin001` (macOS)
 
 ### Development Shell
+
 ```bash
 nix develop
 ```
+
 This provides access to essential tools like `home-manager`, `disko`, `nixos-anywhere`, `agenix`, and others.
 
 ### Home Manager Configurations
+
 Build standalone home-manager configurations:
+
 ```bash
 home-manager switch --flake .#<username>@<machine>
 ```
 
 ### Deployment Tools
+
 - `nixos-anywhere`: Remote system deployment
 - `disko`: Disk partitioning and formatting
 - `agenix`: Secret management
@@ -70,6 +77,7 @@ home-manager switch --flake .#<username>@<machine>
 ### Configuration Pattern
 
 Each machine follows this structure:
+
 - Machine definition in `machines/<name>/default.nix`
 - Hardware configuration and system-specific settings
 - User accounts via using user sets from `users/`
@@ -78,6 +86,7 @@ Each machine follows this structure:
 ### Package Management
 
 Custom packages in `pkgs/`:
+
 - `kalam`/`kalampy`/`kalamv2`: Neovim distributions
 - `claude-code`: Claude Code CLI
 - Hardware-specific packages (Intel FPGA, Xilinx, NVIDIA vGPU)
@@ -94,3 +103,9 @@ Custom packages in `pkgs/`:
 - User configurations support per-machine customization via `homeModules.<machine>`
 - System configurations inherit from common modules in `machines/common/`
 - Templates in `templates/` for new project types
+
+## Contributing Guidelines
+
+- **No surprises**: Features must be opt-in via individual `homes/<user>/home.nix`, not forced through `homes/common/`
+- **Personal boundaries**: SSH agents, shells, and user tools belong in `homes/<user>/` configs only
+- **Cross-platform**: Don't hardcode architectures in `flake.nix` - use `machines/registry.nix` for dynamic package sets

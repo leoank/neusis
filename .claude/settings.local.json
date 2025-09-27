@@ -15,9 +15,6 @@
       "Bash(gh api:*)"
     ],
     "deny": [],
-    "ask": [],
-    "additionalDirectories": [
-      "/Users/shsingh/Documents/GitHub/nix"
-    ]
+    "ask": []
   }
 }
