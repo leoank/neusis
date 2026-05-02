@@ -97,6 +97,7 @@ in
     brews = [
       "pixi"
       "gnu-sed"
+      "pumas"
     ];
     taps = map (key: builtins.replaceStrings [ "homebrew-" ] [ "" ] key) (
       builtins.attrNames config.nix-homebrew.taps
@@ -114,6 +115,8 @@ in
       "superwhisper"
       "thaw"
       "linearmouse"
+      "affinity"
+      "whatcable"
     ];
     onActivation = {
       cleanup = "uninstall";

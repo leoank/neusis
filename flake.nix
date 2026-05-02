@@ -57,10 +57,6 @@
     nix-homebrew = {
       url = "github:zhaofengli-wip/nix-homebrew";
     };
-    homebrew-bundle = {
-      url = "github:homebrew/homebrew-bundle";
-      flake = false;
-    };
     homebrew-core = {
       url = "github:homebrew/homebrew-core";
       flake = false;
@@ -69,30 +65,16 @@
       url = "github:homebrew/homebrew-cask";
       flake = false;
     };
-    vancluever-tap = {
-      url = "github:vancluever/homebrew-input-leap";
-      flake = false;
-    };
-    fuse-t-cask = {
-      url = "github:macos-fuse-t/homebrew-cask";
-      flake = false;
-    };
-    nikitabobko-cask = {
-      url = "github:nikitabobko/homebrew-tap";
-      flake = false;
-    };
     deskflow-tap = {
       url = "github:deskflow/homebrew-tap";
       flake = false;
     };
-
-    felix-kratz-tap = {
-      url = "github:FelixKratz/homebrew-formulae";
+    pumas-tap = {
+      url = "github:graelo/homebrew-tap";
       flake = false;
     };
-
-    autoraise-tap = {
-      url = "github:Dimentium/homebrew-autoraise";
+    whatcable-tap = {
+      url = "github:darrylmorley/homebrew-whatcable";
       flake = false;
     };
 
