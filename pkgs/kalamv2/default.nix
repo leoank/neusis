@@ -3,7 +3,6 @@
   pkgs,
   inputs,
   outputs,
-  avante-nvim,
   ...
 }:
 let
@@ -15,7 +14,6 @@ let
       inherit
         inputs
         outputs
-        avante-nvim
         ;
     }
     // import ./lib {
