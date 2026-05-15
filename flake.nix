@@ -99,6 +99,10 @@
     jail-nix.url = "sourcehut:~alexdavid/jail.nix";
     llm-agents.url = "github:numtide/llm-agents.nix";
     llm-agents.inputs.nixpkgs.follows = "nixpkgs-unstable";
+    msgvault = {
+      url = "github:wesm/msgvault";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =

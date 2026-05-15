@@ -23,7 +23,7 @@ in
     })
     ../common/nix.nix
     ../common/substituters.nix
-    ../../homes/ank/configs/kanata_system.nix
+    ../../homes/ank/configs/keyboard/kanata_system.nix
   ];
 
   # Configure nixpkgs

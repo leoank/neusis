@@ -11,8 +11,9 @@
     ../../common/dev
     ../../common/dev/kalam.nix
     ../../common/themes
-    ../configs/opencode.nix
-    ../configs/zsh.nix
+    ../configs/agent_harness/cli_agents.nix
+    ../configs/terminal/zsh.nix
+    ../configs/terminal/tmux.nix
     (import ../../common/dev/editors.nix {
       inherit pkgs config inputs;
       enableNvim = false;

@@ -16,7 +16,6 @@
         "git"
         "gh"
         "globalias"
-        "fzf"
       ];
     };
     shellGlobalAliases = {
@@ -73,6 +72,7 @@
           # Workaround to make vi-mode work with atuin
           # Similarly fzf can also be enabled if required
           function zvm_after_init() {
+            eval "$(fzf --zsh)"
             zvm_bindkey viins '^R' atuin-search
             zvm_bindkey vicmd '^R' atuin-search
             # Add keytimeout for surround to work

@@ -22,7 +22,7 @@ in
     })
     ../common/nix.nix
     ../common/substituters.nix
-    ../../homes/ank/configs/kanata_system.nix
+    ../../homes/ank/configs/keyboard/kanata_system.nix
   ];
 
   # Configure nixpkgs
@@ -98,6 +98,7 @@ in
       "pixi"
       "gnu-sed"
       "pumas"
+      "libusb"
     ];
     taps = map (key: builtins.replaceStrings [ "homebrew-" ] [ "" ] key) (
       builtins.attrNames config.nix-homebrew.taps
@@ -106,8 +107,8 @@ in
     # https://github.com/nix-darwin/nix-darwin/pull/1382
     # greedyCasks = true;
     casks = map mkGreedy [
-      "signal"
-      "whatsapp"
+      # "signal"
+      # "whatsapp"
       "keycastr"
       #"fiji"
       "hammerspoon"

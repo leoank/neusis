@@ -1,0 +1,4 @@
+{
+  autoshare = false;
+  autoupdate = false;
+}

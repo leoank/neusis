@@ -1,4 +1,9 @@
-{ pkgs, outputs, ... }:
+{
+  pkgs,
+  inputs,
+  outputs,
+  ...
+}:
 with pkgs;
 [
   duckdb
@@ -24,10 +29,11 @@ with pkgs;
   gping
   procs
   bandwhich
-  outputs.packages.${pkgs.stdenv.hostPlatform.system}.claude-code
+  inputs.msgvault.packages.${pkgs.stdenv.hostPlatform.system}.default
   bitwarden-desktop
   pnpm
   mosh
+  rmpc
 ]
 ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
   extra-container

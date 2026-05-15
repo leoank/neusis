@@ -23,6 +23,8 @@
           bind-key k select-pane -U
           bind-key l select-pane -R
           unbind -T root C-\\
+          unbind -T prefix t
+          unbind -T prefix r
           unbind -T copy-mode-vi C-\\
         '';
       }
@@ -47,15 +49,31 @@
     ];
     extraConfig = ''
       bind-key L run-shell "sesh last"
+      bind-key R source-file "~/.config/tmux/tmux.conf"
+
 
       set -gu default-command
       set -g default-shell "$SHELL"
-      set -gq allow-passthrough on
+      set -g allow-passthrough on
+      set -ga update-environment TERM
+      set -ga update-environment TERM_PROGRAM
       set -sg terminal-overrides ",*:RGB"
 
       # popups
-      bind-key T run "#{@popup-toggle} -Ed'#{pane_current_path}' -w75% -h75% --name=scratch"
-      bind-key G run "#{@popup-toggle} -Ed'#{pane_current_path}' -w75% -h90% --name=lazygit lazygit"
+      set -gF @popup-id-format '#{b:pane_current_path}/{popup_name}'
+      bind-key t run "#{@popup-toggle} -Ed'#{pane_current_path}' -w75% -h90% --name=scratch"
+      bind-key y run "#{@popup-toggle} -Ed'#{pane_current_path}' -w75% -h90% --name=yazi yazi"
+      bind-key g run "#{@popup-toggle} -Ed'#{pane_current_path}' -w75% -h90% --name=lazygit lazygit"
+      bind-key m run "#{@popup-toggle} -Ed'#{pane_current_path}' -w75% -h90% --name=rmpc rmpc"
+      bind-key a run "#{@popup-toggle} -Ed'#{pane_current_path}' -w75% -h90% --name=agent-deck agent-deck"
+      bind-key p run "#{@popup-toggle} -Ed'#{pane_current_path}' -w75% -h90% --name=ipython ipython"
+
+      if -F '#{TMUX_POPUP_SERVER}' {
+        set -g copy-command "tmux -Ldefault loadb -w -"
+        bind -T prefix ] run "tmux -Ldefault saveb - | tmux loadb -" \; pasteb -p
+        bind -T copy-mode-vi y send -X copy-pipe-and-cancel
+        bind -T copy-mode-vi MouseDragEnd1Pane send -X copy-pipe-and-cancel
+      }
 
     '';
   };
