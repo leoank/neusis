@@ -1,6 +1,6 @@
 {
   imports = [
-    ./ai/avante.nix
+    #./ai/avante.nix
     #./ai/opencode.nix
     ./completion/blink.nix
 
