@@ -11,6 +11,8 @@ let
     name = caskName;
     greedy = true;
   };
+  msgvault = inputs.msgvault.packages.${pkgs.stdenv.hostPlatform.system}.default;
+  qmd = inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.qmd;
 in
 {
   imports = [
@@ -107,10 +109,10 @@ in
     # https://github.com/nix-darwin/nix-darwin/pull/1382
     # greedyCasks = true;
     casks = map mkGreedy [
-      # "signal"
-      # "whatsapp"
+      "signal"
+      "whatsapp"
       "keycastr"
-      #"fiji"
+      "fiji"
       "hammerspoon"
       "deskflow"
       "superwhisper"
@@ -135,6 +137,39 @@ in
         ../../homes/ank/machines/rogue.nix
       ];
     };
+  };
+
+  # Incremental Gmail sync every 15 minutes (syncs all configured accounts)
+  # msgvault is managed via Nix flake input; update with: nix flake update msgvault
+  launchd.user.agents.msgvault-sync.serviceConfig = {
+    ProgramArguments = [
+      "${msgvault}/bin/msgvault"
+      "sync"
+    ];
+    StartCalendarInterval = [
+      { Minute = 0; }
+      { Minute = 15; }
+      { Minute = 30; }
+      { Minute = 45; }
+    ];
+    StandardErrorPath = "/tmp/msgvault-sync.err.log";
+    StandardOutPath = "/tmp/msgvault-sync.out.log";
+  };
+
+  # Hourly qmd re-index + embed (refreshes configured collections)
+  launchd.user.agents.qmd-reindex.serviceConfig = {
+    ProgramArguments = [
+      "${qmd}/bin/qmd"
+      "update"
+      "&&"
+      "${qmd}/bin/qmd"
+      "embed"
+    ];
+    StartCalendarInterval = [
+      { Minute = 20; }
+    ];
+    StandardErrorPath = "/tmp/qmd-reindex.err.log";
+    StandardOutPath = "/tmp/qmd-reindex.out.log";
   };
 
   security.pam.services.sudo_local.touchIdAuth = true;

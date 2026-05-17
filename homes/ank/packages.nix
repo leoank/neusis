@@ -46,7 +46,7 @@ with pkgs;
   # pkgs.master.signal-desktop-bin
   # pkgs.master.whatsapp-for-mac
   spotify
-  obsidian
+  pkgs.unstable.obsidian
   # broken right now. uncomment later
   #pkgs.unstable.blender
 ]
