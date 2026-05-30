@@ -1,0 +1,108 @@
+{
+  description = "Neusis: Crafting reproducible systems";
+
+  outputs =
+    inputs: inputs.flake-parts.lib.mkFlake { inherit inputs; } (inputs.import-tree ./new_modules);
+  inputs = {
+    # Nixpkgs
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
+    nixpkgs-unstable.url = "github:nixos/nixpkgs/nixos-unstable";
+
+    # flake-parts
+    flake-parts = {
+      url = "github:hercules-ci/flake-parts";
+      inputs.nixpkgs-lib.follows = "nixpkgs";
+    };
+
+    # import tree
+    import-tree = {
+      url = "github:denful/import-tree";
+    };
+
+    # For generating disk images of machines for deployment
+    nixos-generators = {
+      url = "github:nix-community/nixos-generators";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    # Nixos images for building custom kexec images
+    nixos-images.url = "github:nix-community/nixos-images";
+
+    # Auto upgrades
+    comin = {
+      url = "github:nlewo/comin";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    #------------------------------------------------------------
+    # nixvim
+    nixvim = {
+      url = "github:nix-community/nixvim/nixos-25.11";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    stylix.url = "github:danth/stylix/release-25.11";
+    stylix.inputs.nixpkgs.follows = "nixpkgs";
+
+    #------------------------------------------------------------
+
+    # wsl
+    nixos-wsl.url = "github:nix-community/NixOS-WSL/release-25.11";
+    nixos-wsl.inputs.nixpkgs.follows = "nixpkgs-unstable";
+
+    # darwin inputs
+    darwin = {
+      url = "github:LnL7/nix-darwin/nix-darwin-25.11";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    nix-homebrew = {
+      url = "github:zhaofengli-wip/nix-homebrew";
+    };
+    homebrew-core = {
+      url = "github:homebrew/homebrew-core";
+      flake = false;
+    };
+    homebrew-cask = {
+      url = "github:homebrew/homebrew-cask";
+      flake = false;
+    };
+    deskflow-tap = {
+      url = "github:deskflow/homebrew-tap";
+      flake = false;
+    };
+    pumas-tap = {
+      url = "github:graelo/homebrew-tap";
+      flake = false;
+    };
+    whatcable-tap = {
+      url = "github:darrylmorley/homebrew-whatcable";
+      flake = false;
+    };
+
+    # disko
+    disko.url = "github:nix-community/disko";
+    disko.inputs.nixpkgs.follows = "nixpkgs";
+
+    # VS Code
+    vscode-server.url = "github:nix-community/nixos-vscode-server";
+
+    # Home manager
+    home-manager = {
+      url = "github:nix-community/home-manager/release-25.11";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    agenix.url = "github:ryantm/agenix";
+    agenix.inputs.nixpkgs.follows = "nixpkgs";
+
+    hardware.url = "github:nixos/nixos-hardware";
+
+    jail-nix.url = "sourcehut:~alexdavid/jail.nix";
+    llm-agents.url = "github:numtide/llm-agents.nix";
+    llm-agents.inputs.nixpkgs.follows = "nixpkgs-unstable";
+    msgvault = {
+      url = "github:wesm/msgvault";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+  };
+}

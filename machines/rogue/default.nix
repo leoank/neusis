@@ -62,7 +62,6 @@ in
   };
 
   nix.settings = {
-
     trusted-users = [
       "@admin"
       "ank"
