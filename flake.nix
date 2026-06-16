@@ -39,6 +39,7 @@
       flake = false;
     };
     import-tree.url = "github:vic/import-tree";
+    jail-nix.url = "sourcehut:~alexdavid/jail.nix";
     llm-agents = {
       url = "github:numtide/llm-agents.nix";
       inputs.nixpkgs.follows = "nixpkgs-unstable";
@@ -50,9 +51,17 @@
     nix-homebrew.url = "github:zhaofengli-wip/nix-homebrew";
     nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
     nixpkgs-unstable.url = "github:nixos/nixpkgs/nixos-unstable";
+    nixvim = {
+      url = "github:nix-community/nixvim/nixos-25.11";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     pumas-tap = {
       url = "github:graelo/homebrew-tap";
       flake = false;
+    };
+    stylix = {
+      url = "github:danth/stylix/release-25.11";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
     whatcable-tap = {
       url = "github:darrylmorley/homebrew-whatcable";
