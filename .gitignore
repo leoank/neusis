@@ -9,3 +9,5 @@ imaging-server-resources
 /.agent-shell/
 .mypy_cache
 .remember/
+__pycache__/
+*.pyc
