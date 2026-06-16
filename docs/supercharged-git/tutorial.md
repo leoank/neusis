@@ -1,7 +1,7 @@
 # supercharged-git — tutorial
 
-A walkthrough of the `neusis.supercharged-git` umbrella and the eleven
-tool sub-modules that ship under it. Each section shows the
+A walkthrough of the `neusis.supercharged-git` umbrella and the
+twelve tool sub-modules that ship under it. Each section shows the
 home-manager snippet to enable a piece, then a couple of concrete
 workflows it unlocks.
 
@@ -41,7 +41,7 @@ What you get out of the box:
 - `~/.ssh/allowed_signers` is written if you supply
   `allowedSignersPubkey`.
 - `gclb` is on PATH (`git clone --bare` + worktree bootstrap in one
-  command — see §13).
+  command — see §12).
 
 ```sh
 # Verify your most recent signed commit.
@@ -143,13 +143,18 @@ neusis.supercharged-git.tools.lazygit.settings = {
 neusis.supercharged-git.tools.delta.enable = true;
 ```
 
-Defaults (this module ships them, no extra config needed):
+Wires `delta` in via `programs.delta` with
+`enableGitIntegration = true`. Defaults (this module ships them, no
+extra config needed):
 
-- `features = "decorations navigate"`
+- `features = "side-by-side line-numbers decorations navigate"`
+- `syntax-theme = "dracula"` (dark, high-contrast)
 - `navigate = true` — Tab/N jumps between hunks inside the pager
-- `line-numbers = true`
-- `side-by-side = true`
-- `dark = true`
+- Yellow file headers (bold, boxed, underlined), cyan hunk headers.
+- Cyan line numbers in both gutters; red (`124`) for `-` lines,
+  green (`28`) for `+` lines.
+- Subtle dark-green/dark-red background tint on `+`/`-` content
+  (`syntax '#003800'` / `syntax '#3f0001'`).
 
 What changes:
 
@@ -159,19 +164,26 @@ git log -p         # same treatment in log output
 git show HEAD      # ditto
 ```
 
-In lazygit and `gh pr diff`, delta is picked up via the `pager`
-setting — you get consistent rendering everywhere.
+In lazygit and `gh pr diff`, delta is picked up via the same
+`programs.delta` integration — you get consistent rendering
+everywhere.
 
 To go back to inline (single-column) diffs on a narrow terminal,
-override `side-by-side`:
+swap `side-by-side` for nothing in the features string:
 
 ```nix
 neusis.supercharged-git.tools.delta.options = {
-  features = "decorations navigate";
-  navigate = true;
-  line-numbers = true;
-  side-by-side = false;
-  dark = true;
+  features = "line-numbers decorations navigate";
+  # … keep whatever else you want from the default
+};
+```
+
+Or override the whole `options` attrset for a different theme:
+
+```nix
+neusis.supercharged-git.tools.delta.options = {
+  features = "side-by-side line-numbers decorations";
+  syntax-theme = "Catppuccin Mocha";
 };
 ```
 
@@ -385,34 +397,7 @@ CI bonus: `gitleaks-action` for GitHub. Locally, the pre-commit hook
 shown in §4 catches secrets before they ever leave your machine.
 
 ---
-
-## 11. `graphite` (`gt`) — stacked-PR workflow
-
-```nix
-neusis.supercharged-git.tools.graphite.enable = true;
-```
-
-Useful when one feature branches into a chain of small PRs that
-depend on each other.
-
-```sh
-gt init                         # one-time per repo
-gt create -m "auth: token shape"
-# … edit, commit …
-gt create -m "auth: refresh flow"
-# … edit, commit …
-gt stack submit                 # opens a PR per branch, links them
-gt log                          # see the stack tree
-gt sync                         # rebase the whole stack against trunk
-```
-
-The "moves" are `gt up` / `gt down` to walk the stack, `gt restack`
-to rebase children after editing a parent, and `gt absorb` to drop
-WIP changes into the right ancestor branch automatically.
-
----
-
-## 12. Multi-account GitHub
+## 11. Multi-account GitHub
 
 ```nix
 neusis.supercharged-git.tools.multi-account = {
@@ -520,7 +505,7 @@ extra command needed.
 
 ---
 
-## 13. `gclb` — bare clones with worktrees
+## 12. `gclb` — bare clones with worktrees
 
 `gclb` ships with the umbrella; you don't enable it via a `tools.*`
 option. The binary is built as a flake package
@@ -574,13 +559,13 @@ git worktree add feature-x feature-x
 git worktree remove feature-x
 ```
 
-Pair it with multi-account (§12): clone work repos under
+Pair it with multi-account (§11): clone work repos under
 `~/code/work/<repo>/` and they pick up the right identity + SSH
 alias automatically.
 
 ---
 
-## 14. Bootstrap repos with `gclb-sync`
+## 13. Bootstrap repos with `gclb-sync`
 
 ```nix
 neusis.supercharged-git.tools.bootstrap-repos = {
@@ -650,6 +635,44 @@ repos = [
 
 `gclb-sync` creates intermediate directories as needed.
 
+### Per-repo and global `git clone` flags
+
+`gclb` itself forwards any unrecognised flag to `git clone` (§12).
+`bootstrap-repos` plumbs that through with two knobs:
+
+- **`extraGitArgs`** at the module level — applied to every repo.
+- **`extraGitArgs`** inside a per-repo entry — applied only to that
+  repo. Appended *after* the global list, so per-repo wins on
+  conflicting flags.
+
+```nix
+neusis.supercharged-git.tools.bootstrap-repos = {
+  enable = true;
+  extraGitArgs = [ "--depth" "1" "--filter=blob:none" ];   # default: shallow + partial
+  repos = [
+    # Inherits the global shallow + partial flags.
+    "git@github.com:org/dotfiles.git"
+
+    # Override: full history for this one because we need to bisect.
+    {
+      url = "git@github.com:work/internal-tool.git";
+      extraGitArgs = [ "--depth" "0" ];   # cancels the global --depth 1
+    }
+
+    # Pin to a non-default branch.
+    {
+      url = "git@github.com:upstream/samples.git";
+      dest = "external/samples";
+      extraGitArgs = [ "--branch" "next" ];
+    }
+  ];
+};
+```
+
+Under the hood, `gclb-sync` invokes
+`gclb <url> -l <bare> [global args] [per-repo args]` — `gclb` forwards
+those to `git clone --bare`.
+
 ### Hands-free mode
 
 ```nix
@@ -661,7 +684,7 @@ write-boundary), so every `home-manager switch` reconciles the clone
 list. Individual clone failures don't abort activation — they're
 logged to stderr and you can re-run `gclb-sync` to retry.
 
-### Pairing with multi-account (§12)
+### Pairing with multi-account (§11)
 
 `location` is just a path. To get account-correct identity on the
 cloned repos, point it at one of the directories covered by an
@@ -707,20 +730,24 @@ neusis.supercharged-git = {
       enable = true;
       accounts.work = {
         userName = "Ankur Kumar";
-        userEmail = "ank@bodygram.com";
+        userEmail = "ank@leoank.com";
         sshKey = "~/.ssh/id_ed25519_work";
         directories = [ "~/code/work" ];
-        orgs = [ "bodygram" ];
+        orgs = [ "ankcorp" ];
       };
     };
     bootstrap-repos = {
       enable = true;
       repos = [
-        "git@github.com:ank/dotfiles.git"
-        { url = "git@github.com:bodygram/main.git"; dest = "work/main"; }
+        {
+          url = "git@github.com:leoank/neusis";
+          dest = "leoank/neusis";
+        }
+        # Around ~3GB as of june 2026
+        "git@github.com:nixos/nixpkgs"
       ];
     };
-    # act, mergiraf, graphite stay off until needed
+    # act, mergiraf stay off until needed
   };
 };
 ```

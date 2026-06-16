@@ -36,7 +36,6 @@
         self.homeModules.supercharged-git-act
         self.homeModules.supercharged-git-mergiraf
         self.homeModules.supercharged-git-gitleaks
-        self.homeModules.supercharged-git-graphite
         self.homeModules.supercharged-git-multi-account
         self.homeModules.supercharged-git-bootstrap-repos
       ];
@@ -95,38 +94,40 @@
         };
       };
 
-      config = lib.mkIf cfg.enable (lib.mkMerge [
-        {
-          # Ship `gclb` (git-clone-bare-with-worktree) on every user
-          # whose home-manager bundle imports this umbrella. The
-          # package itself is defined as a flake-parts perSystem
-          # output under `new_modules/packages/gclb/`.
-          home.packages = [ outputs.packages.${pkgs.stdenv.hostPlatform.system}.gclb ];
+      config = lib.mkIf cfg.enable (
+        lib.mkMerge [
+          {
+            # Ship `gclb` (git-clone-bare-with-worktree) on every user
+            # whose home-manager bundle imports this umbrella. The
+            # package itself is defined as a flake-parts perSystem
+            # output under `new_modules/packages/gclb/`.
+            home.packages = [ outputs.packages.${pkgs.stdenv.hostPlatform.system}.gclb ];
 
-          programs.git = {
-            enable = true;
-            lfs.enable = cfg.lfs.enable;
-            settings = {
-              user = {
-                name = cfg.userName;
-                email = cfg.userEmail;
+            programs.git = {
+              enable = true;
+              lfs.enable = cfg.lfs.enable;
+              settings = {
+                user = {
+                  name = cfg.userName;
+                  email = cfg.userEmail;
+                };
+              }
+              // lib.optionalAttrs cfg.signCommits {
+                user.signingkey = cfg.signingKey;
+                commit.gpgsign = true;
+                gpg.format = "ssh";
               };
-            }
-            // lib.optionalAttrs cfg.signCommits {
-              user.signingkey = cfg.signingKey;
-              commit.gpgsign = true;
-              gpg.format = "ssh";
             };
-          };
-        }
+          }
 
-        # Stage the allowed_signers file + point git at it. Independent
-        # of `signCommits` so you can verify signatures even if you
-        # don't sign your own commits.
-        (lib.mkIf (cfg.allowedSignersPubkey != null) {
-          home.file.".ssh/allowed_signers".text = "* ${cfg.allowedSignersPubkey}";
-          programs.git.settings.gpg.ssh.allowedSignersFile = "~/.ssh/allowed_signers";
-        })
-      ]);
+          # Stage the allowed_signers file + point git at it. Independent
+          # of `signCommits` so you can verify signatures even if you
+          # don't sign your own commits.
+          (lib.mkIf (cfg.allowedSignersPubkey != null) {
+            home.file.".ssh/allowed_signers".text = "* ${cfg.allowedSignersPubkey}";
+            programs.git.settings.gpg.ssh.allowedSignersFile = "~/.ssh/allowed_signers";
+          })
+        ]
+      );
     };
 }

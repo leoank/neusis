@@ -19,23 +19,31 @@
     let
       cfg = config.neusis.supercharged-git.tools.bootstrap-repos;
 
-      # Normalise each entry to `{ url; dest; }` where `dest = ""`
-      # means "derive from the URL inside the shell".
+      # Normalise each entry to `{ url; dest; extraGitArgs; }` where
+      # `dest = ""` means "derive from the URL inside the shell".
       normalize =
         entry:
         if builtins.isString entry then
           {
             url = entry;
             dest = "";
+            extraGitArgs = [ ];
           }
         else
           {
             inherit (entry) url;
             dest = if entry.dest != null then entry.dest else "";
+            extraGitArgs = entry.extraGitArgs or [ ];
           };
 
+      # Each clone command: `clone_repo URL DEST [EXTRA_GIT_ARGS…]`.
+      # Per-repo args come after the global ones, so later/specific
+      # overrides win on conflicting flags (typical git-cli semantics).
       cloneCmds = lib.concatMapStringsSep "\n" (
-        e: "clone_repo ${lib.escapeShellArg e.url} ${lib.escapeShellArg e.dest} || rc=1"
+        e:
+        "clone_repo ${lib.escapeShellArg e.url} ${lib.escapeShellArg e.dest} "
+        + lib.escapeShellArgs (cfg.extraGitArgs ++ e.extraGitArgs)
+        + " || rc=1"
       ) (map normalize cfg.repos);
 
       gclbBin = "${outputs.packages.${pkgs.stdenv.hostPlatform.system}.gclb}/bin/gclb";
@@ -55,6 +63,9 @@
           clone_repo() {
             local url="$1"
             local dest="$2"
+            shift 2
+            # Anything left in $@ is forwarded to `gclb`, which in
+            # turn forwards it to `git clone`.
             if [[ -z "$dest" ]]; then
               # Same default as gclb itself: last path segment
               # without a `.git` suffix.
@@ -67,7 +78,7 @@
             fi
             mkdir -p "$(dirname "$target")"
             echo "==> Cloning $url -> $target"
-            ${gclbBin} "$url" -l "$target/.bare"
+            ${gclbBin} "$url" -l "$target/.bare" "$@"
           }
 
           rc=0
@@ -115,6 +126,20 @@
                       parsed from the URL.
                     '';
                   };
+                  extraGitArgs = lib.mkOption {
+                    type = lib.types.listOf lib.types.str;
+                    default = [ ];
+                    example = [
+                      "--branch"
+                      "develop"
+                    ];
+                    description = ''
+                      Extra `git clone` flags for this repo only.
+                      Appended after the umbrella's
+                      `extraGitArgs`, so per-repo flags win when
+                      they conflict with the global set.
+                    '';
+                  };
                 };
               }
             )
@@ -132,6 +157,22 @@
             (cloned into `<location>/<repo-name>/.bare/`) or an
             attrset `{ url; dest?; }` for a custom destination
             directory under `location`.
+          '';
+        };
+
+        extraGitArgs = lib.mkOption {
+          type = lib.types.listOf lib.types.str;
+          default = [ ];
+          example = [
+            "--depth"
+            "1"
+            "--filter=blob:none"
+          ];
+          description = ''
+            Extra `git clone` flags applied to every entry in
+            `repos`. Forwarded through `gclb` to `git clone`.
+            Per-repo `extraGitArgs` are appended after these, so
+            they override on conflict.
           '';
         };
 
