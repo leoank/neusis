@@ -416,28 +416,12 @@ in
       '';
     };
 
-    # `homeModules` and `darwinModules` ARE standard community flake
-    # outputs but the flake-parts version pinned here only declares
-    # `nixosModules` as a typed option. We declare them ourselves so
-    # nixd can complete `flake.homeModules.<TAB>` /
-    # `flake.darwinModules.<TAB>` instead of treating them as
-    # untyped freeform attributes.
-    homeModules = mkOption {
-      type = types.lazyAttrsOf types.deferredModule;
-      default = { };
-      description = ''
-        Home-manager modules exposed by this flake — `imports` into
-        a home-manager bundle via `self.homeModules.<name>`.
-      '';
-    };
-
-    darwinModules = mkOption {
-      type = types.lazyAttrsOf types.deferredModule;
-      default = { };
-      description = ''
-        nix-darwin modules exposed by this flake — `imports` into
-        a darwin host config via `self.darwinModules.<name>`.
-      '';
-    };
+    # NOTE: `flake.homeModules` and `flake.darwinModules` are NOT
+    # declared here. home-manager's and nix-darwin's own flake-parts
+    # modules declare them when those inputs are loaded — declaring
+    # them locally too triggers a duplicate-option error during
+    # darwin/nixos eval. nixd completion picks them up transitively
+    # because `.nvim.lua` targets `darwinConfigurations.rogue.options`
+    # which pulls both flake-modules in.
   };
 }
