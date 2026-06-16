@@ -20,7 +20,7 @@
 
       config = lib.mkIf cfg.enable {
         home.packages = [ pkgs.commitizen ];
-        programs.git.aliases = {
+        programs.git.settings.alias = {
           cz = "!cz commit";
         };
       };
