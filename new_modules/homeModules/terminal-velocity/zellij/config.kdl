@@ -1,0 +1,13 @@
+default_mode "normal"
+simplified_ui false
+
+ui {
+    pane_frames {
+        rounded_corners true
+        hide_session_name true
+    }
+}
+
+keybinds {
+  unbind "Ctrl q" // conflicts with qflist in nvim
+}
