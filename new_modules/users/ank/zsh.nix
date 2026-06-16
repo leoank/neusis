@@ -28,6 +28,23 @@
           size = 10000;
         };
 
+        # Inline gray suggestion from history as you type — accept
+        # with `→` (right arrow) or `Ctrl-F` (end-of-line). The
+        # `history` strategy reads from $HISTFILE; `completion`
+        # falls back to zsh's completer when history misses. Both
+        # are stacked: history wins, completion fills the gap.
+        # Per-keystroke cost is single-digit ms — startup unchanged.
+        autosuggestion = {
+          enable = true;
+          strategy = [ "history" "completion" ];
+        };
+
+        # Colorize the command line as you type — unknown commands
+        # in red, valid in green, options/strings highlighted, etc.
+        # Real per-keystroke cost but imperceptible under ~1000
+        # chars of input.
+        syntaxHighlighting.enable = true;
+
         plugins = [
           {
             name = "vi-mode";
@@ -38,6 +55,10 @@
 
         oh-my-zsh = {
           enable = true;
+          # Skip the default `robbyrussell` theme — the PROMPT
+          # below owns the prompt. Empty string short-circuits
+          # the theme loader entirely.
+          theme = "";
           plugins = [
             "git"
             "gh"
@@ -104,6 +125,27 @@
               export TERM=xterm
               # Add env var for vi mode editor
               export ZVM_VI_EDITOR=$EDITOR
+
+              # ── Prompt ────────────────────────────────────────
+              # Two-line, classic minimal:
+              #
+              #   ~/path/to/project  (main)
+              #   ❯
+              #
+              # `%~` is the cwd (with $HOME → ~). `%(?...)` flips
+              # the arrow's colour by the last command's exit
+              # status. vcs_info supplies the `(branch)` segment —
+              # built into zsh, no plugin needed; empty outside a
+              # git repo. The arrow drops to its own line so long
+              # paths and branch names don't push it off-screen.
+              autoload -Uz vcs_info
+              precmd_vcs_info() { vcs_info }
+              precmd_functions+=( precmd_vcs_info )
+              zstyle ':vcs_info:*' enable git
+              zstyle ':vcs_info:git:*' formats ' %F{8}(%b)%f'
+              setopt prompt_subst
+              PROMPT='%F{blue}%~%f''${vcs_info_msg_0_}
+              %(?.%F{green}.%F{red})❯%f '
             '';
 
             zshLateInit = lib.mkOrder 1500 ''
