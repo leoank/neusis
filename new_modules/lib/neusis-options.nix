@@ -415,5 +415,29 @@ in
         touch options that exist (or are shimmed) in every target.
       '';
     };
+
+    # `homeModules` and `darwinModules` ARE standard community flake
+    # outputs but the flake-parts version pinned here only declares
+    # `nixosModules` as a typed option. We declare them ourselves so
+    # nixd can complete `flake.homeModules.<TAB>` /
+    # `flake.darwinModules.<TAB>` instead of treating them as
+    # untyped freeform attributes.
+    homeModules = mkOption {
+      type = types.lazyAttrsOf types.deferredModule;
+      default = { };
+      description = ''
+        Home-manager modules exposed by this flake — `imports` into
+        a home-manager bundle via `self.homeModules.<name>`.
+      '';
+    };
+
+    darwinModules = mkOption {
+      type = types.lazyAttrsOf types.deferredModule;
+      default = { };
+      description = ''
+        nix-darwin modules exposed by this flake — `imports` into
+        a darwin host config via `self.darwinModules.<name>`.
+      '';
+    };
   };
 }
