@@ -106,17 +106,25 @@
             programs.git = {
               enable = true;
               lfs.enable = cfg.lfs.enable;
-              settings = {
-                user = {
-                  name = cfg.userName;
-                  email = cfg.userEmail;
-                };
-              }
-              // lib.optionalAttrs cfg.signCommits {
-                user.signingkey = cfg.signingKey;
-                commit.gpgsign = true;
-                gpg.format = "ssh";
-              };
+              # NB: must use `lib.mkMerge` (not `//`) so the
+              # signing branch can add `user.signingkey` without
+              # *replacing* the whole `user` attrset and losing
+              # `user.name` / `user.email`. The shallow `//` did
+              # exactly that and left identity empty in the
+              # rendered .gitconfig.
+              settings = lib.mkMerge [
+                {
+                  user = {
+                    name = cfg.userName;
+                    email = cfg.userEmail;
+                  };
+                }
+                (lib.mkIf cfg.signCommits {
+                  user.signingkey = cfg.signingKey;
+                  commit.gpgsign = true;
+                  gpg.format = "ssh";
+                })
+              ];
             };
           }
 
