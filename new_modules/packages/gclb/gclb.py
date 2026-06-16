@@ -87,6 +87,11 @@ def build_parser() -> argparse.ArgumentParser:
             "Examples:\n"
             "  gclb git@github.com:org/repo.git\n"
             "  gclb https://github.com/org/repo.git -l ~/code/repo/.bare\n"
+            "  gclb git@github.com:org/repo.git --depth 1 --filter=blob:none\n"
+            "  gclb git@github.com:org/repo.git -- --recurse-submodules\n"
+            "\n"
+            "Any flag gclb doesn't recognise is passed verbatim to `git clone`. "
+            "Use `--` before such flags if you want to be explicit."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -103,7 +108,15 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
-    args = build_parser().parse_args()
+    # `parse_known_args` lets unrecognised flags fall through to
+    # `extra_git_args` so callers can tack on arbitrary `git clone`
+    # options (`--depth`, `--filter`, `--branch`, `--recurse-submodules`,
+    # …) without us having to mirror them.
+    args, extra_git_args = build_parser().parse_known_args()
+    # argparse keeps a leading `--` separator in the remainder on some
+    # Python versions; drop it.
+    if extra_git_args and extra_git_args[0] == "--":
+        extra_git_args = extra_git_args[1:]
 
     if shutil.which("git") is None:
         print("error: `git` not found on PATH.", file=sys.stderr)
@@ -129,7 +142,9 @@ def main() -> int:
 
     try:
         print(f"==> Cloning bare repository to {bare}")
-        git("clone", "--bare", args.url, str(bare))
+        # Extra args go BEFORE the URL/dir positionals so they're
+        # interpreted as `git clone` options, not as URLs.
+        git("clone", "--bare", *extra_git_args, args.url, str(bare))
 
         print(f"==> Writing {gitfile}")
         write_gitfile(repo_root, bare)
