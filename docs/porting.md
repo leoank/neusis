@@ -520,3 +520,538 @@ From the previous list at the top of this file:
   flake8 over the input. Keep the `# flake8: noqa` header on
   hand-rolled python files or accept that the nix build will fail
   on long lines / unused imports.
+
+---
+
+## 2026-06-16 — supercharged toolkit family + agent-harness + ports
+
+Built three more home-manager umbrellas on top of last session's
+schema, ported the remaining personal terminal config out of
+`homes/ank/configs/`, added a cross-platform kanata module, and
+made the long-running services opt-in. Each umbrella follows the
+same shape settled on with `supercharged-git`: a single
+`homeModules/<name>.nix` file imports a directory of tool
+sub-modules, each registering `flake.homeModules.<name>-<tool>`
+and exposing `neusis.<umbrella>.tools.<x>.enable` plus a small
+handful of knobs.
+
+### Umbrellas added
+
+- **`supercharged-shell`** (`homeModules/supercharged-shell.nix` +
+  9 sub-tools): yazi (bundled `max-preview` plugin), direnv, fzf,
+  television, nix-search-tv, nix-your-shell, nix-init, zoxide,
+  atuin. Umbrella `enable` installs the curated CLI bundle: `bat`,
+  `bottom`, `chafa`, `comma`, `duf`, `eza`, `fd`, `gdu`, `htop`,
+  `imagemagick`, `nix-output-monitor`, `ouch`, `rclone`,
+  `ripgrep`, `unzip`, `wget`, `xclip` + toolchains (`cargo`,
+  `clang`, `cmake`, `deno`, `gnumake`, `ninja`, `nodejs_22`,
+  `python3`, `rustc`, `texliveFull`) + Lua (`lua51Packages.{lua,
+  luarocks}`) + `sioyek` on Linux only. `extraPackages` extends
+  without forking; bundle deliberately omits anything already
+  owned elsewhere (lazygit lives in supercharged-git, fzf/yazi/
+  zellij configurations come from their respective tool
+  sub-modules).
+
+- **`terminal-velocity`** (`homeModules/terminal-velocity.nix` + 7
+  sub-tools): wezterm (bundled `wezterm.lua`), kitty
+  (platform-aware `hide_window_decorations`: `titlebar-only` on
+  Darwin, `yes` on Linux), zellij (bundled `config.kdl` +
+  `layouts/default.kdl`, `default_mode = "locked"` so it nests
+  cleanly), tmux (vim-tmux-navigator + resurrect + continuum +
+  better-mouse-mode + tmux-toggle-popup; six prefix-bound popups
+  for scratch shell / yazi / lazygit / rmpc / agent-deck /
+  ipython; fzf-tmux integration auto-wired when
+  `supercharged-shell.tools.fzf` is on), sesh (`tmuxKey = "s"` by
+  default), mosh, eternal-terminal. No umbrella `enable` — each
+  tool stands alone. Funny-name pun: "max speed of a falling
+  object."
+
+- **`agent-harness`** (`homeModules/agent-harness/agent-harness.nix`):
+  single-file umbrella for LLM CLIs (`claude-code`, `opencode`,
+  `gemini-cli`, `pi`, `hermes`). Umbrella `enable` ships extras
+  (`agent-deck`, `beads`, `beads-viewer`, `spec-kit`, `skills`,
+  `qmd`) and shared `AGENTS.md` / `agents` / `commands` /
+  `skills` directories used by every enabled agent. Per-agent
+  `tools.<x>.{enable, settings, extraPkgs}`. On Linux every
+  agent is wrapped through `jail-nix` (common options:
+  `network`, `time-zone`, `no-new-session`, `mount-cwd`;
+  per-agent `readwrite (noescape "~/.<agent>")`; `commonPkgs`
+  bundle in every jail). On Darwin the unwrapped packages are
+  used (jail-nix is Linux-only). Bundled `skills/skill-creator/`
+  with 18 files. New flake input: `jail-nix.url =
+  "sourcehut:~alexdavid/jail.nix"`.
+
+  MCP server configuration was added then removed at user request
+  — "we will only use skills." The `pi-mcp-adapter` string inside
+  `tools.pi.settings.packages` is left intact: it's pi's own
+  package name, not an MCP server config. Override
+  `tools.pi.settings.packages` if you also want pi to skip the
+  adapter.
+
+### Other ports
+
+- **`packages/gclb/gclb.{nix,py}`** — `perSystem.packages.gclb`
+  via `pkgs.writers.writePython3Bin`. Python rewritten to use
+  `argparse.parse_known_args` so unknown flags pass through to
+  `git clone`. Bundled into `supercharged-git` umbrella's
+  `home.packages` via
+  `outputs.packages.${pkgs.stdenv.hostPlatform.system}.gclb`.
+  Earlier overlay-based draft was reverted at user request — the
+  perSystem-package path is canonical.
+
+- **`bootstrap-repos` got `extraGitArgs`** (per-repo + module
+  global). Generated `gclb-sync` shell-quotes the merged list via
+  `lib.escapeShellArgs (cfg.extraGitArgs ++ e.extraGitArgs)` and
+  the helper `clone_repo` shifts the first two args and forwards
+  `$@` to `gclb`, so users can pass arbitrary `git clone` flags
+  (e.g. `--depth=1`, `--filter=blob:none`).
+
+- **`agnosticModules/kanata/{kanata.nix, custom.kbd}`** — Mirrors
+  nixpkgs's `services.kanata` option surface (`enable`, `package`,
+  `keyboards.<name>.{devices, config, extraDefCfg, configFile,
+  extraArgs, port}`). Linux forwards to `services.kanata`; Darwin
+  sets up Karabiner-VirtualHIDDevice via
+  `system.activationScripts.preActivation` + a base
+  `launchd.daemons.Karabiner-DriverKit-VirtualHIDDevice-Daemon` +
+  one `launchd.daemons.kanata-<name>` per declared keyboard.
+  Default `keyboards.default.configFile = ./custom.kbd`.
+
+- **`users/ank/zsh.nix`** — Registers
+  `flake.neusis.users.ank.hmBundles.zsh` containing the full
+  ported zsh config (vi-mode plugin, oh-my-zsh
+  git/gh/globalias, aliases including `cat=bat`/`df=duf`/`ll=eza
+  -lah --color-scale=all --hyperlink`, `nz`/`nx`/`nxp`/`nxpc`
+  shell functions, `completionInit` cache-stable workaround,
+  `lib.mkOrder 1000` zshConfig + `lib.mkOrder 1500` zshLateInit
+  merged via `lib.mkMerge`). Wired per-host via
+  `machineToBundlesMap.<host>`.
+
+- **`homeModules/{msgvault-sync,qmd-reindex}.nix`** — Both
+  switched to opt-in via `neusis.services.<n>.enable`.
+  Configurable `package`, `launchdSchedule`,
+  `systemdOnCalendar`, `logDir`. msgvault has `extraArgs`
+  (default `["sync"]`); qmd has `subcommands` (default
+  `["update" "embed"]`) joined with `&&` via `bash -c`. Both use
+  `lib.getExe cfg.package` and `lib.escapeShellArgs`.
+
+- **`homeModules/hammerspoon/{hammerspoon.nix, init.lua,
+  Spoons/}`** — Ports `homes/ank/configs/hammerspoon/` into a
+  Darwin-only opt-in module. Vendored `init.lua` + bundled
+  `SpoonInstall`, `PaperWM`, and `ActiveSpace` spoons ride along
+  next to the module. `neusis.hammerspoon.enable` symlinks the
+  bundled directory into `~/.hammerspoon/` (hammerspoon's
+  canonical location — legacy used `xdg.configFile."hammerspoon"`
+  which resolved to `~/.config/hammerspoon`, the wrong path
+  unless `MJConfigFile` was set; the new module fixes this).
+  `configDir` swaps in a user-provided dir. Module does **not**
+  install hammerspoon itself — that's a homebrew cask, noted in
+  the tutorial. Sister tutorials' overlap tables gained a
+  `hammerspoon` row.
+
+### Tutorials added
+
+`docs/{supercharged-shell,terminal-velocity,agent-harness}/tutorial.md`
+— one per umbrella, mirroring the supercharged-git format:
+numbered tool sections, "Putting it all together" example, and
+an "Overlap with sister umbrellas" table that lists every tool
+across all four umbrellas. Update all four tables in lockstep
+when adding or moving tools between umbrellas.
+
+After `graphite` was deleted by the user mid-session, the
+supercharged-git tutorial needed §12→§11 / §13→§12 / §14→§13
+renumbering plus three `(§N)` cross-references repointed. Worth
+auditing whenever a tool sub-module is added or removed.
+
+### Patterns confirmed / new
+
+- **Cross-platform HM cookbook**: `lib.mkMerge` with `lib.mkIf
+  pkgs.stdenv.isDarwin { launchd.agents.<n> = …; }` and `lib.mkIf
+  pkgs.stdenv.isLinux { systemd.user.{services,timers}.<n> = …;
+  }`. The `mkIf` gating keeps the dormant branch from touching
+  options that don't exist — same recipe used in
+  `homeModules/{msgvault-sync,qmd-reindex}.nix` and
+  `agnosticModules/kanata/kanata.nix`.
+
+- **Bundled data alongside modules**: `kanata/{kanata.nix,
+  custom.kbd}`, `agent-harness/{agent-harness.nix, AGENTS.md,
+  skills/, …}`, `terminal-velocity/{wezterm/wezterm.lua,
+  zellij/{config.kdl,layout.kdl}}`,
+  `supercharged-shell/yazi/{yazi.nix, yazi_img_max/init.lua}`.
+  `import-tree` only picks up `*.nix`, so non-Nix data files
+  alongside are inert.
+
+- **`programs.git.settings.url.<alias>:.insteadOf` as a list**
+  serializes to multiple `insteadOf = …` lines — that's how
+  `multi-account` redirects every `org/` per SSH alias without
+  generating per-account include files.
+
+- **`programs.git.includes` `contents` form** lets the
+  multi-account module avoid materializing per-account git config
+  files on disk — config lives inline in the includes attrset.
+
+- **jail-nix `mount-cwd` is the agent escape hatch.** It's the
+  only thing letting jailed agent CLIs see your code. Without it
+  every agent is a paperweight. Per-agent `readwrite (noescape
+  "~/.<dir>")` covers state; everything else outside `cwd` is
+  opaque.
+
+- **`programs.delta` standalone** replaces the legacy
+  `programs.git.delta.*` settings. The new module sets delta as
+  the diff pager via its own activation; double-check nothing
+  else is trying to set `core.pager` separately.
+
+- **`writeShellApplication` + `set -euo pipefail`** — anything
+  intended to be best-effort needs `|| true` / `|| rc=1`. The
+  bootstrap-repos `gclb-sync` script uses this for its
+  per-repo loop so a single repo failure doesn't abort the rest.
+
+- **Section renumbering rots silently.** When tools are deleted
+  mid-tutorial, neither markdown linters nor `nix flake check`
+  catch the dangling `(§N)` cross-references. Treat any
+  sub-module addition/removal as a tutorial audit trigger.
+
+### Open WIP gaps — status this session
+
+From the running list at the top of this doc:
+
+- ✅ **`mkNeusisDarwinOS` broken / `darwin` input missing** —
+  closed previous session; verified end-to-end this session
+  by evaluating `darwinConfigurations.rogue.config`.
+- ❌ **`initialHashedPassword` default** — still references
+  `../secrets/common/hashedInitialPassword.age`. Untouched.
+- ❌ **Duplicate `cslab` registry entries** — untouched.
+- ❌ **`mkSystem "nixos"|"darwin"` unification** — deferred again.
+- ❌ **`roleSpecs` → typed `flake.neusis.roles` option** —
+  deferred; notes still in `docs/future-considerations.md`.
+- ❌ **`mkAdmin`/`mkRegular`/`mkGuest`/`mkLocked` aliases vs
+  `mkUser`-only API** — alias layer kept; no consumer audit done
+  to confirm callers.
+
+### Still open after this session
+
+- **Legacy `homes/common/dev/{git,gclb,editors,terminals}.nix`
+  and `homes/ank/configs/{terminal/{tmux,zsh}.nix,
+  keyboard/kanata_system.nix, agent_harness/}`** still on disk
+  despite their content being ported. Verify on a real
+  `home-manager switch` before deleting.
+- **`inputs.llm-agents.homeManagerModules`** not explicitly
+  imported by the agent-harness umbrella — relying on upstream
+  auto-injection into the HM context. If "option doesn't exist"
+  errors fire on switch, add an explicit `imports = [
+  inputs.llm-agents.homeManagerModules.default ]` somewhere
+  upstream.
+- **Agent-harness MCP**: the option block + config branch are
+  gone, but `tools.pi.settings.packages` still lists
+  `pi-mcp-adapter`. Override at the bundle if you want pi to
+  skip loading it.
+
+### Process notes
+
+- `nix run .#write-flake` after every new `flake-file.inputs.<x>`
+  entry. This session added `jail-nix`; running the regenerator
+  was needed before `nix eval` would resolve it.
+- Verification command for parse-only sanity on a new module:
+  `nix eval .#homeModules.<name> --apply "x: builtins.typeOf x"`.
+  Returns `"set"` if the module body itself parses; doesn't
+  fully evaluate the config, but catches the obvious nix-syntax
+  / option-typo class of errors before the slower
+  `home-manager.users.<u>.imports = […]` round-trip.
+- The MCP-removal pass touched four files (the module, the
+  agent-harness tutorial, and two sister-umbrella overlap
+  tables). When ripping a feature out, grep for the feature
+  name across `docs/` and across all umbrella tutorials — the
+  overlap tables are the easiest to miss.
+
+---
+
+## 2026-06-17 — kalam family + nvim-debug skill + rogue feature parity
+
+The session-of-many-sessions. Three threads landed: the kalam
+nixvim distribution got a proper library layer plus a clean
+`base` flavor written from scratch, an `nvim-debug` skill encodes
+the diagnostic patterns we developed while debugging dap, and
+rogue's home-manager bundle list reached feature parity with the
+legacy `homes/ank/machines/rogue.nix` (stylix, brave, atuin,
+tmux, mpd, rmpc — all now declarative through `flake.neusis`).
+
+### kalam: library + variant builder + flavor scaffold
+
+- **`flake.neusis.lib.kalam`** (`new_modules/lib/kalam.nix`) —
+  new lib namespace. `mkKalamVariants { pkgs; inputs; outputs;
+  root }` enumerates subdirs under `root`; subdir name `base` →
+  package `kalam`, anything else → `kalam-<name>`. `mkKalam`
+  builds a single flavor from a directory containing `config/`
+  and (optional) `lib/`. Per-flavor `lib/` is honoured if
+  present; helpers `icons`, `mkPlugin`, `whichkeySpec`,
+  `mkKeymap` live in the shared namespace and propagate via
+  `extraSpecialArgs` as `kalamLib`. Legacy aliases (`icons`,
+  `mkPkgs`, `specObj`) are preserved at the top level of
+  `extraSpecialArgs` so unported flavor modules keep working.
+
+- **Flavors relocated** to `new_modules/packages/kalam/_flavors/{base,py,v2}/`.
+  The `_flavors/` prefix keeps `import-tree` from interpreting
+  the ~208 nixvim config modules as flake-parts modules — same
+  trick as `_kalam/` for the shared icons data, hammerspoon's
+  `Spoons/`, and the agent-harness `skills/skill-creator/`
+  subtree.
+
+- **Per-flavor `default.nix` derivation files deleted.** The
+  shared `mkKalam` does the build. Per-flavor `lib/` directories
+  also deleted (they were identical across flavors and the
+  shared lib now provides the helpers).
+
+- **Removed per-package nixpkgs rebuild.** Legacy
+  `pkgs/kalam{,py,v2}/default.nix` each did
+  `import inputs.nixpkgs { cudaSupport = true; overlays = [ … ]; }`
+  inside the derivation — forcing a full nixpkgs rebuild per
+  flavor and baking CUDA in. New `mkKalam` uses the perSystem
+  `pkgs` verbatim; the perSystem driver `pkgs.extend self.outputs.overlays.git-worktree`
+  for the one overlay the configs actually need
+  (`pkgs.git-worktree-custom`). CUDA dropped.
+
+- **New flake input** `nixvim = "github:nix-community/nixvim/nixos-25.11"`
+  declared in `new_modules/packages/kalam/kalam.nix` via
+  `flake-file.inputs`.
+
+- **Old `pkgs/` tree no longer wired in.** `flakeModules/packages.nix`
+  (the legacy flake-parts module that imported `../pkgs`) was
+  deleted. `outputs.packages.<system>` now exposes
+  `kalam`, `kalam-py`, `kalam-v2`, `gclb` — no more `kalamv2`,
+  `specstory`, `xrt`, `kexec_tailscale`. (Source files at `pkgs/`
+  still on disk; deletion deferred until non-kalam consumers
+  are confirmed unused.)
+
+### kalam-base: clean implementation from scratch
+
+Built on three toolkits per a deliberate philosophy choice:
+
+- **blink.cmp** — single completion engine (LSP + path + snippets
+  + buffer sources). Uses `lspkind`'s symbol_map for richer kind
+  icons.
+- **mini.nvim** — pairs, comment, surround, move, bracketed,
+  splitjoin, hipatterns, bufremove, sessions, icons. **`mini.ai`
+  removed** — raced with treesitter-textobjects on `af`/`ac`/`aa`,
+  winner depended on typing speed. treesitter-textobjects + vim
+  defaults cover the same surface area.
+- **snacks.nvim** — bigfile, quickfile, dashboard (custom
+  giraffe ASCII art), indent + scope, input, notifier, picker
+  (replaces telescope), rename, scratch, statuscolumn, terminal
+  (replaces toggleterm), toggle, words, zen, image. Most of the
+  `<leader>` map dispatches to snacks features.
+
+Plus catppuccin (theme, with `integrations.dap` for dap highlight
+groups), treesitter + treesitter-context + treesitter-textobjects,
+nixd + pyright (LSP), conform.nvim (format-on-save with
+`vim.g.disable_autoformat` toggle), gitsigns, lualine (now with
+filesize component), bufferline, oil + yazi (replaces
+snacks.explorer), leap (bidirectional `s`, cross-window `S`),
+trouble, undotree, colorizer, dap + dap-view + dap-python +
+dap-virtual-text.
+
+`mini.surround` was rebound from `s*` to `gs*` so leap could own
+single-key `s`. Parallel mnemonic with `gc` (comment) and `gS`
+(splitjoin).
+
+`<leader>` map labelled groups: `b` (buffer), `c` (code), `d`
+(debug), `dP` (python-debug), `f` (find/file), `g` (git), `gh`
+(hunks), `q` (quit/session), `s` (search), `t` (terminal/tab),
+`u` (toggles), `w` (window proxy → `<c-w>`), `x` (trouble), `z`
+(zen), plus non-leader `gs` (surround).
+
+### nvim-debug: lessons codified into a skill
+
+Six different bugs across the kalam debug session each demanded
+the same diagnostic pattern — write a Lua script that probes
+state and writes results to `/tmp/diag.log`, run nvim
+`--headless -c 'lua dofile(...)' -c 'qa!' <test-file>`, read the
+log from the shell. Encoded as `~/.claude/skills/nvim-debug/`:
+
+- The `--headless -c 'lua dofile(...)'` pattern (NOT `nvim -l`,
+  which skips startup).
+- Probe cookbook: module load state, LSP clients/settings/
+  capabilities, keymaps via `maparg`, signs (with the group
+  scope gotcha — `sign_getplaced { group = "*" }` doesn't always
+  match), autocmds via `nvim_get_autocmds`.
+- Locating the generated init.lua in nixvim:
+  `grep -oE '/nix/store/[a-z0-9]+-init\.lua' $PKG/bin/nvim`.
+- `xxd` on string options to verify multi-byte glyphs survived
+  the source → emission pipeline (see "burned hours" below).
+
+Packaged via `package_skill.py` into `~/Downloads/nvim-debug.skill`
+for portable install.
+
+Ran description optimization via `run_loop.py` (5 iterations).
+**No improvement found** — all iterations scored 50% with
+recall=0%. Root cause is a structural limit of the optimization
+loop (Claude's headless skill-consultation heuristic doesn't
+respond to description tweaks on debugging-style queries; it
+decides "I'd just inspect files directly"). Best = original
+description by tiebreak. Documented as a known limitation.
+
+### Burned hours rediscovered (six bugs, each illuminating)
+
+These each cost time and each taught something worth remembering:
+
+1. **Nerd-font PUA glyphs got stripped to empty strings** in the
+   nix source itself. The bytes between `text = "..."` quotes
+   were `22 22` (just the quotes). Diagnosed via `xxd` after the
+   sign_define output showed no `text` field. Fix: replace with
+   BMP characters (`●`, `◆`, `◌`, `→`) which have well-defined
+   UTF-8 encodings and survive every copy/paste/serialize chain.
+2. **nvim's native `'exrc'` option doesn't fire on a kalam
+   launch** despite `opts.exrc = true` + matching trust hash.
+   Suspect: nixvim's `-u <init.lua>` wrapper interaction. Worked
+   around with a `VimEnter` autocmd in `autocmds.nix` that
+   manually does `vim.secure.read` + `loadstring` + invoke.
+   Native exrc remains an unsolved mystery; the manual loader
+   is the working substitute.
+3. **dap.adapters.python showing `<function1>`** — dap-python's
+   setup runs after our manual table-form adapter registration
+   and replaces it with a function-form adapter that misbehaves
+   on nix store paths. Reordered: pcall dap-python.setup FIRST,
+   then our `dap.adapters.python = { type = "executable"; … }`
+   wins. Followed by a final pass that moved everything to
+   nixvim's native `plugins.dap-view.settings.auto_toggle` /
+   `plugins.dap.signs` so the extraConfigLua block could be
+   dropped entirely.
+4. **`claude-remote.nix` in `homeModules/` had no
+   `flake.homeModules.<name>` wrapper.** `import-tree` picked it
+   up as a top-level flake-parts module; its body's
+   `launchd.user.agents.X = ...` got applied at the wrong
+   evaluation context, where `pkgs` wasn't a module arg. This
+   broke darwin options tree evaluation entirely, which silently
+   blanked nixd's hover/gd against `services.X`. Rewrote as a
+   proper `flake.homeModules.claude-remote` with
+   `neusis.claude-remote.enable`, `profile`, `projectDir`,
+   `claudeBin`, `logDir` options. Also switched from nix-darwin's
+   `launchd.user.agents` namespace to home-manager's
+   `launchd.agents` since the module lives under `homeModules/`.
+5. **lspconfig deprecation warning** every launch — fixed by
+   mutating `lspconfig.configs.nixd.default_config.settings`
+   directly in the `.nvim.lua` exrc rather than calling
+   `lspconfig.nixd.setup({...})`. Same effect, no warning. Uses
+   lspconfig internals so brittle, but works until nixvim
+   migrates to `vim.lsp.config`.
+6. **nixd needs manual submodule descent** for flake-parts
+   options. `evaluated.options.flake` is a typed option, not a
+   walkable attrset. The `.nvim.lua` exrc descends via
+   `evaluated.options.flake.type.getSubOptions []` and wraps as
+   `{ flake = <subopts>; }` so user-typed paths like
+   `flake.neusis.users.X.hmBundles.Y` walk through the tree.
+   Also declared `flake.homeModules` and `flake.darwinModules`
+   as typed options in `neusis-options.nix` — flake-parts itself
+   only declares `nixosModules`, so without these `nixd` couldn't
+   complete `flake.homeModules.<TAB>`.
+
+### Other ports landed today
+
+- **mpd + rmpc** as `homeModules` (`new_modules/homeModules/{mpd,rmpc}.nix`).
+  mpd module is platform-aware: default log file at
+  `~/Library/Logs/mpd/log.txt` on Darwin, `~/.local/state/mpd/log`
+  on Linux. Activation script creates log dir + touches log file
+  + creates playlist dir. rmpc takes structured options
+  (`address`, `volumeStep`, `maxFps`) that get substituted into
+  a default RON config; full `config` string also overridable.
+
+- **kanata** as `agnosticModules/kanata/kanata.nix`. Mirrors
+  nixpkgs `services.kanata` option surface; Linux forwards to
+  `services.kanata`, Darwin sets up Karabiner-VirtualHIDDevice
+  via `system.activationScripts.preActivation` + launchd daemons.
+
+- **stylix** as `users/ank/theming.nix` hmBundle. Iosevka Term
+  Nerd Font Mono, evenok-dark base16 scheme, terminal opacity
+  0.8, wallpaper at `users/ank/_assets/wallpaper.jpg` (copied
+  from `homes/common/gui/wallpapers/gruvbox_astro.jpg`). New
+  `flake-file.inputs.stylix = "github:danth/stylix/release-25.11"`.
+
+- **brave** as `homeModules/brave.nix`. Wraps `programs.chromium`
+  with `pkgs.brave` + ublock origin / dark reader / kagi search /
+  theme extensions. `useHomebrew` opt lets Darwin users prefer
+  the cask (module then only writes preferences/extensions, cask
+  owns the binary). Bundle wiring in `users/ank/ank.nix` as
+  `hmBundles.browsers`.
+
+- **zsh polish**: `users/ank/zsh.nix` gained `history.path =
+  "${config.xdg.dataHome}/zsh/history"`, `history.size = 10000`,
+  and the `update <host>` / `darwin <host>` shell helper
+  functions for `nixos-rebuild` / `darwin-rebuild` invocations.
+
+### rogue feature parity
+
+After porting the missing pieces, `darwinConfigurations.rogue`'s
+home-manager bundle list now reads:
+
+```
+machineToBundlesMap.rogue = [
+  features.agnostic.nix-pkgs
+  hmBundles.kalam-ide       # → kalam base (was kalamv2)
+  hmBundles.terminal-life   # supercharged-git/shell/terminal-velocity + zsh
+  hmBundles.agent-harness   # claude/opencode/gemini/pi/hermes + msgvault + qmd
+  hmBundles.darwin-tools    # hammerspoon + mpd + rmpc
+  hmBundles.theming         # stylix + iosevka + wallpaper
+  hmBundles.browsers        # brave
+  ./_packages.nix           # ank's home.packages list
+]
+```
+
+The legacy `homes/ank/machines/rogue.nix` import chain has been
+fully migrated. Items intentionally dropped: `programs.starship`
+(was already `enable = false`), `programs.mcp` (user decided to
+"only use skills" earlier; `pi-mcp-adapter` left in pi's
+settings.packages as pi's own client-side package). gh-dash
+extension on gh kept disabled by user.
+
+### Patterns confirmed / new
+
+- **`_flavors/` and `_assets/` prefix for non-module data.**
+  Same as `_kalam/` for shared icons. import-tree skips any path
+  containing `/_`. Use for: nixvim flavor configs (208 .nix
+  files under `_flavors/`), wallpaper image, kanata custom.kbd,
+  agent-harness skill-creator bundle (18 files).
+
+- **nixpkgs.expr in nixd settings is project-agnostic; option
+  trees are project-specific.** Base `lsp.nix` ships only
+  `nixd.nixpkgs.expr = "import <nixpkgs> { }"` and
+  `nixd.formatting.command = [ "nixfmt" ]`. Per-flake
+  `options.<key>.expr` belongs in `.nvim.lua` exrc at the
+  project root — neusis ships its own at the repo root.
+
+- **`flake.homeModules.<name>` registration is mandatory** for
+  any `homeModules/X.nix` file. Without it, `import-tree`
+  applies the file's body as a top-level flake-parts module,
+  silently breaking either the file's intent or downstream
+  evaluation. The pattern is: `{ ... }: { flake.homeModules.X =
+  { config, lib, pkgs, ... }: { options.neusis.X = …; config =
+  lib.mkIf cfg.enable { … }; }; }`.
+
+- **Catppuccin's `integrations.dap = true`** auto-defines the
+  `DapBreakpoint*` highlight groups — no need for manual
+  `vim.api.nvim_set_hl` calls when catppuccin is the
+  colorscheme.
+
+- **`nvim --headless -c 'lua dofile(...)' -c 'qa!'`** is the
+  canonical pattern for inspecting plugin state from outside.
+  `-l <script>` is a different mode that skips startup; useless
+  for debugging user config.
+
+### Still open
+
+- **Legacy `pkgs/` tree** still on disk (kalam/kalampy/kalamv2
+  + non-nvim packages: xilinx, intel-fpgas, nvidia_vgpu,
+  specstory, sst, typedb, kexec_tailscale). Nothing in the
+  active layout references it after the `flakeModules/packages.nix`
+  deletion. Sweep candidate.
+- **`flakeModules/`** directory (legacy flake-parts modules) is
+  no longer loaded by the root flake (`flake.nix` only imports
+  `./new_modules`). Deletion safe; deferred for archaeology.
+- **`homes/`** likewise — all per-host content has been ported.
+  Deletion needs verification that nothing references
+  `homes/common/...` paths.
+- **nixd native exrc** still doesn't load on a kalam launch
+  (only via `--cmd 'set exrc'`). Workaround autocmd in
+  `autocmds.nix` makes it work; root cause unidentified.
+- **MCP server config** is gone from agent-harness. The
+  `pi-mcp-adapter` entry in pi's `settings.packages` still
+  ships — pi's own client-side adapter, not a server config.
+  Override `tools.pi.settings.packages` to drop if you also
+  want pi to skip the adapter.
