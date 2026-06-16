@@ -1,5 +1,7 @@
 # Agent Instructions
 
+! Note: We are doing a project refactor right now. Read documents in the folder @./docs/ for more context.
+
 ## Overview
 
 Neusis is a NixOS/nix-darwin flake-based configuration management system for Linux and macOS machines. It provides declarative system configurations, user management, and home-manager integration across multiple machines.
