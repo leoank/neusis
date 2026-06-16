@@ -1055,3 +1055,236 @@ extension on gh kept disabled by user.
   ships — pi's own client-side adapter, not a server config.
   Override `tools.pi.settings.packages` to drop if you also
   want pi to skip the adapter.
+
+---
+
+## 2026-06-17 (cont.) — git workflow, theme tuning, commit split, build fixes
+
+Second half of 2026-06-17. Kalam-base's git surface got rebuilt
+top-to-bottom, the diff theme tuned through several feedback
+rounds, the whole staged tree split into atomic commits, and two
+regressions caught (one mine, one upstream-rename).
+
+### Kalam-base: full git workflow rewrite
+
+Replaced the single `<leader>gg` lazygit shortcut with four
+purpose-built tools, each owning a clean slice of the surface
+(see [`docs/kalam/git-workflow.md`](./kalam/git-workflow.md) for
+the worked-example walkthrough):
+
+| Plugin       | Owns                                                     | Prefix       |
+| ------------ | -------------------------------------------------------- | ------------ |
+| `gitsigns`   | gutter signs + hunk ops + inline rich view               | `<leader>gh` |
+| `neogit`     | magit-style status/commit/merge/push/rebase popups       | `<leader>g…` (top-level) |
+| `diffview`   | side-by-side diffs + file-history walking                | `<leader>gd` |
+| `octo`       | GitHub issues/PRs/reviews/comments — shells out to `gh`  | `<leader>go` |
+| `worktrees`  | create/delete/switch worktrees (afonsofrancof's, not the more-common ThePrimeagen) | `<leader>gw` |
+
+Specifics worth remembering:
+
+- **neogit** uses `kind = "tab"` (full-tab status), `integrations.diffview = true` so `d` inside the status buffer opens diffview, and `integrations.snacks = true` for native input/select prompts.
+- **diffview** has no built-in toggle — wrote `_G.kalam_diffview_toggle` that introspects `diffview.lib.get_current_view()` for close-if-open / open-otherwise on `<leader>gdd`. The big-value binding turned out to be `<leader>gdf` = `DiffviewFileHistory %` — the canonical "when did this function break?" walk.
+- **octo** with `picker = "snacks"` reuses the same picker UX as `<leader>ff`, so PR/issue lists feel native. `gh` bundled via `extraPackages`; user authenticates once with `gh auth login`.
+- **worktrees.nvim isn't in nixpkgs** — inlined `pkgs.vimUtils.buildVimPlugin` directly in the plugin module (no overlay) with a pinned rev. `lib.fakeHash` first build → capture real hash from FOD mismatch → paste. The flake-prefetch hash and the FOD hash match exactly (`nix flake prefetch` uses the same NAR computation as `fetchFromGitHub`).
+- **catppuccin integrations** extended: `diffview`, `neogit`, `octo` added so plugin-specific highlight groups get sensible bases from the theme.
+
+Catppuccin's `gh auth status` requirement bites on first use only;
+the bindings are wired regardless.
+
+### Kalam-base: gitsigns rich view + UI toggles
+
+Added three gitsigns settings (all default OFF) behind a snacks
+toggle bundle:
+
+- `linehl` — tints the whole changed line so it pops in context
+- `word_diff` — highlights bytes that actually changed
+- `toggle_deleted` (runtime) — renders deleted lines as virt-text in place; the answer to "I added 5 lines but what did I delete?"
+
+Two snacks toggles wired inside a `VimEnter` autocmd (so both
+snacks + gitsigns are loaded):
+
+| Key            | What                                                                  |
+| -------------- | --------------------------------------------------------------------- |
+| `<leader>ug`   | git inline diff — flips linehl + word_diff + toggle_deleted bundle    |
+| `<leader>ub`   | git inline blame — flips `current_line_blame`                         |
+
+Initial bindings used `uG` / `uB` (inherited from a stale comment
+in the previous gitsigns config); renamed lowercase to match the
+rest of the `<leader>u*` cluster (only uppercase when the lowercase
+letter is already taken: `uD` dim because `d` = diagnostics).
+
+### Kalam-base: terminal `<Esc>` fix for zsh-vi-mode
+
+User's zsh-vi-mode plugin consumes `<Esc>` inside `:te` terminals,
+so the standard "press Esc to go to nvim normal mode" didn't work.
+Snacks's toggle-terminal solves this with a buffer-local
+`<Esc><Esc>` → `<C-\><C-n>`; mirrored at `mode = "t"` globally in
+`keymaps.nix` (with `nowait = true` for responsiveness). Single
+Esc still passes to the shell, double-tap returns to nvim normal.
+
+### Kalam-base: diff theme — high-contrast iteration
+
+Multi-round tuning driven by user feedback. The final palette
+lives in `theme.nix` under `highlightOverride`:
+
+| Group                          | Final value                            | Why                                                       |
+| ------------------------------ | -------------------------------------- | --------------------------------------------------------- |
+| `DiffAdd`                      | `bg=#1f3826`                          | dark forest green; less saturated than initial `#2e4d2f`  |
+| `DiffChange`                   | `bg=#2c3e5b`                          | muted blue, distinct from DiffAdd                         |
+| `DiffDelete`                   | `bg=#552e2e fg=#8a4a4a`               | solid red, dim fg                                          |
+| `DiffText`                     | `bg=#4d7a2c fg=#f0f0f0 bold`          | clear step-up from DiffAdd; bold + light fg for byte legibility |
+| `DiffviewDiffDelete`           | matches `DiffDelete`                   | initial fg-only override stripped the red bg — fixed       |
+| `GitSignsDeleteVirtLn`         | `bg=#552e2e fg=#c87878`               | catppuccin sets fg-only; explicit bg restores deleted-row visibility |
+| `GitSignsDeleteVirtLnInLine`   | `bg=#7a3a3a fg=#f0c8c8`               | brighter red for word-diff within virt deleted lines       |
+| `GitSignsAddInline`            | `bg=#3a6020 fg=#f0f0f0 bold`          | the bytes that actually changed *within* an added line     |
+| `GitSignsChangeInline`         | `bg=#3e5a8a fg=#f0f0f0 bold`          | likewise for changed lines — the "ur" in "ankur" pops      |
+| `GitSignsDeleteInline`         | `bg=#7a3a3a fg=#f0c8c8 bold`          | inline highlight on deleted virt-line bytes                |
+| `DiffviewFilePanelInsertions`  | `fg=#6fa84f bold`                     | toned-down green for sidebar `+N`                          |
+| `DiffviewFilePanelDeletions`   | `fg=#e07070 bold`                     | balanced red for sidebar `-N`                              |
+| `DiffviewDim1`                 | `fg=#6a6f80`                          | nudged up from default; unchanged context stays legible    |
+
+### Diff highlight learnings
+
+- **Catppuccin's gitsigns integration sets `GitSignsAddInline` / `GitSignsChangeInline` / `GitSignsDeleteInline` fg-only.** Without an explicit `bg`, the word-diff overlay vanishes into the surrounding `DiffAdd`/`DiffChange` tint. Override via `highlightOverride` so it re-fires on `ColorScheme` events.
+- **`DiffText` overlays `DiffAdd`** — its `bg` must be a clear step-up from `DiffAdd.bg`, or the changed bytes look identical to the surrounding line.
+- **Override `bg` AND `fg` together**, never just one. `DiffviewDiffDelete = { fg = "#5a5a5a" }` (fg-only) silently strips the red bg because no explicit `bg` means "inherit transparent" in this context.
+- **`bold` is the subtle-but-visible win** for focal-point groups (`DiffText`, `GitSignsChangeInline`, etc.) — a dim bg + bold light fg lifts the bytes off without the neon look saturated bg gives.
+- **Diagnosing**: `:hi <Group>` in a real diff buffer tells you exactly which palette is in effect post-catppuccin-integration. The first guess is rarely the active group; for `<leader>uG` rich view, it's the `GitSigns*Inline` groups, NOT `DiffText`.
+
+### Commit hygiene — 22 commits, one logical change each
+
+The full session's staged work was sliced into atomic commits
+keyed to a single subsystem:
+
+```
+1. feat(kalam): port kalam family with new base flavor and lib
+2. feat(hm-agent-harness): add agent-harness home-manager module with skills
+3. feat(hm-brave): add brave browser home-manager module with curated extensions
+4. feat(hm-claude-remote): add claude-remote launchd/systemd agent module
+5. feat(hm-hammerspoon): add hammerspoon module with PaperWM + ActiveSpace spoons
+6. feat(hm-mpd): add mpd home-manager module with platform-aware log paths
+7. feat(hm-rmpc): add rmpc home-manager module with structured config knobs
+8. refactor(hm-msgvault-sync): switch to options-based opt-in
+9. refactor(hm-qmd-reindex): switch to options-based opt-in with subcommand list
+10. refactor(hm-supercharged-git): drop graphite, extend bootstrap + delta
+11. feat(hm-supercharged-shell): add shell utilities umbrella module
+12. feat(hm-terminal-velocity): add terminal + multiplexer umbrella module
+13. chore: ignore __pycache__ and *.pyc
+14. fix(gclb): pass-through arbitrary git-clone args via parse_known_args
+15. feat(lib): declare flake.homeModules and flake.darwinModules options   (later reverted)
+16. chore: regenerate flake with nixvim, stylix, jail-nix inputs
+17. feat(users-ank): wire kalam, theming, terminal-life on rogue
+18. feat: add project-local nvim exrc for nixd against this flake
+19. docs(agents): point agents at docs/ during refactor
+20. docs(porting): append 2026-06-17 checkpoint
+21. fix(lib): drop duplicate flake.homeModules and flake.darwinModules   (reverts #15)
+22. fix(hm-supercharged-git): migrate aliases to programs.git.settings.alias
+```
+
+Pattern for "commit only X" with many staged paths and mixed
+intent-to-add markers:
+
+```bash
+git add <X paths>                  # ensures content (not just names) is staged
+git commit -m "..." -- <X paths>   # commits ONLY matching paths from index
+```
+
+Files that show ` A` in `git status --short` (space then A) are
+intent-to-add — names registered, contents not actually staged.
+A plain `git diff --staged` won't show them; you must `git add`
+again (without `-N`) to register their contents.
+
+### Regression caught: flake.homeModules duplicate declaration
+
+Commit 15 above (`8d8f000`) added typed `flake.homeModules` and
+`flake.darwinModules` options to `new_modules/lib/neusis-options.nix`
+because nixd wasn't completing those paths in the kalam project
+exrc. That declaration collides with home-manager's own flake-parts
+module (and nix-darwin's) which ALREADY declare them when those
+inputs are loaded.
+
+`nix build .#kalam` evaluated fine (no home-manager pulled in)
+but `darwinConfigurations.rogue.system` failed:
+
+```
+error: The option `flake.homeModules' in `…/neusis-options.nix' is
+already declared in `…/home-manager/flake-module.nix'.
+```
+
+Fix (`6082d68`): remove the local declarations. nixd completion is
+unaffected because `.nvim.lua` targets
+`darwinConfigurations.rogue.options`, which transitively pulls in
+both flake-modules. **Comment left in the file** documenting the
+constraint so we don't re-add.
+
+Takeaway pattern: **before declaring a flake-parts option locally,
+grep the inputs**. flake-parts has multiple owners for the same
+attribute name when nix-darwin + home-manager + nixos are all in
+play.
+
+### Regression caught: programs.git.aliases rename warning
+
+Single trace warning during darwin build:
+
+```
+trace: warning: ank profile: The option `programs.git.aliases' …
+has been renamed to `programs.git.settings.alias'.
+```
+
+home-manager moved the path. Migrated in `commitizen.nix`
+(`05f0b7e`). Old name still works but emits the trace on every
+`darwin-rebuild switch`.
+
+To surface trace warnings reliably:
+
+```bash
+nix build .#darwinConfigurations.rogue.system --no-link --option eval-cache false 2>&1 | grep -iE "warning|deprecat"
+```
+
+The eval-cache reuses results across runs and silences traces on
+the second invocation. `--option eval-cache false` forces re-eval.
+
+### Other small wins
+
+- **`docs/kalam/git-workflow.md`** (~370 lines) — worked-example
+  walkthrough of the whole git surface: daily commit, selective
+  hunk staging, history walking, merge conflict resolution, PR
+  review, PR creation, issue triage, full bindings cheat sheet,
+  five-pain-point troubleshooting.
+- **`.gitignore`** now excludes `__pycache__/` and `*.pyc` — the
+  `scripts/` agent-harness tree's incidental python caches no
+  longer show in `git status`.
+- **`gclb`** (the bare-clone helper) now passes unrecognised flags
+  through to `git clone` via `parse_known_args`, so `gclb url
+  --depth 1 --filter=blob:none` works without us mirroring every
+  git-clone option.
+
+### Patterns confirmed (new this session)
+
+- **Snacks.toggle.new + VimEnter autocmd** is the cleanest way to
+  register a custom toggle that integrates with which-key — defer
+  the `Snacks.toggle.new({...}):map("<leader>X")` call until
+  VimEnter so snacks + the underlying plugin (gitsigns here) are
+  both ready. `pcall(require, "gitsigns")` inside the setter
+  gives a clean no-op if it isn't.
+- **`extraConfigLua` for plugin-bridging helpers** is preferable
+  to scattering small Lua snippets across keymaps. The smart
+  diffview toggle + gitsigns toggle bundles live together in
+  `git.nix`'s extraConfigLua, surfaced via keymaps that call
+  `_G.kalam_*` or via the `:map(key)` chain.
+- **Inline `buildVimPlugin` is fine for one-flavor unpackaged
+  plugins** — overlay only when multiple flavors share it (as
+  `git-worktree-custom` does across py + v2).
+- **`git commit -- <pathspecs>`** commits only matching index
+  changes — even when other paths are staged. Use it to slice a
+  busy staging area into clean atomic commits without `git reset
+  HEAD` gymnastics.
+
+### Still open after this session
+
+- Native nvim exrc still doesn't fire on kalam launch (workaround
+  via `kalam_exrc` autocmd in `autocmds.nix`).
+- Legacy `pkgs/`, `flakeModules/`, `homes/` directories still on
+  disk pending verification before deletion.
+- The 22-commit branch hasn't been merged to `main` yet — pending
+  user review of the splits.
