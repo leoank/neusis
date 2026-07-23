@@ -1471,3 +1471,17 @@ the relevant zone.
 
 New file: `latex/treesitter.nix`. `mkKalam` builder unchanged; verified
 by rebuild + headless feedkeys expansion test on the built binary.
+
+### Follow-up 2 — postfix snippets needed `wordTrig = false`
+
+`sr`/`cb`/`td`/`__`/`//` used LuaSnip's default `wordTrig = true`, so
+the trigger only fired at a word boundary. `xsr` (no space) didn't
+expand at all; the only way to trigger was `x sr`, which then left a
+literal space (`x ^2`). Postfix/fraction snippets must attach to the
+preceding token, so they need `wordTrig = false` (new `AW` marker in
+`math.lua`). `xsr` → `x^2`, `a__i` → `a_{i}`, `x//` → `x\frac{}{}` now.
+**Relations/operators (`<=`, `xx`, `->`) intentionally keep the default**
+— you type them *with* surrounding spaces (`a <= b` → `a \leq b`), and
+`a<=b` would give the broken `a\leqb`. Tutorial §2 table + §8 worked
+example were showing `x sr` with a misleading space; fixed to `xsr` and
+a note added distinguishing postfix (no space) from infix (spaces).

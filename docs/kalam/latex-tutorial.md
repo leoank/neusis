@@ -104,17 +104,24 @@ press `<Tab>` to jump to the denominator, type `b`, `<Tab>` to jump
 out. You just wrote `$x=\frac{a}{b}$` with 8 keystrokes and never
 touched a backslash.
 
-Keep going inside math — try each:
+Keep going inside math — type each **exactly** as shown (mind the
+spaces):
 
-| You type | You get      |
-| -------- | ------------ |
-| `x sr`   | `x^2`        |
-| `x td n` | `x^{n}` (then `<Tab>` out) |
-| `a __ i` | `a_{i}`      |
-| `;a`     | `\alpha` (renders as α with conceal on) |
-| `<=`     | `\leq`       |
-| `ooo`    | `\infty`     |
-| `sum`    | `\sum_{}^{}` |
+| You type  | You get      |
+| --------- | ------------ |
+| `xsr`     | `x^2` |
+| `xtd`     | `x^{}` — cursor in the braces; type `n`, `<Tab>` out → `x^{n}` |
+| `a__i`    | `a_{i}` |
+| `;a`      | `\alpha` (renders as α with conceal on) |
+| `a <= b`  | `a \leq b` |
+| `ooo`     | `\infty` |
+| `sum`     | `\sum_{}^{}` |
+
+> **Postfix snippets attach with no space.** `sr` `cb` `td` `__` and
+> `//` fire directly after the preceding token: type `xsr`, *not*
+> `x sr` — the latter leaves a literal space (`x ^2`). Relation and
+> operator snippets are the opposite: type `<=`, `xx`, `->` with the
+> spaces you want *around* them (`a <= b` → `a \leq b`).
 
 Now leave math — press `<Esc>` or move past the `$`. Type `//` in the
 prose. **Nothing happens** — it stays literal `//`, because the
@@ -271,10 +278,13 @@ expand as you go):
 
 > `\section{Kinetic energy}` ⏎
 > `The kinetic energy is `**`mk`**`E = ` **`//`** `1``<Tab>``2``<Tab>` ⏎
-> ` m v ` **`sr`** ` .` ⏎ ⏎
+> ` m v`**`sr`**` .` ⏎ ⏎
 > `We can also write it as a displayed equation:` ⏎
 > **`dm`** ⏎
-> `E ` **`==`** ` ` **`//`** `1``<Tab>``2``<Tab>` ` m v` **`sr`**
+> `E ` **`==`** ` ` **`//`** `1``<Tab>``2``<Tab>` ` m v`**`sr`**
+
+(Note `v`**`sr`** with no space between them — `sr` is postfix, so it
+attaches straight to the `v` to give `v^2`.)
 
 Which builds, keystroke by keystroke, into:
 

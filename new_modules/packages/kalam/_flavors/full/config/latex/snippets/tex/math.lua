@@ -45,6 +45,12 @@ local function get_visual(_, parent)
 end
 
 local A = { snippetType = "autosnippet" }
+-- Concatenating variant: `wordTrig = false` so the trigger fires even
+-- when it directly follows a letter/digit. Postfix snippets (^2, _{},
+-- …) MUST attach to the preceding token with no space — with the
+-- default `wordTrig = true`, `xsr` wouldn't expand at all and you'd be
+-- forced to type `x sr`, leaving a stray space (`x ^2`).
+local AW = { snippetType = "autosnippet", wordTrig = false }
 local mathA = { condition = in_mathzone }
 
 return {
@@ -75,11 +81,13 @@ return {
   ---------------------------------------------------------------------
   -- Fractions, powers, roots (math-mode only)
   ---------------------------------------------------------------------
-  s(vim.tbl_extend("keep", { trig = "//" }, A), fmta([[\frac{<>}{<>}]], { d(1, get_visual), i(2) }), mathA),
-  s(vim.tbl_extend("keep", { trig = "sr" }, A), t("^2"), mathA), -- square
-  s(vim.tbl_extend("keep", { trig = "cb" }, A), t("^3"), mathA), -- cube
-  s(vim.tbl_extend("keep", { trig = "td" }, A), fmta([[^{<>}]], { i(1) }), mathA), -- superscript
-  s(vim.tbl_extend("keep", { trig = "__" }, A), fmta([[_{<>}]], { i(1) }), mathA), -- subscript
+  -- Postfix / fraction: attach directly to the preceding token, so
+  -- `wordTrig = false` (AW). Type `xsr` → `x^2`, `a__i` → `a_{i}`.
+  s(vim.tbl_extend("keep", { trig = "//" }, AW), fmta([[\frac{<>}{<>}]], { d(1, get_visual), i(2) }), mathA),
+  s(vim.tbl_extend("keep", { trig = "sr" }, AW), t("^2"), mathA), -- square
+  s(vim.tbl_extend("keep", { trig = "cb" }, AW), t("^3"), mathA), -- cube
+  s(vim.tbl_extend("keep", { trig = "td" }, AW), fmta([[^{<>}]], { i(1) }), mathA), -- superscript
+  s(vim.tbl_extend("keep", { trig = "__" }, AW), fmta([[_{<>}]], { i(1) }), mathA), -- subscript
   s(vim.tbl_extend("keep", { trig = "sq" }, A), fmta([[\sqrt{<>}]], { d(1, get_visual) }), mathA),
   s(vim.tbl_extend("keep", { trig = "ee" }, A), fmta([[e^{<>}]], { i(1) }), mathA), -- exponential
 
