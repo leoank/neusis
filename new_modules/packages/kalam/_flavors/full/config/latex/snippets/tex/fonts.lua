@@ -18,8 +18,9 @@ local i = ls.insert_node
 local d = ls.dynamic_node
 local fmta = require("luasnip.extras.fmt").fmta
 
+-- filetype-aware (tex → VimTeX, markdown → treesitter); see luasnip.nix.
 local function in_mathzone()
-  return vim.fn["vimtex#syntax#in_mathzone"]() == 1
+  return _G.kalam_in_mathzone()
 end
 
 local function get_visual(_, parent)
@@ -49,10 +50,19 @@ local math_faces = {
 
 local snippets = {}
 
+-- Text faces are tex-only: markdown has its own **bold** / _italic_,
+-- so `\textbf{}` etc. shouldn't surface there (markdown reuses the tex
+-- snippet set via filetype_extend).
 for _, e in ipairs(text_faces) do
   table.insert(
     snippets,
-    s({ trig = e[1] }, fmta("\\" .. e[2] .. "{<>}", { d(1, get_visual) }))
+    s(
+      { trig = e[1] },
+      fmta("\\" .. e[2] .. "{<>}", { d(1, get_visual) }),
+      { condition = function()
+        return _G.kalam_is_tex()
+      end }
+    )
   )
 end
 

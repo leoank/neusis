@@ -141,6 +141,15 @@ On a fresh line, type `dm`. You get:
 a centred display equation. Everything inside is a math zone, so all
 the snippets above work here too.
 
+### The same math snippets work in Markdown
+
+Open a `.md` file and the math snippets come along for the ride. Type
+`mk` in prose → `$ $`; inside it, `//`, `sr`, `;a`, `lr(` all fire just
+like in tex. `dm` opens a `$$ … $$` block (Markdown's display-math
+syntax), and the snippets work inside it too. In prose they stay
+literal. The only difference: text-face snippets (`bf`, `ita`, …) are
+off in Markdown — use `**bold**` / `_italic_` there.
+
 ---
 
 ## 3. Wrapping existing text (the visual workflow)
@@ -330,7 +339,7 @@ search) and you land on that exact line in the source.
 | `sum` `dint` | `\sum` `\int` | `lim` | `\lim` |
 | `;a` `;p` `;G` | α π Γ | `<=` `>=` `!=` | ≤ ≥ ≠ |
 | `->` `=>` | → ⟹ | `ooo` | ∞ |
-| `xbar` `xhat` `xvec` | x̄ x̂ x⃗ | `tt` | `\text{}` |
+| `xbarr` `xhatt` `xvecc` | x̄ x̂ x⃗ | `tt` | `\text{}` |
 | `lr(` `lr[` `lr\|` | `\left…\right…` | `:mat` `:cas` | matrix / cases |
 
 ### Enter math / structure

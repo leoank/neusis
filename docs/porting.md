@@ -1485,3 +1485,46 @@ preceding token, so they need `wordTrig = false` (new `AW` marker in
 `a<=b` would give the broken `a\leqb`. Tutorial §2 table + §8 worked
 example were showing `x sr` with a misleading space; fixed to `xsr` and
 a note added distinguishing postfix (no space) from infix (spaces).
+
+### Follow-up 3 — accent triggers renamed + math snippets in Markdown
+
+Two user requests.
+
+**1. `bar`/`hat`/`vec` → `barr`/`hatt`/`vecc`.** The postfix accents
+(`([%a])bar` etc.) tripped on common word endings; doubling the last
+letter (`xbarr` → `\bar{x}`) makes them deliberate. Trivial trigger
+rename in `math.lua`.
+
+**2. Math snippets in Markdown.** Markdown supports `$…$`/`$$…$$`, so
+`luasnip.nix` now `filetype_extend("markdown", { "tex" })`. The hard
+part was context detection: `vimtex#syntax#in_mathzone()` only works in
+tex. Centralised the detector as `_G.kalam_in_mathzone` (+ `_in_text`,
+`_is_tex`) in `luasnip.nix`'s `extraConfigLua`, filetype-switched:
+- tex/plaintex → VimTeX syntax engine.
+- markdown → **treesitter**: walk ancestors for `inline_formula`
+  (`$…$`) or `displayed_equation` (`$$…$$`). The four snippet files now
+  delegate their `in_mathzone`/`in_text` to these globals (globals so
+  the from_lua files, which aren't on package.path, can reach them; and
+  because conditions run at expand time, definition order is moot).
+
+Gotchas hit:
+- **`get_node()` reads a possibly-stale tree** — it does NOT force a
+  parse. Inline `$…$` happened to resolve, but `$$…$$` (block-level
+  `displayed_equation`) came back stale and math snippets didn't fire.
+  Fix: `parser:parse(true)` inside the markdown branch before
+  `get_node`. Cheap (incremental) and now both inline + display work.
+- **`dm` made filetype-aware**: emits `$$ $$` in markdown, `\[ \]` in
+  tex — markdown's treesitter only treats `$$` (not `\[…\]`) as a math
+  zone, so `\[ \]` in markdown wouldn't have detected as math for the
+  inner snippets. Done with `f()` nodes switching on `vim.bo.filetype`.
+- **Text faces gated tex-only** (`fonts.lua`): `\textbf` etc. are wrong
+  in markdown (`**bold**`), so they self-gate via `_G.kalam_is_tex`.
+  Environment scaffolds left available in both (line-start triggers,
+  negligible leak, and `:ali`/`:mat` are useful for embedded LaTeX).
+
+Requires `markdown` + `markdown_inline` treesitter parsers (base
+bundles them; the `latex` injection is present too). Verified by
+headless feedkeys across tex + markdown inline/display/prose. Reusable
+note: **to detect "in math" in markdown, force a treesitter parse then
+match `inline_formula`/`displayed_equation` ancestors — `get_node`
+alone is stale during autosnippet expansion.**

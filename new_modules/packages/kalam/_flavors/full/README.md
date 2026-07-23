@@ -70,11 +70,17 @@ fire in text; everything under "math" fires only inside a math zone.
 | `;a` `;p` `;G` | `\alpha` `\pi` `\Gamma` | math     |
 | `lr(` `lr[` `lr\|` | `\left( \right)` …   | math        |
 | `:beg` `:eq` `:ali` | environment scaffolds | line start |
-| `bf` `ita` `emp` | `\textbf{}` … (via menu) | anywhere |
+| `bf` `ita` `emp` | `\textbf{}` … (via menu) | tex only |
 | `mbb` `mcal` | `\mathbb{}` `\mathcal{}` | math    |
+| `xbarr` `xhatt` `xvecc` | `\bar{x}` `\hat{x}` `\vec{x}` | math (postfix) |
 
 The visual workflow: select text, press `<Tab>`, type a wrapping
 trigger (`mk`, `//`, `lr(`, `bf`, …) — the selection lands inside.
+
+**Markdown too:** the math snippets also fire in `.md` files inside
+`$…$` / `$$…$$` (math context detected via treesitter instead of
+VimTeX). `dm` emits `$$ $$` there; text faces stay tex-only. Wired via
+`filetype_extend("markdown", { "tex" })` in `latex/luasnip.nix`.
 
 Full walkthrough: [`docs/kalam/full.md`](../../../../../docs/kalam/full.md)
 (features) and

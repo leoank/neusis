@@ -21,13 +21,14 @@ local d = ls.dynamic_node
 local fmta = require("luasnip.extras.fmt").fmta
 local line_begin = require("luasnip.extras.expand_conditions").line_begin
 
--- Context helpers. VimTeX exposes the syntax query; `== 1` because it
--- returns a 0/1 number, not a boolean.
+-- Context helpers — filetype-aware, defined once in luasnip.nix's
+-- extraConfigLua (VimTeX for tex, treesitter for markdown). Called at
+-- expand time, so the globals are always set by then.
 local function in_mathzone()
-  return vim.fn["vimtex#syntax#in_mathzone"]() == 1
+  return _G.kalam_in_mathzone()
 end
 local function in_text()
-  return not in_mathzone()
+  return _G.kalam_in_text()
 end
 
 -- Re-insert the character a regex trigger consumed (capture group 1).
@@ -71,12 +72,23 @@ return {
     fmta("$<>$", { d(1, get_visual) }),
     { condition = in_text }
   ),
-  -- Display math on its own line.
+  -- Display math on its own line. Delimiters are filetype-aware:
+  -- `\[ \]` in tex, `$$ $$` in markdown — markdown's treesitter only
+  -- recognises `$$…$$` (not `\[…\]`) as a math zone, so using `$$`
+  -- keeps the inner math snippets firing there.
   s(vim.tbl_extend("keep", { trig = "dm" }, A), fmta([[
-    \[
+    <>
       <>
-    \]
-  ]], { i(1) }), { condition = line_begin }),
+    <>
+  ]], {
+    f(function()
+      return vim.bo.filetype == "markdown" and "$$" or "\\["
+    end),
+    i(1),
+    f(function()
+      return vim.bo.filetype == "markdown" and "$$" or "\\]"
+    end),
+  }), { condition = line_begin }),
 
   ---------------------------------------------------------------------
   -- Fractions, powers, roots (math-mode only)
@@ -124,20 +136,21 @@ return {
   -- Text inside math, and postfix accents
   ---------------------------------------------------------------------
   s(vim.tbl_extend("keep", { trig = "tt" }, A), fmta([[\text{<>}]], { d(1, get_visual) }), mathA),
-  -- Postfix accents: type the letter, then the trigger. `xbar` →
-  -- `\bar{x}`. Only single letters, only in math.
+  -- Postfix accents: type the letter, then the trigger. `xbarr` →
+  -- `\bar{x}`. Doubled last letter so common words (…bar/…hat/…vec)
+  -- don't accidentally trip them. Only single letters, only in math.
   s(
-    vim.tbl_extend("keep", { trig = "([%a])bar", regTrig = true, wordTrig = false }, A),
+    vim.tbl_extend("keep", { trig = "([%a])barr", regTrig = true, wordTrig = false }, A),
     fmta([[\bar{<>}]], { f(cap1) }),
     mathA
   ),
   s(
-    vim.tbl_extend("keep", { trig = "([%a])hat", regTrig = true, wordTrig = false }, A),
+    vim.tbl_extend("keep", { trig = "([%a])hatt", regTrig = true, wordTrig = false }, A),
     fmta([[\hat{<>}]], { f(cap1) }),
     mathA
   ),
   s(
-    vim.tbl_extend("keep", { trig = "([%a])vec", regTrig = true, wordTrig = false }, A),
+    vim.tbl_extend("keep", { trig = "([%a])vecc", regTrig = true, wordTrig = false }, A),
     fmta([[\vec{<>}]], { f(cap1) }),
     mathA
   ),

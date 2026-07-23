@@ -11,8 +11,9 @@ local i = ls.insert_node
 local d = ls.dynamic_node
 local fmta = require("luasnip.extras.fmt").fmta
 
+-- filetype-aware (tex → VimTeX, markdown → treesitter); see luasnip.nix.
 local function in_mathzone()
-  return vim.fn["vimtex#syntax#in_mathzone"]() == 1
+  return _G.kalam_in_mathzone()
 end
 local mathA = { condition = in_mathzone }
 

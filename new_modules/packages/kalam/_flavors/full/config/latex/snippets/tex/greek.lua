@@ -7,8 +7,9 @@ local ls = require("luasnip")
 local s = ls.snippet
 local t = ls.text_node
 
+-- filetype-aware (tex → VimTeX, markdown → treesitter); see luasnip.nix.
 local function in_mathzone()
-  return vim.fn["vimtex#syntax#in_mathzone"]() == 1
+  return _G.kalam_in_mathzone()
 end
 local mathA = { condition = in_mathzone }
 

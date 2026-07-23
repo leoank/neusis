@@ -184,7 +184,7 @@ directory for the `tex` filetype.
 | `iff` `fa` `tee` | `\iff` `\forall` `\exists` | math |
 | `...`    | `\dots`                    | math   |
 | `tt`     | `\text{ }`                 | math   |
-| `xbar` `xhat` `xvec` | `\bar{x}` `\hat{x}` `\vec{x}` (postfix) | math |
+| `xbarr` `xhatt` `xvecc` | `\bar{x}` `\hat{x}` `\vec{x}` (postfix) | math |
 
 #### `greek.lua` — Greek letters (`;` prefix, math only)
 
@@ -223,6 +223,34 @@ Text faces surface in the completion menu (type + accept): `bf`→`\textbf`,
 `ita`→`\textit`, `emp`→`\emph`, `mono`→`\texttt`, `tsc`→`\textsc`.
 Math faces autosnippet inside math: `mbb`→`\mathbb`, `mcal`→`\mathcal`,
 `mbf`→`\mathbf`, `mrm`→`\mathrm`, `mfr`→`\mathfrak`.
+
+### The math snippets work in Markdown too
+
+Markdown supports LaTeX math (`$…$` inline, `$$…$$` display), so the
+math snippets are wired to fire there as well — `luasnip.nix` does
+`filetype_extend("markdown", { "tex" })`.
+
+The catch is context detection. In tex, "am I in math?" is answered by
+VimTeX's syntax engine; VimTeX isn't loaded in markdown, so the shared
+`_G.kalam_in_mathzone` helper switches on filetype and asks
+**treesitter** instead — you're in math if the cursor sits inside an
+`inline_formula` (`$…$`) or `displayed_equation` (`$$…$$`) node.
+
+What this gives you in a `.md` file:
+
+- All the math autosnippets (`//`, `sr`, `;a`, `lr(`, `mbb`, …) fire
+  inside `$…$` and `$$…$$`, and stay literal in prose — same as tex.
+- `mk` enters inline math (`$ $`); `dm` opens a `$$ … $$` block (it
+  emits `$$` in markdown, `\[ \]` in tex, since markdown only treats
+  `$$` as a math zone).
+- **Text faces (`bf`/`ita`/`emp`/…) do *not* fire in markdown** — use
+  markdown's own `**bold**` / `_italic_`. They self-gate to tex.
+- Environment scaffolds (`:eq`, `:ali`, …) are still available (they're
+  line-start triggers); handy if you embed raw LaTeX, otherwise ignore
+  them.
+
+Requires the `markdown` + `markdown_inline` treesitter parsers (bundled
+by base).
 
 ### Editing / reloading snippets
 
