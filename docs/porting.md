@@ -1528,3 +1528,40 @@ headless feedkeys across tex + markdown inline/display/prose. Reusable
 note: **to detect "in math" in markdown, force a treesitter parse then
 match `inline_formula`/`displayed_equation` ancestors — `get_node`
 alone is stale during autosnippet expansion.**
+
+### Follow-up 4 — Gilles Castel's snippets (`castel.lua`)
+
+Ported the math snippets we lacked from
+[gillescastel/latex-snippets](https://github.com/gillescastel/latex-snippets)
++ [the blog](https://castel.dev/post/lecture-notes-1/) into a new
+`snippets/tex/castel.lua`, all math-gated via `_G.kalam_in_mathzone`
+(so they work in markdown too). Only the *missing* ones — skipped
+everything already in math/greek/delimiters/environments/fonts.
+
+Added: **auto-subscript** (`x1`→`x_1`, `x12`→`x_{12}`),
+**function auto-backslash** (`sin`→`\sin`, …), **number systems**
+(`RR`→`\mathbb{R}`, …), set ops (`inn`/`notin`/`cap`/`cup`/`sub`/`OO`),
+`nabl`, postfix `invs`→`^{-1}`, wrapping delimiters
+(`norm`/`abs`/`ceil`/`floor`/`set`/`conj`), and `part` (partial deriv).
+
+Lua-pattern limitations vs UltiSnips (Castel's format) worth recording:
+- **No alternation / lookbehind in Lua patterns.** Castel's function
+  auto-backslash is one regex `(?<!\\)(sin|cos|…)`. Lua patterns can't
+  do `|` or `(?<!…)`. Solution: one snippet per function with trigger
+  `([^%a\\])<fn>` (regTrig), re-emitting the captured leading char.
+  The `[^%a\\]` class = "not a letter, not a backslash", which
+  simultaneously (a) stops `arcsin` tripping `sin` (letter before → no
+  match) and (b) stops a hand-typed `\sin` doubling (`\` before → no
+  match). Cost: won't fire at absolute start-of-line (needs a leading
+  char); acceptable.
+- **Autosnippet prefix collision** (again): `sub`→`\subset` fires
+  before you can reach `sube`→`\subseteq`. Dropped `sube`.
+- **`wordTrig` rule reused**: postfix (`invs`) + concatenating regex
+  (subscripts, functions) → `wordTrig=false`/regex-guarded; word-like
+  operators (`cap`,`cup`,`sub`,`part`,`nabl`) → default true.
+
+Verified by headless feedkeys in tex + markdown (inline & display) and
+prose-safety (no expansion outside math). Playground gained a
+"Blackboard-speed shortcuts" section; re-compiled clean with
+scheme-medium. Docs (full.md table, README, tutorial §2 + cheat sheet)
+updated.

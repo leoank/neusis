@@ -224,6 +224,33 @@ Text faces surface in the completion menu (type + accept): `bf`→`\textbf`,
 Math faces autosnippet inside math: `mbb`→`\mathbb`, `mcal`→`\mathcal`,
 `mbf`→`\mathbf`, `mrm`→`\mathrm`, `mfr`→`\mathfrak`.
 
+#### `castel.lua` — Gilles Castel's lecture-notes toolkit
+
+Adapted from [Gilles Castel's snippets](https://github.com/gillescastel/latex-snippets)
+and his [lecture-notes blog post](https://castel.dev/post/lecture-notes-1/).
+These are the "write at blackboard speed" tricks; all math-gated.
+
+| Trigger | Result | Notes |
+| ------- | ------ | ----- |
+| `x1`    | `x_1`  | **auto-subscript** — letter + digit |
+| `x12`   | `x_{12}` | a second digit promotes into braces |
+| `sin` `cos` `tan` `cot` `sec` `csc` | `\sin` … | auto-backslash for function names |
+| `sinh` `cosh` `tanh` `ln` `log` `exp` | `\sinh` … | " |
+| `arcsin` `arccos` `arctan` | `\arcsin` … | longer names win; `\sin` never double-fires |
+| `det` `dim` `gcd` `min` `max` | `\det` … | " |
+| `RR` `NN` `ZZ` `QQ` `CC` | `\mathbb{R}` … | number systems |
+| `inn` `notin` | `\in` `\notin` | |
+| `cap` `cup` `sub` | `\cap` `\cup` `\subset` | |
+| `OO` `nabl` | `\emptyset` `\nabla` | |
+| `Ainvs` | `A^{-1}` | postfix inverse |
+| `norm` `abs` `ceil` `floor` | `\lVert \rVert`, `\lvert \rvert`, `\lceil \rceil`, `\lfloor \rfloor` | wrap a `<Tab>` selection |
+| `set` `conj` | `\{ \}` `\overline{}` | " |
+| `part` | `\frac{\partial }{\partial }` | partial derivative |
+
+The auto-backslash snippets fire only when preceded by a non-letter,
+non-`\` character (so `arcsin` doesn't trip `sin`, and a hand-typed
+`\sin` isn't doubled) — they won't fire at the very start of a line.
+
 ### The math snippets work in Markdown too
 
 Markdown supports LaTeX math (`$…$` inline, `$$…$$` display), so the

@@ -51,7 +51,9 @@ config/
         ├── greek.lua        `;`-prefixed Greek letters
         ├── environments.lua `:`-prefixed environment scaffolds
         ├── delimiters.lua   `lr(`-style auto-sized \left \right pairs
-        └── fonts.lua        text faces (menu) + math faces (auto)
+        ├── fonts.lua        text faces (menu) + math faces (auto)
+        └── castel.lua       Gilles Castel extras: auto-subscript,
+                             function \backslash, number systems, sets
 ```
 
 ## Snippet cheat-sheet
@@ -73,6 +75,11 @@ fire in text; everything under "math" fires only inside a math zone.
 | `bf` `ita` `emp` | `\textbf{}` … (via menu) | tex only |
 | `mbb` `mcal` | `\mathbb{}` `\mathcal{}` | math    |
 | `xbarr` `xhatt` `xvecc` | `\bar{x}` `\hat{x}` `\vec{x}` | math (postfix) |
+| `x1` `x12` | `x_1` `x_{12}` | math (auto-subscript) |
+| `sin` `arcsin` `ln` `det` | `\sin` `\arcsin` `\ln` `\det` | math (function names) |
+| `RR` `NN` `ZZ` `QQ` `CC` | `\mathbb{R}` … | math (number systems) |
+| `inn` `cap` `cup` `sub` `OO` | `\in` `\cap` `\cup` `\subset` `\emptyset` | math (sets) |
+| `Ainvs` `norm` `part` | `A^{-1}` `\lVert \rVert` `\frac{\partial }{\partial }` | math |
 
 The visual workflow: select text, press `<Tab>`, type a wrapping
 trigger (`mk`, `//`, `lr(`, `bf`, …) — the selection lands inside.

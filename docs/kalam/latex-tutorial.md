@@ -123,6 +123,18 @@ spaces):
 > operator snippets are the opposite: type `<=`, `xx`, `->` with the
 > spaces you want *around* them (`a <= b` → `a \leq b`).
 
+A few more that feel like magic (adapted from Gilles Castel's
+lecture-notes setup):
+
+- **Auto-subscripts.** A letter then a digit: `x1` → `x_1`, and a
+  second digit tucks it into braces — `x12` → `x_{12}`.
+- **Function names backslash themselves.** Type `sin`, `cos`, `ln`,
+  `arcsin`, `det`, … → `\sin`, `\cos`, … (smart enough that `arcsin`
+  doesn't become `arc\sin`). Just don't type the leading `\` yourself.
+- **Systems & sets.** `RR` → `\mathbb{R}`, `inn` → `\in`, `cap` →
+  `\cap`, `OO` → `\emptyset`; `Ainvs` → `A^{-1}`; `norm`/`ceil`/`floor`
+  wrap a selection.
+
 Now leave math — press `<Esc>` or move past the `$`. Type `//` in the
 prose. **Nothing happens** — it stays literal `//`, because the
 fraction snippet is math-zone-only. That context awareness is what lets
@@ -341,6 +353,9 @@ search) and you land on that exact line in the source.
 | `->` `=>` | → ⟹ | `ooo` | ∞ |
 | `xbarr` `xhatt` `xvecc` | x̄ x̂ x⃗ | `tt` | `\text{}` |
 | `lr(` `lr[` `lr\|` | `\left…\right…` | `:mat` `:cas` | matrix / cases |
+| `x1` `x12` | `x_1` `x_{12}` | `sin` `ln` `det` | `\sin` `\ln` `\det` |
+| `RR` `NN` `ZZ` | `\mathbb{R}` … | `inn` `cap` `cup` | `\in` `\cap` `\cup` |
+| `Ainvs` | `A^{-1}` | `norm` `part` | `\lVert\rVert` `∂/∂` |
 
 ### Enter math / structure
 

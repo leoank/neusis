@@ -127,6 +127,22 @@ Section~\ref{sec:refs}.
 % TRY: rename a label. Put the cursor on "eq:pythagoras", press
 % <leader>cr (LSP rename) — the \eqref above updates with it.
 
+\section{Blackboard-speed shortcuts (Gilles Castel)}
+
+% TRY (all inside math): auto-subscripts and self-backslashing
+% function names. Delete the line below and retype it:
+%   x1  → x_1 ,  then keep typing:  x12 → x_{12}
+%   sin cos ln  → \sin \cos \ln   (type the bare name in math)
+%   RR NN ZZ  → \mathbb{R} \mathbb{N} \mathbb{Z}
+%   inn cap cup  → \in \cap \cup ,  OO → \emptyset
+%   Ainvs → A^{-1} ,  part → partial-derivative fraction
+The sequence $x_1, x_2, \ldots, x_{12}$ converges, and
+$f(x) = \sin(x) + \ln(x)$ for $x \in \mathbb{R}$ with $A^{-1}$ defined.
+
+% TRY: wrapping delimiters — select an expression, press <Tab>, then
+% type  norm  (→ \lVert … \rVert),  ceil ,  floor , or  abs .
+The bound $\lVert x \rVert \leq 1$ holds.
+
 \section{Text faces}
 
 % TRY: text faces surface in the completion menu (they are NOT auto).
