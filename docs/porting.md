@@ -1288,3 +1288,141 @@ the second invocation. `--option eval-cache false` forces re-eval.
   disk pending verification before deletion.
 - The 22-commit branch hasn't been merged to `main` yet — pending
   user review of the splits.
+
+---
+
+## 2026-07-24 — kalam-full: base + LaTeX writing (ejmastnak-modeled)
+
+New flavor `_flavors/full/` → package `kalam-full`. It is **base + a
+LaTeX layer**, nothing more. `full/config/default.nix` is a two-line
+`imports = [ ../../base/config ./latex ]`, so the flavor tracks base
+automatically — zero duplicated config. This confirms the "layer on
+base" extension path documented in `base/README.md` works exactly as
+advertised (the flavor builder just `import`s `config/`, and nix
+imports compose).
+
+### The LaTeX layer (`full/config/latex/`)
+
+Modeled on ejmastnak's *Vim + LaTeX* series. Six files, one concern
+each (mirrors base's `plugins/` split):
+
+- **`vimtex.nix`** — VimTeX + TeX Live + PDF viewer + which-key group.
+  `texlivePackage = texlive.combined.scheme-medium` (user chose medium
+  over full). `view_method` picked at *build* time by
+  `pkgs.stdenv.hostPlatform.isDarwin`: **skim** on Darwin (+
+  `view_skim_sync`/`view_skim_activate`), **zathura** on Linux (+
+  `xdotool` in extraPackages for forward search). Out-of-source build
+  (`compiler_latexmk.{aux_dir,out_dir} = ".build"`, `-synctex=1`),
+  `quickfix_mode = 0`, full `syntax_conceal.*`. Same `texlive` package
+  put on PATH so `latexmk`/`latexindent` reach conform + `:terminal`.
+- **`opts.nix`** — `FileType tex` autocmd (new autogroup
+  `kalam_tex`): `conceallevel=2` + `concealcursor=""`, soft-wrap
+  `j`/`k`→`gj`/`gk`, spell on. The ftplugin-equivalent.
+- **`lsp.nix`** — layers `texlab` + `ltex` onto base's
+  `plugins.lsp.servers`. texlab `build.onSave=false` (VimTeX owns the
+  build — two latexmk drivers race on the `.build` lock). ltex
+  `checkFrequency="save"`. User chose texlab **+** ltex.
+- **`luasnip.nix`** — base already enables LuaSnip as blink's snippet
+  backend; here just flip `enable_autosnippets=true` +
+  `store_selection_keys="<Tab>"` and add `fromLua.paths=[./snippets]`.
+  Autosnippets coexist with blink (luasnip's own autocmd drives
+  autoexpand; blink drives the menu). **No UltiSnips** — LuaSnip is
+  already wired and needs no python.
+- **`formatting.nix`** — one line:
+  `conform.settings.formatters_by_ft.tex = ["latexindent"]`.
+  latexindent ships inside scheme-medium (already on PATH), so no
+  extra extraPackages entry.
+- **`snippets/tex/*.lua`** — the library. `math.lua` (inline/display
+  entry + fractions/powers/relations, math-zone-gated), `greek.lua`
+  (`;`-prefix, table-driven), `environments.lua` (`:`-prefix
+  scaffolds, `line_begin`), `delimiters.lua` (`lr(`-style auto
+  `\left\right`), `fonts.lua` (text faces via menu, math faces auto).
+
+### Snippet design decisions worth remembering
+
+- **Context gating is the whole game.** Short triggers (`//`, `sr`,
+  `;a`) are gated to `vimtex#syntax#in_mathzone()==1` so they never
+  fire in prose. Entry snippets (`mk`, `dm`) are gated to `in_text`.
+- **Autosnippet vs menu snippet, chosen by prose-danger.** Math + `:`
+  / `;` / `lr`-prefixed triggers autosnippet (safe). Text faces
+  (`bf`/`ita`/`emp`) are *regular* snippets surfaced through blink's
+  menu — their triggers are too word-like to auto-fire safely.
+- **`:` prefix for environments avoids the prefix-collision trap.**
+  Autosnippets fire the instant the trigger matches, so `:eq` can't
+  coexist with `:eqs` (the former fires first). Triggers are chosen
+  non-prefixing (`:eq`, `:enum`, `:ali`, …). `:beg` + `rep(1)` is the
+  generic escape hatch (env name mirrors to `\end`).
+- **`get_visual` visual-wrap** (`<Tab>` stashes selection →
+  `LS_SELECT_RAW`) inlined per file rather than shared via a module —
+  bulletproof against load-order/rtp issues in a nix-packaged build.
+
+### Lua-in-nix gotchas hit
+
+- **Long-bracket `]` collision.** `[[ \right]]]` parses as ` \right`
+  + stray `]` — Lua closes the long string at the first `]]`. Use
+  quoted `"\\right]"` strings for anything ending in `]`. (delimiters.lua)
+- **`fmta` leaves `{`/`}` literal** (its placeholders are `<>`), so
+  `\textbf{<>}` needs no brace-escaping — unlike `fmt` (`{}`).
+- **Snippet `.lua` files are NOT linted at build** (unlike
+  `writePython3Bin`'s flake8). nixvim copies `fromLua` dirs verbatim;
+  a parse error only surfaces when a tex buffer opens. Validate with
+  `lua -e "loadfile('f.lua')"` (compiles without executing, so the
+  top-of-file `require("luasnip")` doesn't run) before trusting them.
+
+### Verification ladder (all green)
+
+1. `nix eval .#packages.aarch64-darwin.kalam-full.drvPath` — module
+   tree valid (vimtex/texlab/ltex/luasnip/conform options; which-key
+   `spec` list merges across base + vimtex.nix via freeform-attrs
+   list-concat — no "defined multiple times").
+2. `lua -e loadfile` on all 5 snippet files — parse OK.
+3. `nix build .#…kalam-full` — texlive-combined-medium + vimtex +
+   neovim-0.11.7 built; nixvim `print-init` step passed.
+4. Headless probe on a `.tex` buffer against the built binary:
+   `ft=tex`, `conceallevel=2`, `spell=true`, LuaSnip loaded (~98
+   snippets / 93 autosnippets), `vimtex#syntax#in_mathzone` callable.
+   The runtime probe is the one that catches lazy-loaded snippet-file
+   errors the build can't.
+
+### localleader `\` → `,` (base-wide)
+
+Changed `maplocalleader` in **base/opts.nix** from `\` (nvim's default,
+set explicitly with no kalam-specific reason) to `,` — the conventional
+VimTeX prefix, so compile/view are `,ll` / `,lv`. It was a base change,
+not a full-only override, because (a) the user asked about the base
+setting directly and (b) `,` is inert in buffers without `<localleader>`
+maps, so base/py get no behavior change. Note **py and v2 already set
+`maplocalleader = ","`** in their own `tex.nix` — base/full were the
+odd ones out; this aligns the family. Verified in the rebuilt binary:
+`vim.g.maplocalleader == ","`. Docs (`full.md`, `latex-tutorial.md`)
+updated in lockstep — careful sed on backtick-wrapped mappings only
+(`` `\ll` `` → `` `,ll` ``) so LaTeX commands `\left`/`\leq`/`\ldots`
+were untouched.
+
+### Docs
+
+- `_flavors/full/README.md` — file map + snippet cheat-sheet (base
+  README format).
+- `docs/kalam/full.md` — feature reference (LaTeX layer only; defers
+  to `base.md` for base features).
+- `docs/kalam/latex-tutorial.md` — hands-on worked-example walkthrough
+  (first doc → fast math → environments → inverse-search wiring →
+  grammar → cheat sheet → troubleshooting).
+- `docs/kalam/latex-playground.tex` — a compilable sample document with
+  inline `TRY:` exercises for every feature. **Verified it builds** with
+  scheme-medium (`latexmk -pdf`, exit 0, multi-page PDF). Referenced
+  from both docs as the "just start poking" entry point.
+
+### Not wired into any machine yet
+
+`kalam-full` is built + published as a perSystem package but **not**
+added to any user's `machineToBundlesMap`. rogue still uses
+`hmBundles.kalam-ide` → base `kalam`. Swapping rogue (or a new
+`kalam-latex` bundle) to `kalam-full` is a follow-up when the user
+wants LaTeX on that host.
+
+### Still open (carried over)
+
+- Native nvim exrc workaround still in place.
+- Legacy `pkgs/`, `flakeModules/`, `homes/` still on disk.
+- Branch not merged to `main`.

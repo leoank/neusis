@@ -3,7 +3,12 @@
 {
   globals = {
     mapleader = " ";
-    maplocalleader = "\\";
+    # localleader = comma, the conventional VimTeX/LaTeX prefix (`,ll`
+    # compile, `,lv` view). nvim's built-in default is `\`; `,` is
+    # faster to reach and is what the tex-bearing flavors expect. It
+    # only shadows the native `,` (repeat f/t backwards) inside buffers
+    # that actually define <localleader> maps — i.e. tex, via VimTeX.
+    maplocalleader = ",";
   };
 
   opts = {

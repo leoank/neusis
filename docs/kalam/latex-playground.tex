@@ -1,0 +1,162 @@
+% =====================================================================
+%  kalam-full LaTeX playground
+% ---------------------------------------------------------------------
+%  A self-contained, compilable document for kicking the tyres on
+%  kalam-full's LaTeX layer. Copy it somewhere writable and open it:
+%
+%      mkdir -p /tmp/kalam-latex && cp latex-playground.tex /tmp/kalam-latex/
+%      cd /tmp/kalam-latex && nvim latex-playground.tex
+%
+%  Then, inside nvim:
+%      ,ll   start continuous compilation (localleader is comma)
+%      ,lv   open the PDF / forward-search to the cursor
+%      ,lt   table of contents
+%
+%  Lines beginning with "TRY:" are exercises — delete the example that
+%  follows and retype it using the snippet trigger named, to watch it
+%  expand. (Reference: docs/kalam/full.md and docs/kalam/latex-tutorial.md)
+%
+%  Everything here builds with the bundled scheme-medium TeX Live.
+% =====================================================================
+\documentclass{article}
+
+\usepackage{amsmath}   % align, equation, cases, \text, \dots
+\usepackage{amssymb}   % \mathbb, \leq, \geq, \to, \forall, …
+
+\title{kalam-full playground}
+\author{you}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+% Turn conceal on if it isn't already: :set conceallevel=2
+% Move your cursor onto a line with \alpha or \frac and watch the raw
+% source reveal itself (concealcursor is empty, so the current line is
+% always editable).
+
+\section{Inline and display math}
+
+% TRY: delete "$E = mc^2$" below and retype it: type  mk  (you're now in
+% a math zone), then  E = mc sr  → gives  E = mc^2 .
+The mass–energy relation is $E = mc^2$, discovered by Einstein.
+
+% TRY: on a blank line, type  dm  to open a display equation, then fill
+% it in. This one was written with  dm  +  // (frac) +  sr (square).
+\[
+    E = \frac{1}{2} m v^2
+\]
+
+\section{Fractions, powers, roots, symbols}
+
+% TRY (all inside the $...$, i.e. a math zone):
+%   //      → \frac{}{}
+%   sr cb   → ^2  ^3
+%   td      → ^{}      (superscript with a group)
+%   __      → _{}      (subscript)
+%   sq      → \sqrt{}
+%   ooo     → \infty
+%   <= >= != → \leq \geq \neq
+The identity $\frac{a}{b} + \frac{c}{d} = \frac{ad + bc}{bd}$ holds for
+$b, d \neq 0$, and $x^2 + y^2 = r^2$ with $r = \sqrt{x^2 + y^2}$.
+
+\section{Greek letters}
+
+% TRY: Greek uses the ";" prefix in math. Type  ;a ;b ;g  →  α β γ ,
+% ;p → π , and the capitals with a capital letter: ;G → Γ .
+Let $\alpha, \beta, \gamma$ be angles with $\alpha + \beta + \gamma =
+\pi$. A rotation by $\theta$ maps $\Gamma$ onto $\Gamma'$.
+
+\section{Big operators and an aligned derivation}
+
+% TRY:  sum  → \sum_{}^{} ,  dint → definite integral ,  lim → \lim .
+The geometric series is $\sum_{n=0}^{\infty} r^n = \frac{1}{1 - r}$ for
+$|r| < 1$, and $\lim_{n \to \infty} \frac{1}{n} = 0$.
+
+% TRY: on a blank line type  :ali  to scaffold an align environment.
+% Inside it,  ==  drops the  &=  alignment point.
+\begin{align}
+    (a + b)^2 &= (a + b)(a + b)          \\
+              &= a^2 + 2ab + b^2
+\end{align}
+
+\section{Delimiters, matrices, cases}
+
+% TRY (in math):  lr(  → \left( \right) , lr[  , lr|  , lra (angle).
+% The closing delimiter is emitted automatically, so it always balances.
+The norm $\left( \sum_i x_i^2 \right)^{1/2}$ scales correctly.
+
+% TRY: inside a display, type  :mat  → pmatrix ,  :cas  → cases .
+\[
+    A = \begin{pmatrix} 1 & 0 \\ 0 & 1 \end{pmatrix},
+    \qquad
+    |x| = \begin{cases}
+        x  & x \geq 0 \\
+        -x & x < 0
+    \end{cases}
+\]
+
+\section{Lists and structure}
+
+% TRY:  :item  → itemize ,  :enum  → enumerate  (cursor lands on the
+% first \item; press <Tab> after typing a line, then type \item again).
+\begin{itemize}
+    \item First point.
+    \item Second point, with math: $f(x) = \int_0^x g(t)\, dt$.
+\end{itemize}
+
+\begin{enumerate}
+    \item Step one.
+    \item Step two.
+\end{enumerate}
+
+\section{Cross-references}
+\label{sec:refs}
+
+% TRY: give the equation below a label, then reference it. Type
+%   \ref{   and start typing "eq:" — texlab completes eq:pythagoras
+% from the label you see here (blink completion menu).
+\begin{equation}
+    \label{eq:pythagoras}
+    a^2 + b^2 = c^2
+\end{equation}
+
+Equation~\eqref{eq:pythagoras} is the Pythagorean theorem, introduced in
+Section~\ref{sec:refs}.
+
+% TRY: rename a label. Put the cursor on "eq:pythagoras", press
+% <leader>cr (LSP rename) — the \eqref above updates with it.
+
+\section{Text faces}
+
+% TRY: text faces surface in the completion menu (they are NOT auto).
+% Type  bf  and accept from the menu → \textbf{} .  ita → \textit{} ,
+% emp → \emph{} . The visual workflow also works: select a word, press
+% <Tab>, then type  bf  to wrap it.
+This word is \textbf{bold}, this one is \textit{italic}, and this is
+\emph{emphasised}.
+
+\section{Prose: spelling and grammar}
+
+% TRY: the next sentence has a deliberate misspelling ("teh"). Spell-
+% check is on — the word is underlined; put the cursor on it and press
+%   z=   for suggestions,  zg  to add it to your dictionary.
+This sentence contains teh classic typo for you to catch.
+
+% TRY: ltex-ls checks grammar on save. The sentence below is clunky on
+% purpose. Save the file (<leader><space>), wait a moment, then put the
+% cursor on the underline and press  <leader>cd  for the message, or
+%   <leader>ca  for a code action ("Disable rule" / "Hide false positive").
+% If ltex gets noisy while you experiment,  <leader>ud  mutes diagnostics.
+The the results was clearly very good and nice and fine.
+
+\section{Forward and inverse search}
+
+% TRY: put your cursor on THIS line and press  ,lv  — the PDF viewer
+% jumps to this exact spot (forward search). Then, in the PDF viewer,
+% Cmd+Shift+click (Skim) or Ctrl+click (Zathura) any line to jump back
+% here in nvim (inverse search — needs the one-time viewer setup from
+% tutorial §5).
+This is the forward/inverse search test line. Aim here.
+
+\end{document}
