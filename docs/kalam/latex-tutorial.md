@@ -241,12 +241,13 @@ sentence gets an underline like any diagnostic:
 
 ## 7. Formatting & references
 
-### Auto-format
+### Format on demand
 
-`latexindent` cleans up indentation and environment alignment. It runs
-on save (if base's format-on-save is on — toggle with `<leader>uf`), or
-on demand with `<leader>cf`. It won't reflow your sentences, only the
-structure.
+`latexindent` cleans up indentation and environment alignment — run it
+with `<leader>cf` (it won't reflow your sentences, only the structure).
+Format-*on-save* is off for tex on purpose: latexindent's slow Perl
+start-up would time out on every write, so kalam-full only runs it when
+you ask.
 
 ### Cross-references with texlab
 

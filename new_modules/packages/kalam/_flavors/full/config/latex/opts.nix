@@ -38,6 +38,14 @@
           -- z= suggests, ]s/[s jump between misspellings.
           vim.opt_local.spell = true
           vim.opt_local.spelllang = "en_us"
+
+          -- latexindent (Perl) is slow to start — inside conform's
+          -- 500ms format-on-save budget it times out on nearly every
+          -- write ("formatter latexindent timeout"). Turn OFF
+          -- format-on-save for tex buffers (base's format_on_save
+          -- honours vim.b.disable_autoformat); latexindent stays
+          -- available on demand via `<leader>cf` (async, untimed).
+          vim.b.disable_autoformat = true
         end
       '';
     }

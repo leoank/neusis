@@ -29,8 +29,13 @@ the reference: *what* exists and *why*.
 | **texlab + ltex**    | `latex/lsp.nix`     | completion, refs, symbols, grammar/style          |
 | **latexindent**      | `latex/formatting.nix` | source formatting via base's conform           |
 
-Plus `latex/opts.nix`, which sets prose-friendly buffer options
-(concealment, spell-check, soft-wrap cursor motion) for `tex` files.
+Plus `latex/opts.nix` (prose-friendly buffer options: concealment,
+spell-check, soft-wrap cursor motion) and `latex/treesitter.nix`, which
+hands tex highlighting back to VimTeX — nvim-treesitter's `latex`
+highlighter would otherwise suppress Vim's syntax engine, and
+`vimtex#syntax#in_mathzone()` (which every math snippet gates on) reads
+that engine. With treesitter highlighting tex, math snippets silently
+never fire; disabling it is what makes them work.
 
 ---
 
@@ -268,9 +273,14 @@ flag your `\commands`, only your words). Checks on save
 filetype. It fixes indentation and environment alignment **without
 reflowing your prose** (it won't rewrap sentences).
 
-- **On save** — subject to base's format-on-save toggle. Off? flip it
-  with `<leader>uf`.
-- **On demand** — `<leader>cf` (works on a visual selection too).
+- **On demand** — `<leader>cf` (async; works on a visual selection
+  too). This is the way to format tex.
+- **On save is disabled for tex.** latexindent is a Perl program with a
+  slow cold start that overruns conform's 500 ms save budget — you'd
+  get a "formatter latexindent timeout" notification on nearly every
+  write. So `opts.nix` sets `vim.b.disable_autoformat = true` for tex
+  buffers. Want it back (and don't mind the occasional timeout)? Delete
+  that line.
 
 The `latexindent` binary ships inside the `scheme-medium` TeX Live
 package that `vimtex.nix` puts on `PATH`, so it's available to conform

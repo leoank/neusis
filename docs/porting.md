@@ -1426,3 +1426,48 @@ wants LaTeX on that host.
 - Native nvim exrc workaround still in place.
 - Legacy `pkgs/`, `flakeModules/`, `homes/` still on disk.
 - Branch not merged to `main`.
+
+### Follow-up (same day) — three bugs from first real use, all fixed
+
+User drove the tutorial and hit three issues. Root causes were more
+entangled than they looked:
+
+1. **Math autosnippets (`//`, `sr`, `;a`, …) never auto-fired; showed
+   in the blink menu but couldn't be activated; occasionally worked
+   after moving around.** Root cause was **bug 3**, not a snippet bug.
+   `vimtex#syntax#in_mathzone()` reads Vim's `synstack()`. With
+   nvim-treesitter's `latex` highlighter active, Vim's syntax engine
+   never loads (`b:current_syntax == nil`), so `synstack()` is empty and
+   `in_mathzone()` returns 0 *everywhere* → every math-zone-gated
+   autosnippet's condition fails silently. `mk`/`dm` (gated on
+   `in_text` = `not in_mathzone`, so always true) kept working — which
+   is exactly why the user only reported `//`/`sr`. The "occasionally
+   after moving" was syntax briefly re-syncing in a region. **Fix:**
+   `latex/treesitter.nix` → `plugins.treesitter.settings.highlight.disable
+   = [ "latex" ]`. Vim syntax then loads, `synstack` populates,
+   `in_mathzone` returns 1 in math. Verified by feedkeys: `//`→`\frac{}{}`
+   and `;a`→`\alpha` in math, `//` stays literal in prose. This also
+   fixed conceal (same dependency on Vim syntax) — which had silently
+   never worked either.
+
+2. **"formatter latexindent timeout" on nearly every save.** latexindent
+   is Perl; cold start overruns conform's 500 ms `format_on_save`
+   budget. **Fix:** `opts.nix` sets `vim.b.disable_autoformat = true`
+   for tex (base's `format_on_save` honours it — no base edit needed).
+   latexindent stays on `<leader>cf` (async, untimed). Documented as the
+   intended behavior.
+
+3. **VimTeX warned that highlighting is controlled by Treesitter.** Same
+   root as #1; fixed by the same `treesitter.nix` disable.
+
+**Lesson for the next flavor that layers a syntax-heavy filetype onto
+base:** base enables treesitter highlight globally. Any plugin that
+relies on Vim's *syntax* engine (VimTeX's mathzone/conceal/motions;
+possibly others) needs `highlight.disable = [ <lang> ]` or it will be
+silently starved of `synstack`. The failure is invisible — no error,
+features just don't fire. Diagnose with `:echo
+vimtex#syntax#in_mathzone()` (or `synstack(line('.'), col('.'))`) inside
+the relevant zone.
+
+New file: `latex/treesitter.nix`. `mkKalam` builder unchanged; verified
+by rebuild + headless feedkeys expansion test on the built binary.

@@ -40,11 +40,12 @@ config/
 ├── default.nix              imports ../../base/config + ./latex
 └── latex/
     ├── default.nix          domain index
-    ├── opts.nix             FileType tex: conceal, spell, soft-wrap motions
+    ├── opts.nix             FileType tex: conceal, spell, wrap, no autoformat
     ├── vimtex.nix           VimTeX + TeX Live + viewer + which-key group
+    ├── treesitter.nix       disable TS highlight for latex (VimTeX owns it)
     ├── lsp.nix              texlab + ltex-ls (layered onto base's lsp)
     ├── luasnip.nix          enable_autosnippets + load ./snippets
-    ├── formatting.nix       conform: tex → latexindent
+    ├── formatting.nix       conform: tex → latexindent (on-demand only)
     └── snippets/tex/        LuaSnip snippet library (filetype = tex)
         ├── math.lua         inline/display math, fractions, powers, relations
         ├── greek.lua        `;`-prefixed Greek letters
