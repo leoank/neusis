@@ -22,7 +22,6 @@
       {
         imports = [
           self.neusis.features.darwin.defaults
-          self.neusis.features.darwin.homebrew-defaults
           self.neusis.features.darwin.setup-keyboard
           # agenix + neusis secrets (provides the remoteBuildKey the
           # distributed-builds feature consumes).

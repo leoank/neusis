@@ -30,10 +30,15 @@
     #
     # (`whatsapp` used to live here too — now pulled from
     # fresh-apps.nix instead; see `users/ank/_packages.nix`.)
-    casks = map (n: { name = n; greedy = true; }) [
-      "deskflow"
-      "fiji"
-    ];
+    casks =
+      map
+        (n: {
+          name = n;
+          greedy = true;
+        })
+        [
+          "deskflow"
+        ];
     onActivation = {
       cleanup = "uninstall";
       autoUpdate = true;
