@@ -1565,3 +1565,197 @@ prose-safety (no expansion outside math). Playground gained a
 "Blackboard-speed shortcuts" section; re-compiled clean with
 scheme-medium. Docs (full.md table, README, tutorial §2 + cheat sheet)
 updated.
+
+## 2026-08-12 — fresh-apps GUI packages, distributed builds, agenix-rekey on darwin
+
+A darwin-focused session: pulled two GUI apps off Homebrew onto a flake
+input, made the linux-builder host-specific, then built the whole nix
+**distributed-builds** stack — reusable modules + a curated builder
+registry + agenix-rekey secret distribution — and in the process
+excavated a pile of latent bugs in the (previously never-enabled) secrets
+modules. Landed in two commits, `04eb352` (modules) + `27351ce` (secrets
++ wiring), on top of three smaller commits earlier in the session.
+
+### fresh-apps.nix — Signal + WhatsApp off Homebrew
+
+Added `github:leoank/fresh-apps.nix` as a flake input (its `nixpkgs`
+`follows` our `nixpkgs-unstable`, the branch it targets) — a flake of
+darwin GUI apps rebuilt daily against upstream, faster than nixpkgs.
+`signal-desktop` and `whatsapp` now come from
+`inputs.fresh-apps.packages.${system}.*` in `users/ank/_packages.nix`
+(darwin block), replacing the Homebrew casks. Removed `signal`/`whatsapp`
+from **both** cask sources (`features/darwin/homebrew-default.nix` and the
+`_homebrew.nix` brew-nix-fallback list) so they come *only* from
+fresh-apps — the built config had confirmed signal was double-installed.
+`aarch64-darwin` only (fresh-apps dropped x86_64-darwin with
+nixpkgs-unstable 26.11+). WhatsApp needed a lock bump (`nix flake update
+fresh-apps`) to appear, and I **built it first** before pulling the
+Homebrew fallback — whatsapp lived there precisely because brew-nix's 7z
+couldn't unpack its nested frameworks, so fresh-apps' build had to be
+proven before removing the safety net. Both mirror to `kumarank` for free
+(shared `_packages.nix`).
+
+**Gotcha — flake.nix is generated, and generation ignores untracked
+files.** `flake.nix` is written by `nix run .#write-flake` from
+`flake-file.inputs` declared across `new_modules/*.nix`. A *new*
+input-declaring module (`features/flake/fresh-apps.nix`) must be
+`git add`ed before write-flake sees it — flakes (and thus write-flake's
+own eval) ignore untracked files. First run silently produced a flake.nix
+without the input.
+
+### Standalone `homeConfigurations` made buildable
+
+`home-manager switch --flake .#<user>@<host>` failed:
+`home.stateVersion` (then `username`, then `homeDirectory`) "accessed but
+has no value". Root cause: **two divergent build paths.** The
+system-integrated path (`darwin-rebuild`) pulls in `hm-system-init` +
+home-manager's darwin module, which supply that identity; the standalone
+path (`mkNeusisFlake.hmPairsFor`) called `homeManagerConfiguration` with
+*only* the user's bundle modules and inherited none of it. Fix: seed
+`home.{username,homeDirectory,stateVersion}` (`mkDefault`) in
+`hmPairsFor`, mirroring the system path — `/Users/<name>` on darwin,
+`/home/<name>` elsewhere; stateVersion tracks
+`hm-system-init.defaultStateVersion`. The standalone home build is the one
+verification that catches this class of gap — the system path hides it.
+
+### linux-builder → rogue only; one dynamic trusted-users source
+
+`features/darwin/virtualization.nix` (the `nix.linux-builder`) was in the
+shared `darwin.defaults` bundle → ran on every darwin host. Moved it out
+of defaults, imported explicitly in `rogue.nix` only. Also deleted the
+hardcoded `nix.settings.trusted-users = ["@admin" "ank"]` from that
+file — `agnostic.nix-settings` (a default feature) **already** sets
+`trusted-users = ["@admin" config.system.primaryUser]` dynamically, so
+the hardcoded copy was both redundant (duplicated `ank` on rogue) and
+wrong for `darwin001` (primary user `kumarank`). Verified: rogue
+`linux-builder.enable=true` + `[root @admin ank]`, darwin001 `false` +
+`[root @admin kumarank]`.
+
+### Distributed builds — the reusable stack
+
+Modeled on nix.dev's distributed-builds tutorial, but split into
+**option-driven agnostic modules** so they're reusable on their own:
+
+- **`build-server`** (`neusis.services.build-server`) — a dedicated,
+  nix-trusted build user. Cross-platform: NixOS gets `isSystemUser` + a
+  group; nix-darwin needs `uid` + the user in `users.knownUsers` (there's
+  no `isSystemUser` on darwin). Authorized key(s) via option.
+- **`build-client`** (`neusis.services.build-client`) — takes a
+  *passed-in* `builders` list (not a hardcoded registry), turns each into
+  a `nix.buildMachines` entry, drops the local host
+  (`excludeLocalhost`), enables `distributedBuilds` +
+  `builders-use-substitutes`, and pins each builder's host key via
+  `programs.ssh.knownHosts`.
+- **`registry.builders`** — a new typed option in `neusis-options.nix`
+  (the `flake.neusis.registry` submodule is strict — a bare `builders`
+  attr errored until declared). A curated per-lab list with per-builder
+  `maxJobs`/`speedFactor`/feature sets; host identity pulled from the
+  machine defs (single source).
+
+**Host-key pinning via `programs.ssh.knownHosts` sidesteps base64.**
+`nix.buildMachines.*.publicHostKey` wants a base64-encoded key and Nix has
+no base64 builtin; setting `knownHosts.<host>.publicKey = <hostPubkey>`
+(the raw `ssh-ed25519 …` line) lets ssh verify instead — no encoding
+dance. Confirmed nix-darwin has `nix.buildMachines`, `distributedBuilds`,
+`programs.ssh.knownHosts`, `users.knownUsers`. `sshKey` is just a path
+*string*, so the modules evaluate whether or not the key file exists —
+remote builds fall back to local until it's deployed.
+
+### agenix-rekey on darwin + home — and the latent-bug excavation
+
+The build key (and ank's tokens) are distributed with **agenix-rekey**,
+which was declared in the repo but wired for NixOS only and enabled
+nowhere. Getting it live on darwin surfaced a chain of bugs, each visible
+only once the module was actually evaluated:
+
+- **import-tree loads every `.nix` under `new_modules/` as a flake
+  module.** Copying `secrets/` in wholesale broke the flake: the agenix
+  *rules* file `secrets.nix` (a plain `{ "x.age".publicKeys = …; }`
+  attrset) got loaded as a flake-parts module → `option "common/…age"
+  does not exist`. Fix — the copy under `new_modules/secrets/` holds only
+  `.age`/`.pub`; agenix-rekey needs no rules file (recipients come from
+  `age.rekey`). Kept only the generated build key + root-pw hash; original
+  repo-root `secrets/` left untouched.
+- **Platform agenix import can't live in an agnostic module.** Reading
+  `pkgs.stdenv.isDarwin` inside `imports` is infinite recursion (same note
+  as `hm-system-init`). So `inputs.agenix.darwinModules.default` +
+  `agenix-rekey.darwinModules.default` are imported by the **machine**,
+  exactly like home-manager — which is *why* the wiring feature is
+  agnostic, not darwin-scoped.
+- **`age.identityPaths` already defaults to
+  `/etc/ssh/ssh_host_ed25519_key`** on darwin — no override needed, which
+  is exactly the host key the rekeyFile is encrypted to.
+- **`localStorageDir` must exist.** Its path literal is force-copied; a
+  full build fails `path .../secrets/rekeyed/<host> does not exist` until
+  `agenix rekey` populates it (keep a `.gitkeep`).
+- **The decrypt failure.** `agenix rekey` "fails to decrypt" when
+  `masterIdentities` is a `.pub` (public) file and the private key isn't
+  in ssh-agent — there's nothing to decrypt *with*. The rekeyFile itself
+  was fine (`age -d -i ~/.ssh/id_ed25519` decrypted it). Fix — the
+  `{ identity = "/Users/ank/.ssh/id_ed25519"; pubkey = "…"; }` form:
+  `identity` a **string** path so it's read at rekey time and never copied
+  into the store; `pubkey` tells agenix-rekey the recipient without the
+  private half.
+- Per the user's steer, `masterIdentities` is now a **required option
+  with no default** (the consumer states it), and secrets are configured
+  **directly in each machine** (`enable`, per-host `hostPubkey`, explicit
+  `masterIdentities`) — pulled out of the shared feature, which now only
+  wires the build modules and reads `config.age.secrets.remoteBuildKey.path`.
+
+### `secrets` hmBundle + ank tokens (more latent bugs)
+
+Added `ank.hmBundles.secrets` (imports `homeModules.secrets`) with
+placeholder `ghauthToken` + `atuinToken` rekeyFiles. The home-manager
+secrets module had never been enabled, so it hid its own bugs:
+`age.rekey.userPubkey` **is not an option** (it's `hostPubkey` in every
+context — one shared agenix-rekey module handles both), and
+`localStorageDir = …${config.networking.hostName}…` — **home configs have
+no `networking.hostName`** (keyed it off `config.home.username` instead).
+Same `.pub`-masterIdentity decrypt bug, same fix. `agenix rekey` picks up
+HM secrets from *both* the darwin-integrated config
+(`host-darwin:rogue-user-ank`) and the standalone `ank@rogue`.
+
+### Patterns confirmed / new
+
+- **Agnostic module + machine-side platform import** is the repo's answer
+  to "reusable across NixOS/darwin but needs a platform-specific input
+  module": the agnostic module consumes the options (`age.*`, `nix.*`),
+  the machine supplies the platform module. Same shape home-manager
+  already uses via the system builders.
+- **Options make a module reusable; the data is passed in.** `build-client`
+  takes `builders` as a list rather than reaching into
+  `self.neusis.registry`, so it's usable outside anklab.
+- **`{ identity = "<string path>"; pubkey; }`** is the correct
+  agenix-rekey master form for a private key that lives outside the repo
+  (read at rekey time, never stored). A `.pub`-only master needs the key
+  in ssh-agent.
+- **Machine `hostPubkey`/`system` are the single source** feeding the
+  builder registry, `knownHosts`, and `age.rekey.hostPubkey`.
+
+### Verification ladder (all green)
+
+1. `nix eval` of config attrs per machine: `nix.buildMachines`,
+   `age.secrets.remoteBuildKey.path`, `age.rekey.masterIdentities`,
+   `nix.settings.trusted-users`, the HM `age.secrets` names.
+2. `nix build …#fresh-apps…{signal-desktop,whatsapp}` — `Signal.app` /
+   `WhatsApp.app` present in the output.
+3. `agenix rekey` — `Rekeying darwin:{rogue,darwin001}:remoteBuildKey`
+   and `ank@rogue:{ghauthToken,atuinToken}` all succeed; rekeyed `.age`
+   committed under `new_modules/secrets/rekeyed/`.
+4. Full `--dry-run` of `darwinConfigurations.{rogue,darwin001}.system`
+   **and** `homeConfigurations."ank@rogue".activationPackage` — all clean.
+   The standalone home path is the one that catches the missing-identity
+   and HM-secret bugs the system path hides.
+
+### Still open
+
+- **No cross-host name resolution** (no Tailscale/DNS) — remote builds
+  fall back to local until `rogue`/`darwin001` can SSH each other by
+  hostname (the addressing choice was `hostname` directly).
+- Master identity is **ank's SSH key**, not a yubikey
+  (`yubikey-identity.pub` is absent) — swap by dropping the file in and
+  re-running `agenix rekey`.
+- Placeholder tokens need real values
+  (`agenix edit new_modules/secrets/ank/<name>.age`).
+- Nothing deployed yet (`darwin-rebuild switch`); branch still not merged
+  to `main`; legacy `pkgs/`/`flakeModules/`/`homes/` still on disk.
