@@ -39,11 +39,8 @@
         };
       };
 
-      nix.settings = {
-        trusted-users = [
-          "@admin"
-          "ank"
-        ];
-      };
+      # trusted-users is set (dynamically, from config.system.primaryUser)
+      # by the shared `agnostic.nix-settings` default feature — no need to
+      # repeat it here.
     };
 }

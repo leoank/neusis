@@ -17,6 +17,9 @@
       {
         imports = [
           self.neusis.features.darwin.defaults
+          # linux-builder lives here (not in darwin.defaults) so it runs
+          # on rogue only, not darwin001.
+          self.neusis.features.darwin.virtualization
           self.neusis.features.darwin.homebrew-defaults
           self.neusis.features.darwin.setup-keyboard
           ./_homebrew.nix
