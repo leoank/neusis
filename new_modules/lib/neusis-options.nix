@@ -348,6 +348,20 @@ let
                 `nixosConfigurations` and `darwinConfigurations`.
               '';
             };
+            builders = mkOption {
+              type = types.lazyAttrsOf (types.listOf types.attrs);
+              default = { };
+              description = ''
+                Per-lab curated lists of remote build machines for nix
+                distributed builds. Each entry describes a builder's
+                SSH target and capabilities (`hostName`, `sshUser`,
+                `systems`, `maxJobs`, `speedFactor`,
+                `supportedFeatures`, `mandatoryFeatures`,
+                `hostPubkey`). Consumed by
+                `features.agnostic.build-client`, which drops the local
+                host and turns the rest into `nix.buildMachines`.
+              '';
+            };
           };
         };
       };
