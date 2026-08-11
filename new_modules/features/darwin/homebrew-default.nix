@@ -31,8 +31,7 @@
         # https://github.com/nix-darwin/nix-darwin/pull/1382
         # greedyCasks = true;
         casks = map mkGreedy [
-          "signal"
-          "whatsapp"
+          # signal + whatsapp now come from fresh-apps.nix (see users/ank/_packages.nix)
           "keycastr"
           "fiji"
           "hammerspoon"

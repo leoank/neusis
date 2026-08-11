@@ -1,12 +1,10 @@
+# System-level homebrew config for darwin hosts. Casks moved to
+# brew-nix (via `flake.homeModules.brew-cask` + the per-user
+# `hmBundles.casks` bundle). Only brews + taps + masApps remain
+# here — brew-nix is cask-only, so CLI tools that don't have a
+# clean nixpkgs equivalent stay on real homebrew.
 { config, ... }:
-let
-  mkGreedy = caskName: {
-    name = caskName;
-    greedy = true;
-  };
-in
 {
-  # Configure homebrew
   homebrew = {
     enable = true;
     masApps = {
@@ -22,21 +20,19 @@ in
     taps = map (key: builtins.replaceStrings [ "homebrew-" ] [ "" ] key) (
       builtins.attrNames config.nix-homebrew.taps
     );
-    # https://github.com/nix-darwin/nix-darwin/issues/935
-    # https://github.com/nix-darwin/nix-darwin/pull/1382
-    # greedyCasks = true;
-    casks = map mkGreedy [
-      "signal"
-      "whatsapp"
-      "keycastr"
-      "fiji"
-      "hammerspoon"
+    # Casks are managed via brew-nix in the per-user `casks`
+    # hmBundle (see `homeModules/brew-cask.nix`). The list below
+    # is the fallback path for casks brew-nix can't currently
+    # build — retry on each `nix flake update brew-nix brew-api`.
+    #
+    #   * `deskflow`   — not in brew-nix's brew-api snapshot.
+    #   * `fiji`       — installer-style cask, no output produced.
+    #
+    # (`whatsapp` used to live here too — now pulled from
+    # fresh-apps.nix instead; see `users/ank/_packages.nix`.)
+    casks = map (n: { name = n; greedy = true; }) [
       "deskflow"
-      "superwhisper"
-      "thaw"
-      "linearmouse"
-      "affinity"
-      "whatcable"
+      "fiji"
     ];
     onActivation = {
       cleanup = "uninstall";
@@ -44,5 +40,4 @@ in
       upgrade = true;
     };
   };
-
 }

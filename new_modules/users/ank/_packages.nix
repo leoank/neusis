@@ -43,9 +43,10 @@
       nixos-generators
     ]
     ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
-      # goes out of date very quickly
-      # pkgs.master.signal-desktop-bin
-      # pkgs.master.whatsapp-for-mac
+      # Signal + WhatsApp from fresh-apps.nix (daily upstream builds)
+      # instead of homebrew casks. See features/flake/fresh-apps.nix.
+      inputs.fresh-apps.packages.${pkgs.stdenv.hostPlatform.system}.signal-desktop
+      inputs.fresh-apps.packages.${pkgs.stdenv.hostPlatform.system}.whatsapp
       spotify
       pkgs.unstable.obsidian
       # broken right now. uncomment later

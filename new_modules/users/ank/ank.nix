@@ -157,6 +157,7 @@
         self.neusis.users.ank.hmBundles.darwin-tools
         self.neusis.users.ank.hmBundles.theming
         self.neusis.users.ank.hmBundles.browsers
+        self.neusis.users.ank.hmBundles.casks
         ./_packages.nix
       ];
     };

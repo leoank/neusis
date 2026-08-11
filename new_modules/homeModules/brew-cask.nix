@@ -78,12 +78,16 @@
         };
       };
 
-      config = lib.mkIf (cfg.enable && pkgs.stdenv.isDarwin) {
-        # home-manager runs with `useGlobalPkgs = mkForce false`
-        # (see `agnosticModules/hm-system-init.nix`), so this
-        # overlay applies to the same `pkgs` argument that
-        # `lib.attrVals` reads from below — Nix's module-system
-        # fixed-point sees to it.
+      # NB: don't gate this `mkIf` on `pkgs.stdenv.isDarwin` — `pkgs`
+      # is derived from the `nixpkgs.{overlays,config}` we set
+      # below, so reading it here causes an infinite recursion in
+      # the module fixed-point. Caller is responsible for only
+      # enabling on darwin (the option description says so).
+      # home-manager runs with `useGlobalPkgs = mkForce false`
+      # (see `agnosticModules/hm-system-init.nix`), so this
+      # overlay applies to the same `pkgs` argument that
+      # `lib.attrVals` reads from below.
+      config = lib.mkIf cfg.enable {
         nixpkgs.overlays = [ inputs.brew-nix.overlays.default ];
         # Most casks are unfree (commercial macOS apps); the
         # system pkgs already sets this, but home-manager's own
