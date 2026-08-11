@@ -311,13 +311,35 @@ in
         # `machineToBundlesMap` entry on this host.
         hmPairsFor =
           machine:
+          let
+            # Standalone home-manager builds don't pass through
+            # `hm-system-init` or home-manager's nixos/darwin module, so
+            # they inherit none of the identity the integrated path gets
+            # for free (`home.stateVersion` from
+            # `hm-system-init.defaultStateVersion`; `home.username` and
+            # `home.homeDirectory` from `users.users.<name>`). Seed them
+            # here so `home-manager switch --flake .#<user>@<host>`
+            # evaluates on its own. Values mirror the system path:
+            # `/Users/<name>` on Darwin, `/home/<name>` elsewhere.
+            # `mkDefault` leaves bundles free to override — keep the
+            # stateVersion in sync with `hm-system-init.defaultStateVersion`.
+            homeRoot = if lib.hasSuffix "darwin" machine.system then "/Users/" else "/home/";
+            mkStandaloneDefaults = user: {
+              home.username = lib.mkDefault user.username;
+              home.homeDirectory = lib.mkDefault (homeRoot + user.username);
+              home.stateVersion = lib.mkDefault "25.11";
+            };
+          in
           lib.concatMap (
             user:
             lib.optional (user.machineToBundlesMap ? ${machine.hostname}) (
               lib.nameValuePair "${user.username}@${machine.hostname}" (
                 inputs.home-manager.lib.homeManagerConfiguration {
                   pkgs = pkgsFor machine;
-                  modules = user.machineToBundlesMap.${machine.hostname};
+                  modules = [
+                    (mkStandaloneDefaults user)
+                  ]
+                  ++ user.machineToBundlesMap.${machine.hostname};
                   extraSpecialArgs = mkSpecialArgs { };
                 }
               )
