@@ -136,6 +136,31 @@
 
       neusis.brave.enable = true;
     };
+
+  # Secrets bundle — agenix-rekey home secrets (personal tokens).
+  flake.neusis.users.ank.hmBundles.secrets =
+    { ... }:
+    {
+      imports = [ self.homeModules.secrets ];
+
+      neusis.service.secrets = {
+        enable = true;
+        userPubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFH40XzfXPtcTwJ8FHxHXCaEteylFOwtuw5TaY5CZ5NS ank@leoank.me";
+        masterIdentities = [
+          {
+            # STRING path → read at `agenix rekey` time, never stored.
+            identity = "/Users/ank/.ssh/id_ed25519";
+            pubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFH40XzfXPtcTwJ8FHxHXCaEteylFOwtuw5TaY5CZ5NS ank@leoank.me";
+          }
+        ];
+      };
+
+      # Placeholder tokens — fill real values with
+      # `agenix edit new_modules/secrets/ank/<name>.age`.
+      age.secrets.ghauthToken.rekeyFile = ../../secrets/ank/ghauthToken.age;
+      age.secrets.atuinToken.rekeyFile = ../../secrets/ank/atuinToken.age;
+    };
+
   # Configuring user for neusisOS
   flake.neusis.users.ank.neusisOS = {
     username = "ank";
@@ -158,6 +183,7 @@
         self.neusis.users.ank.hmBundles.theming
         self.neusis.users.ank.hmBundles.browsers
         self.neusis.users.ank.hmBundles.casks
+        self.neusis.users.ank.hmBundles.secrets
         ./_packages.nix
       ];
     };

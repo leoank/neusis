@@ -1,65 +1,88 @@
-# Neusis secrets service.
-# Flake-parts module that registers a NixOS module at
-# `flake.nixosModules.secrets` exposing `neusis.service.secrets.enable`.
-# Import from a NixOS configuration to opt the host into neusis-managed
-# secrets handling.
+# Neusis secrets service (agenix-rekey).
+#
+# Registered at `flake.agnosticModules.secrets` and re-exported to
+# `flake.nixosModules.secrets` / `flake.darwinModules.secrets`.
+#
+# NOTE: the platform-correct agenix + agenix-rekey modules are imported
+# by the machine (they can't be branched here — importing
+# `nixosModules` into a darwin config breaks), so a consumer imports:
+#   inputs.agenix.darwinModules.default
+#   inputs.agenix-rekey.darwinModules.default
+#   self.darwinModules.secrets           (or the nixos equivalents)
+# and sets `neusis.services.secrets.{enable,hostPubkey}`.
 { ... }:
 {
   flake.agnosticModules.secrets =
     {
       config,
       lib,
-      inputs,
+      pkgs,
       ...
     }:
     with lib;
     let
       cfg = config.neusis.services.secrets;
-      keysFromUserRegistries = listOfUserRegitries: listOfUserRegitries;
     in
     {
-      imports = [
-        inputs.agenix.nixosModules.default
-        inputs.agenix-rekey.nixosModules.default
-      ];
       options.neusis.services.secrets = {
         enable = mkEnableOption "neusis-managed secrets service";
+
         hostPubkey = mkOption {
           type = types.str;
-          example = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOy3dC8cCbucumHphroUzZUTKkM0jL3mG3+tkeAWgIdX";
-          description = "Host public key";
+          example = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOy3dC8cCbuc...";
+          description = "This host's SSH public key — agenix-rekey encrypts this host's secrets to it.";
         };
-        rootUserPassPath = mkOption {
-          type = types.path;
-          example = "./neusis-root-user-pass";
-          description = "Path to the hashed password for root user";
-        };
-        userRegistries = mkOption {
-          type = types.listOf types.deferredModule;
-          example = "[ config.registry.users.anklab ]";
+
+        masterIdentities = lib.mkOption {
+          type = types.listOf types.raw;
+          # No default on purpose — the consumer must state its own
+          # master identity (whose private half decrypts every secret).
+          example = lib.literalExpression ''
+            [ { identity = "/Users/you/.ssh/id_ed25519"; pubkey = "ssh-ed25519 AAAA... you@host"; } ]
+          '';
           description = ''
-            List of user registries used on this machine. 
-            Admins on the list will be added to masterIdentities of agenix-rekey using the sshKeys property.
+            agenix-rekey master identities — the key(s) used to decrypt
+            rekeyFiles and re-encrypt them per host on `agenix rekey`.
+            Set explicitly by the consumer. Prefer the
+            `{ identity; pubkey; }` form with `identity` as a STRING path
+            to the private key, so it is read at rekey time on the
+            operator's machine and never copied into the nix store.
           '';
         };
-      };
 
-      config = mkIf cfg.enable {
-        # Import agenix and agenix-rekey modules
-
-        # Configure agenix
-        age.rekey = {
-          hostPubkey = cfg.hostPubkey;
-          masterIdentities = [ ./yubikey-identity.pub ];
-          storageMode = "local";
-          localStorageDir = ./. + "/secrets/rekeyed/${config.networking.hostName}";
+        rootUserPassPath = mkOption {
+          type = types.nullOr types.path;
+          default = null;
+          example = "../secrets/common/hashedInitialPassword.age";
+          description = "rekeyFile holding the root password hash. NixOS only; ignored on darwin.";
         };
-
-        # Create common secrets for neusis
-        age.secrets.neusis-root-pw-hash.rekeyFile = cfg.rootUserPassPath;
-
-        # Configure host with common secrets
-        users.users.root.hashedPasswordFile = config.age.secrets.neusis-root-pw-hash.path;
       };
+
+      config = mkIf cfg.enable (mkMerge [
+        {
+          age.rekey = {
+            hostPubkey = cfg.hostPubkey;
+            masterIdentities = cfg.masterIdentities;
+            storageMode = "local";
+            localStorageDir = ../secrets/rekeyed + "/${config.networking.hostName}";
+          };
+
+          # Shared build-user private key for nix distributed builds
+          # (consumed by build-client's `sshKey`).
+          age.secrets.remoteBuildKey = {
+            rekeyFile = ../secrets/common/remote-build-key.age;
+            path = "/etc/nix/remote-build-key";
+            mode = "0400";
+            owner = "root";
+          };
+        }
+
+        # Root password is a NixOS concept; nix-darwin manages root
+        # differently, so only wire it on Linux.
+        (mkIf (pkgs.stdenv.isLinux && cfg.rootUserPassPath != null) {
+          age.secrets.neusis-root-pw-hash.rekeyFile = cfg.rootUserPassPath;
+          users.users.root.hashedPasswordFile = config.age.secrets.neusis-root-pw-hash.path;
+        })
+      ]);
     };
 }
