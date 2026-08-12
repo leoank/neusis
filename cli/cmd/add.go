@@ -9,6 +9,7 @@ import (
 	"github.com/leoank/neusis/cli/internal/gen"
 	"github.com/leoank/neusis/cli/internal/nix"
 	"github.com/leoank/neusis/cli/internal/scaffold"
+	"github.com/leoank/neusis/cli/internal/schema"
 	"github.com/leoank/neusis/cli/internal/tmpl"
 	"github.com/leoank/neusis/cli/internal/wizard"
 	"github.com/spf13/cobra"
@@ -127,16 +128,16 @@ func runMachineForm(m *tmpl.Machine) error {
 				Validate(wizard.ValidateIdent),
 			huh.NewSelect[string]().
 				Title("System").
-				Description("Target architecture. Sets nixpkgs.hostPlatform and picks the builder (NixOS vs nix-darwin).").
+				Description(schema.HelpOr("machine", "system", "Target architecture. Sets nixpkgs.hostPlatform and picks the builder (NixOS vs nix-darwin).")).
 				Options(sysOpts...).
 				Value(&m.System),
 			huh.NewInput().
 				Title("SSH host public key").
-				Description("Used by agenix-rekey to encrypt per-host secrets. Leave blank to fill in later.").
+				Description(schema.HelpOr("machine", "hostPubkey", "Used by agenix-rekey to encrypt per-host secrets. Leave blank to fill in later.")).
 				Value(&m.HostPubkey),
 			huh.NewInput().
 				Title("Primary user").
-				Description("On Darwin, wired to system.primaryUser (homebrew, activation). Optional.").
+				Description(schema.HelpOr("machine", "primaryUser", "On Darwin, wired to system.primaryUser (homebrew, activation). Optional.")).
 				Value(&m.PrimaryUser),
 		),
 	)
@@ -246,15 +247,16 @@ func runUserForm(w *scaffold.Writer, u *tmpl.User) error {
 		huh.NewGroup(
 			huh.NewInput().
 				Title("Username").
-				Description("System username and attribute key.").
+				Description(schema.HelpOr("user", "username", "System username and attribute key.")).
 				Value(&u.Name).
 				Validate(wizard.ValidateIdent),
 			huh.NewInput().
 				Title("Full name").
+				Description(schema.HelpOr("user", "fullName", "Human-readable full name.")).
 				Value(&u.FullName),
 			huh.NewInput().
 				Title("Login shell").
-				Description("e.g. bash, zsh, fish.").
+				Description(schema.HelpOr("user", "shell", "e.g. bash, zsh, fish.")).
 				Value(&u.Shell),
 			huh.NewSelect[string]().
 				Title("Role").
@@ -263,7 +265,7 @@ func runUserForm(w *scaffold.Writer, u *tmpl.User) error {
 				Value(&u.Role),
 			huh.NewInput().
 				Title("Public SSH key path").
-				Description("Optional. Copied into modules/users/keys/. Leave blank to add later.").
+				Description(schema.HelpOr("user", "sshKeys", "Public SSH key files authorized for this user.")+" Copied into modules/users/keys/; blank to add later.").
 				Value(&keyPath),
 		),
 	)
