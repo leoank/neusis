@@ -97,6 +97,9 @@ func newAddMachineCmd() *cobra.Command {
 			}
 			fmt.Fprintf(cmd.OutOrStdout(), "Added machine %q to lab %q:\n", m.Name, m.Lab)
 			finish(cmd, w, root)
+			if m.IsDarwin() && !hasDarwinInput(root) {
+				warnMissingDarwinInput(cmd, root)
+			}
 			return nil
 		},
 	}
@@ -109,6 +112,27 @@ func newAddMachineCmd() *cobra.Command {
 	f.BoolVar(&force, "force", false, "overwrite an existing file")
 	f.BoolVar(&yes, "yes", false, "non-interactive: use flags and defaults")
 	return cmd
+}
+
+// warnMissingDarwinInput tells the user a nix-darwin host won't build
+// until the repo declares a `darwin` flake input, with the exact fix
+// for its flake style.
+func warnMissingDarwinInput(cmd *cobra.Command, root string) {
+	err := cmd.ErrOrStderr()
+	block := `    darwin = {
+      url = "` + wizard.DefaultDarwinRef + `";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };`
+	fmt.Fprintln(err, "\nwarning: this repo has no `darwin` flake input; this host won't build until you add one.")
+	if isDendritic(root) {
+		fmt.Fprintln(err, "Add it to modules/dendritic.nix under `flake-file.inputs`:")
+		fmt.Fprintln(err, block)
+		fmt.Fprintln(err, "then: git add . && nix run .#write-flake && nix flake lock")
+	} else {
+		fmt.Fprintln(err, "Add it to flake.nix under `inputs`:")
+		fmt.Fprintln(err, block)
+		fmt.Fprintln(err, "then: nix flake lock")
+	}
 }
 
 func runMachineForm(m *tmpl.Machine) error {

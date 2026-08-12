@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 
 	"github.com/leoank/neusis/cli/internal/scaffold"
 )
@@ -45,6 +46,31 @@ func reportWritten(out io.Writer, w *scaffold.Writer) {
 // on the presence of secrets/master-identities.nix.
 func secretsEnabled(root string) bool {
 	_, err := os.Stat(filepath.Join(root, "secrets", "master-identities.nix"))
+	return err == nil
+}
+
+var darwinInputRe = regexp.MustCompile(`(?m)^\s*darwin\s*=\s*\{`)
+
+// hasDarwinInput reports whether the repo declares a `darwin` flake
+// input (needed to build any nix-darwin host). Checks the generated
+// flake.nix and, for dendritic repos, modules/dendritic.nix.
+func hasDarwinInput(root string) bool {
+	for _, rel := range []string{"flake.nix", filepath.Join("modules", "dendritic.nix")} {
+		b, err := os.ReadFile(filepath.Join(root, rel))
+		if err != nil {
+			continue
+		}
+		if darwinInputRe.Match(b) {
+			return true
+		}
+	}
+	return false
+}
+
+// isDendritic reports whether the repo uses the dendritic (flake-file)
+// style, keyed on modules/dendritic.nix.
+func isDendritic(root string) bool {
+	_, err := os.Stat(filepath.Join(root, "modules", "dendritic.nix"))
 	return err == nil
 }
 
