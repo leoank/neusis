@@ -56,6 +56,34 @@
           example = "../secrets/common/hashedInitialPassword.age";
           description = "rekeyFile holding the root password hash. NixOS only; ignored on darwin.";
         };
+
+        storageBaseDir = mkOption {
+          type = types.path;
+          default = ../secrets/rekeyed;
+          description = ''
+            Base directory under which agenix-rekey stores each host's
+            rekeyed secrets (`storageMode = "local"`). The effective
+            `age.rekey.localStorageDir` is `storageBaseDir/<hostname>`.
+
+            Defaults to neusis's own `secrets/rekeyed`. Downstream
+            consumers override this with a path inside their own repo so
+            rekeyed outputs land in their tree, not neusis's.
+          '';
+        };
+
+        remoteBuildKeyFile = mkOption {
+          type = types.nullOr types.path;
+          default = ../secrets/common/remote-build-key.age;
+          description = ''
+            rekeyFile for the shared distributed-build SSH key, exposed
+            as `age.secrets.remoteBuildKey` at `/etc/nix/remote-build-key`
+            (consumed by the build-client feature).
+
+            Defaults to neusis's own key. Set to `null` to disable this
+            secret entirely — appropriate for consumers that don't use
+            neusis distributed builds.
+          '';
+        };
       };
 
       config = mkIf cfg.enable (mkMerge [
@@ -64,18 +92,21 @@
             hostPubkey = cfg.hostPubkey;
             masterIdentities = cfg.masterIdentities;
             storageMode = "local";
-            localStorageDir = ../secrets/rekeyed + "/${config.networking.hostName}";
+            localStorageDir = cfg.storageBaseDir + "/${config.networking.hostName}";
           };
+        }
 
-          # Shared build-user private key for nix distributed builds
-          # (consumed by build-client's `sshKey`).
+        # Shared build-user private key for nix distributed builds
+        # (consumed by build-client's `sshKey`). Opt-out by setting
+        # `remoteBuildKeyFile = null`.
+        (mkIf (cfg.remoteBuildKeyFile != null) {
           age.secrets.remoteBuildKey = {
-            rekeyFile = ../secrets/common/remote-build-key.age;
+            rekeyFile = cfg.remoteBuildKeyFile;
             path = "/etc/nix/remote-build-key";
             mode = "0400";
             owner = "root";
           };
-        }
+        })
 
         # Root password is a NixOS concept; nix-darwin manages root
         # differently, so only wire it on Linux.
