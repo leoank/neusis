@@ -18,6 +18,13 @@
     # User registries installed on this host. Users in these labs get
     # system accounts and home-manager wiring here.
     userRegistries = [ self.neusis.registry.users.{{ .Lab }} ];
+{{- if and (not .IsDarwin) .Secrets }}
+
+    # Initial hashed password seeded for every non-locked account on
+    # this host. Create it with:
+    #   agenix edit secrets/common/hashedInitialPassword.age
+    initialHashedPassword = ../../secrets/common/hashedInitialPassword.age;
+{{- end }}
 
     module =
       { inputs, ... }:
