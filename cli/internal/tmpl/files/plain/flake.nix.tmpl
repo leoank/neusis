@@ -33,9 +33,10 @@
     inputs:
     inputs.flake-parts.lib.mkFlake { inherit inputs; } {
       imports = [
-        # neusis library: `flake.neusis.*` option schema + `neusisOS`
-        # builders (mkNeusisFlake, mkNeusisOS, …).
-        inputs.neusis.flakeModules.lib
+        # neusis library: `flake.neusis.*` option schema, `neusisOS`
+        # builders (mkNeusisFlake, mkNeusisOS, …), and the agnostic
+        # integration modules (hm-system-init, secrets).
+        inputs.neusis.flakeModules.default
         # Auto-import every module under ./modules.
         (inputs.import-tree ./modules)
       ];

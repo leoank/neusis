@@ -6,15 +6,14 @@
 # both NixOS and nix-darwin. The module auto-populates
 # `home-manager.users.<name>` from the supplied user registries by
 # reading each user's `machineToBundlesMap.<hostname>` module list.
+#
+# NOTE: this file declares no `flake-file.inputs`. It is part of
+# `flakeModules.default`, which non-dendritic (plain flake-parts)
+# consumers import — and they have no `flake-file` option. neusis's own
+# `home-manager` input is declared in `homeModules/home-manager.nix`;
+# downstream consumers declare their own `home-manager` input directly.
 { ... }:
 {
-  flake-file.inputs = {
-    home-manager = {
-      url = "github:nix-community/home-manager/release-25.11";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-  };
-
   flake.agnosticModules.hm-system-init =
     {
       config,
