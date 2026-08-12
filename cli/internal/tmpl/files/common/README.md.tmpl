@@ -15,6 +15,12 @@ modules/
   registry/          # labs (groupings of machines and users)
   machines/          # one file per host
   users/             # one file per person
+secrets/             # agenix-rekey secrets{{ if .Secrets }} (enabled){{ end }}
+  common/            # shared rekeyFiles
+  rekeyed/           # per-host rekeyed outputs
+{{- if .Secrets }}
+  master-identities.nix   # your agenix-rekey master identity
+{{- end }}
 ```
 
 ## Common tasks
@@ -23,6 +29,7 @@ modules/
 neusis add machine       # add a host (wizard)
 neusis add user          # add a person (wizard)
 neusis add registry      # add a lab
+neusis add secrets       # set up / scaffold agenix-rekey secrets
 ```
 
 ## Building

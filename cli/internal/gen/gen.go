@@ -41,7 +41,33 @@ func Repo(w *scaffold.Writer, r tmpl.Repo) error {
 	if err := render(w, "README.md", "common/README.md.tmpl", r); err != nil {
 		return err
 	}
+	// Every repo gets a secrets/ skeleton; the agenix-rekey wiring
+	// (master-identities.nix) is only written when secrets are enabled.
+	if err := SecretsSkeleton(w); err != nil {
+		return err
+	}
 	return nil
+}
+
+// SecretsSkeleton creates the empty secrets/ folder structure. Safe to
+// call repeatedly.
+func SecretsSkeleton(w *scaffold.Writer) error {
+	for _, p := range []string{"secrets/common/.gitkeep", "secrets/rekeyed/.gitkeep"} {
+		if err := w.WriteFile(p, nil); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// MasterIdentities writes secrets/master-identities.nix — the marker
+// that a repo is secrets-enabled. Presence of this file is what
+// SecretsEnabled checks.
+func MasterIdentities(w *scaffold.Writer, id tmpl.MasterIdentity) error {
+	if err := SecretsSkeleton(w); err != nil {
+		return err
+	}
+	return render(w, "secrets/master-identities.nix", "common/master-identities.nix.tmpl", id)
 }
 
 // Lab scaffolds a registry lab file.

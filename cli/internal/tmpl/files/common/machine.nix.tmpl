@@ -22,18 +22,28 @@
     module =
       { inputs, ... }:
       {
+        imports = [
 {{- if .IsDarwin }}
+{{- if .Secrets }}
+          inputs.agenix.darwinModules.default
+          inputs.agenix-rekey.darwinModules.default
+          self.darwinModules.secrets
+{{- end }}
+{{- else }}
+          # Provides `age.secrets` — neusis seeds each account's initial
+          # password through an agenix secret.
+          inputs.agenix.nixosModules.default
+{{- if .Secrets }}
+          inputs.agenix-rekey.nixosModules.default
+          self.nixosModules.secrets
+{{- end }}
+{{- end }}
+        ];
+{{ if .IsDarwin }}
         # nix-darwin configuration for {{ .Hostname }}. Add homebrew,
         # `system.defaults`, and other host options here.
         system.stateVersion = 6;
 {{- else }}
-        imports = [
-          # Provides `age.secrets` — neusis seeds each account's initial
-          # password through an agenix secret. Run `neusis add secrets`
-          # to set up agenix-rekey and your own password secret.
-          inputs.agenix.nixosModules.default
-        ];
-
         # NixOS configuration for {{ .Hostname }}. Replace the
         # placeholders below with this host's real hardware settings
         # (typically the output of `nixos-generate-config`).
@@ -47,6 +57,19 @@
 
         services.openssh.enable = true;
         system.stateVersion = {{ .StateVersion | nixStr }};
+{{- end }}
+{{- if .Secrets }}
+
+        # agenix-rekey secrets for this host. Populate secrets with
+        # `agenix edit`/`agenix rekey`; see `neusis add secrets`.
+        neusis.services.secrets = {
+          enable = true;
+          hostPubkey = {{ .HostPubkey | nixStr }};
+          masterIdentities = import ../../secrets/master-identities.nix;
+          storageBaseDir = ../../secrets/rekeyed;
+          # This fleet doesn't use neusis's shared distributed-build key.
+          remoteBuildKeyFile = null;
+        };
 {{- end }}
       };
   };

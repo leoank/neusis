@@ -16,16 +16,19 @@ import (
 
 func newInitCmd() *cobra.Command {
 	var (
-		name       string
-		style      string
-		lab        string
-		withDarwin bool
-		neusisRef  string
-		nixpkgsRef string
-		hmRef      string
-		darwinRef  string
-		yes        bool
-		force      bool
+		name        string
+		style       string
+		lab         string
+		withDarwin  bool
+		neusisRef   string
+		nixpkgsRef  string
+		hmRef       string
+		darwinRef   string
+		secretsFlag bool
+		masterID    string
+		masterPub   string
+		yes         bool
+		force       bool
 	)
 
 	cmd := &cobra.Command{
@@ -65,7 +68,9 @@ Run with no flags to be guided interactively, or pass flags (with
 				HMRef:         hmRef,
 				DarwinRef:     darwinRef,
 				IncludeDarwin: withDarwin,
+				Secrets:       secretsFlag,
 			}
+			id := tmpl.MasterIdentity{IdentityPath: masterID, Pubkey: masterPub}
 
 			var addMachine, addUser bool
 			interactive := !yes && isTTY()
@@ -73,6 +78,14 @@ Run with no flags to be guided interactively, or pass flags (with
 				if err := runInitForm(&repo, &lab, &addMachine, &addUser); err != nil {
 					return err
 				}
+				if repo.Secrets {
+					if err := runMasterIdentityForm(&id); err != nil {
+						return err
+					}
+				}
+			}
+			if repo.Secrets && (id.IdentityPath == "" || id.Pubkey == "") {
+				return fmt.Errorf("secrets enabled but master identity is incomplete (need --master-identity and --master-pubkey)")
 			}
 
 			if err := os.MkdirAll(absTarget, 0o755); err != nil {
@@ -84,15 +97,21 @@ Run with no flags to be guided interactively, or pass flags (with
 			if err := gen.Repo(w, repo); err != nil {
 				return err
 			}
+			if repo.Secrets {
+				if err := gen.MasterIdentities(w, id); err != nil {
+					return err
+				}
+			}
 			if err := gen.Lab(w, tmpl.Lab{Name: lab}); err != nil {
 				return err
 			}
 
 			if addMachine {
-				m := tmpl.Machine{Lab: lab, StateVersion: wizard.DefaultStateVersion}
+				m := tmpl.Machine{Lab: lab, StateVersion: wizard.DefaultStateVersion, Secrets: repo.Secrets}
 				if err := runMachineForm(&m); err != nil {
 					return err
 				}
+				normalizeMachine(&m)
 				if err := gen.Machine(w, m); err != nil {
 					return err
 				}
@@ -131,9 +150,31 @@ Run with no flags to be guided interactively, or pass flags (with
 	f.StringVar(&nixpkgsRef, "nixpkgs-ref", wizard.DefaultNixpkgsRef, "flake ref for nixpkgs")
 	f.StringVar(&hmRef, "hm-ref", wizard.DefaultHMRef, "flake ref for home-manager")
 	f.StringVar(&darwinRef, "darwin-ref", wizard.DefaultDarwinRef, "flake ref for nix-darwin")
+	f.BoolVar(&secretsFlag, "secrets", false, "set up agenix-rekey secrets (needs --master-identity/--master-pubkey with --yes)")
+	f.StringVar(&masterID, "master-identity", "", "path to your agenix-rekey master private key")
+	f.StringVar(&masterPub, "master-pubkey", "", "public key matching --master-identity")
 	f.BoolVar(&yes, "yes", false, "non-interactive: use flags and defaults, skip prompts")
 	f.BoolVar(&force, "force", false, "overwrite existing files")
 	return cmd
+}
+
+func runMasterIdentityForm(id *tmpl.MasterIdentity) error {
+	form := huh.NewForm(
+		huh.NewGroup(
+			huh.NewInput().
+				Title("Master identity private key path").
+				Description("String path to your SSH private key. Read at `agenix rekey` time; never copied into the nix store.").
+				Placeholder("/Users/you/.ssh/id_ed25519").
+				Value(&id.IdentityPath).
+				Validate(wizard.ValidateNonEmpty),
+			huh.NewInput().
+				Title("Master identity public key").
+				Description("The matching public key (ssh-ed25519 …).").
+				Value(&id.Pubkey).
+				Validate(wizard.ValidateNonEmpty),
+		),
+	)
+	return form.Run()
 }
 
 func runInitForm(repo *tmpl.Repo, lab *string, addMachine, addUser *bool) error {
@@ -161,6 +202,10 @@ func runInitForm(repo *tmpl.Repo, lab *string, addMachine, addUser *bool) error 
 				Title("Include the nix-darwin input?").
 				Description("Enable if any host runs macOS.").
 				Value(&repo.IncludeDarwin),
+			huh.NewConfirm().
+				Title("Set up agenix-rekey secrets?").
+				Description("Scaffolds a secrets/ tree and wires each machine to your master identity.").
+				Value(&repo.Secrets),
 		),
 		huh.NewGroup(
 			huh.NewConfirm().
