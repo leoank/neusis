@@ -61,8 +61,15 @@ type User struct {
 	KeyFile  string // relative nix path to a copied pubkey, or "" if none
 }
 
-// RolePlural maps a role to its registry list key.
-func (u User) RolePlural() string { return u.Role + "s" }
+// RolePlural maps a role to its registry list key (the userRegistryType
+// option name). "locked" is irregular — its option is `locked`, not
+// `lockeds`.
+func (u User) RolePlural() string {
+	if u.Role == "locked" {
+		return "locked"
+	}
+	return u.Role + "s"
+}
 
 // IsDarwin reports whether the machine targets a Darwin system.
 func (m Machine) IsDarwin() bool { return strings.HasSuffix(m.System, "darwin") }

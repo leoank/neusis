@@ -46,14 +46,19 @@ let
   };
 
   # Stable role iteration order. The plural form ("admins", "regulars",
-  # …) is the key under which a registry stores users of that role.
+  # …) is the key under which a registry stores users of that role —
+  # matching the `userRegistryType` option names in neusis-options.nix.
   roleOrder = [
     "admin"
     "regular"
     "guest"
     "locked"
   ];
-  pluralOf = role: role + "s";
+  # `locked` is irregular: the registry option is `locked`, not
+  # `lockeds`. Naive `role + "s"` here silently dropped locked users
+  # (mkUserAccountModules read a non-existent `lockeds` key) and made
+  # `mergeUserConfigs` emit an invalid `lockeds` attribute.
+  pluralOf = role: if role == "locked" then "locked" else role + "s";
 
   # Pick the nixpkgs source for a machine. `null` ⇒ flake-wide default.
   chooseNixpkgs = nixpkgs: if nixpkgs != null then nixpkgs else inputs.nixpkgs;
