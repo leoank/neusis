@@ -218,6 +218,25 @@ let
           '';
         };
 
+        initialHashedPassword = mkOption {
+          type = types.nullOr types.path;
+          default = null;
+          example = lib.literalExpression "../../secrets/common/hashedInitialPassword.age";
+          description = ''
+            Path to an agenix secret holding the hashed password seeded
+            for every non-locked account on this host (wired to each
+            account's `hashedPasswordFile`).
+
+            There is intentionally no default: a hidden default would
+            silently seed accounts from a secret the consumer cannot
+            decrypt. `mkNeusisOS` requires this to be set precisely when
+            the host has login (non-locked) users, and errors otherwise.
+
+            NixOS-only — ignored on Darwin, which manages account
+            passwords differently.
+          '';
+        };
+
         userRegistries = mkOption {
           type = types.listOf userRegistryType;
           default = [ ];

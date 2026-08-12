@@ -206,18 +206,42 @@ in
         # option); declare it freely on machines and read it back via
         # `machine.primaryUser` if you wire it yourself.
         primaryUser ? null,
-        initialHashedPassword ? ../secrets/common/hashedInitialPassword.age,
+        # Path to an agenix secret holding the hashed password seeded for
+        # every non-locked account on this host. Deliberately has NO
+        # default — a hidden default would silently point a consumer's
+        # accounts at a secret they can't decrypt. Required precisely
+        # when the host has login (non-locked) users.
+        initialHashedPassword ? null,
       }:
+      let
+        # Non-locked users need a password source; locked accounts don't.
+        loginUsers = lib.concatMap (
+          r: (r.admins or [ ]) ++ (r.regulars or [ ]) ++ (r.guests or [ ])
+        ) userRegistries;
+        needsInitialPassword = loginUsers != [ ];
+      in
+      assert lib.assertMsg (!needsInitialPassword || initialHashedPassword != null) ''
+        mkNeusisOS: machine "${machineName}" has login (non-locked) users but no
+        `initialHashedPassword`. Set it on the machine to an agenix secret holding
+        the initial hashed password, e.g.
+
+          flake.neusis.machines.${machineName}.initialHashedPassword =
+            ../../secrets/common/hashedInitialPassword.age;
+
+        There is no default: neusis will not silently seed accounts from a secret
+        you cannot decrypt.'';
       (chooseNixpkgs nixpkgs).lib.nixosSystem {
         specialArgs = mkSpecialArgs specialArgs;
         modules = [
           userModule
-          { age.secrets.commonInitialHashedPassword.file = initialHashedPassword; }
           {
             nixpkgs.hostPlatform = lib.mkDefault system;
             networking.hostName = lib.mkDefault machineName;
           }
         ]
+        ++ lib.optional (initialHashedPassword != null) {
+          age.secrets.commonInitialHashedPassword.file = initialHashedPassword;
+        }
         ++ mkUserAccountModules userRegistries
         ++ mkHmInitModules {
           platform = "nixos";
@@ -244,6 +268,11 @@ in
         # nix-darwin's `system.primaryUser`. Read it from any module
         # downstream via `config.system.primaryUser`.
         primaryUser ? null,
+        # Accepted for signature parity with `mkNeusisOS` so
+        # `mkNeusisFlake` can forward `machine.initialHashedPassword`
+        # uniformly. No-op on Darwin: nix-darwin manages account
+        # passwords differently, so there is no hashedPasswordFile path.
+        initialHashedPassword ? null,
       }:
       assert lib.assertMsg (nixpkgs == null) ''
         mkNeusisDarwinOS: per-machine `nixpkgs` overrides aren't supported on Darwin.
@@ -300,6 +329,7 @@ in
               nixpkgs
               primaryUser
               computerName
+              initialHashedPassword
               ;
             specialArgs = machine.modulesSpecialArgs;
           });
