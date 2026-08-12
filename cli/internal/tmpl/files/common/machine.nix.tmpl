@@ -1,0 +1,58 @@
+{{- /* One host. Defines the machine and joins it to its lab. */ -}}
+{ self, ... }:
+{
+  flake.neusis.machines.{{ .Name }} = {
+    system = {{ .System | nixStr }};
+    hostname = {{ .Hostname | nixStr }};
+{{- if .ComputerName }}
+    computerName = {{ .ComputerName | nixStr }};
+{{- end }}
+{{- if .PrimaryUser }}
+    primaryUser = {{ .PrimaryUser | nixStr }};
+{{- end }}
+    # SSH host public key — used by agenix-rekey to encrypt per-host
+    # secrets. Replace the placeholder with this host's real key
+    # (`cat /etc/ssh/ssh_host_ed25519_key.pub`).
+    hostPubkey = {{ .HostPubkey | nixStr }};
+
+    # User registries installed on this host. Users in these labs get
+    # system accounts and home-manager wiring here.
+    userRegistries = [ self.neusis.registry.users.{{ .Lab }} ];
+
+    module =
+      { inputs, ... }:
+      {
+{{- if .IsDarwin }}
+        # nix-darwin configuration for {{ .Hostname }}. Add homebrew,
+        # `system.defaults`, and other host options here.
+        system.stateVersion = 6;
+{{- else }}
+        imports = [
+          # Provides `age.secrets` — neusis seeds each account's initial
+          # password through an agenix secret. Run `neusis add secrets`
+          # to set up agenix-rekey and your own password secret.
+          inputs.agenix.nixosModules.default
+        ];
+
+        # NixOS configuration for {{ .Hostname }}. Replace the
+        # placeholders below with this host's real hardware settings
+        # (typically the output of `nixos-generate-config`).
+        nixpkgs.hostPlatform = {{ .System | nixStr }};
+
+        boot.loader.systemd-boot.enable = true;
+        fileSystems."/" = {
+          device = "/dev/disk/by-label/nixos";
+          fsType = "ext4";
+        };
+
+        services.openssh.enable = true;
+        system.stateVersion = {{ .StateVersion | nixStr }};
+{{- end }}
+      };
+  };
+
+  # Join this host to its lab.
+  flake.neusis.registry.machines.{{ .Lab }}.{{ if .IsDarwin }}darwin{{ else }}nixos{{ end }} = [
+    self.neusis.machines.{{ .Name }}
+  ];
+}

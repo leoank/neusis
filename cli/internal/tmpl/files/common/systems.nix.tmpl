@@ -1,0 +1,24 @@
+# Turns the machine registry into the flake's system outputs. You
+# should not need to edit this: adding a machine anywhere under
+# `modules/machines/` and joining it to a lab is enough for it to
+# appear here.
+{ self, ... }:
+let
+  fleet = self.neusis.lib.neusisOS.mkNeusisFlake {
+    machineRegistries = self.neusis.registry.machines;
+  };
+in
+{
+  # Systems this flake evaluates for. Required by flake-parts; extend
+  # if you add machines on other architectures.
+  systems = [
+    "x86_64-linux"
+    "aarch64-linux"
+    "aarch64-darwin"
+    "x86_64-darwin"
+  ];
+
+  flake.nixosConfigurations = fleet.nixosConfigurations;
+  flake.darwinConfigurations = fleet.darwinConfigurations;
+  flake.homeConfigurations = fleet.homeConfigurations;
+}

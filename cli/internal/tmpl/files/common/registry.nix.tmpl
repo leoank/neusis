@@ -1,0 +1,20 @@
+# Lab {{ .Name | nixStr }} — a grouping of machines and users.
+#
+# Machines and users register *themselves* into these lists from their
+# own files under `modules/machines/` and `modules/users/` (module
+# lists merge across files). This file only declares the lab with empty
+# lists so the attribute always exists — even before anything joins it.
+{ ... }:
+{
+  flake.neusis.registry.machines.{{ .Name }} = {
+    nixos = [ ];
+    darwin = [ ];
+  };
+
+  flake.neusis.registry.users.{{ .Name }} = {
+    admins = [ ];
+    regulars = [ ];
+    guests = [ ];
+    locked = [ ];
+  };
+}

@@ -1,0 +1,43 @@
+{
+  description = {{ .Name | nixStr }};
+
+  inputs = {
+    agenix = {
+      url = "github:ryantm/agenix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    agenix-rekey = {
+      url = "github:oddlama/agenix-rekey";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+{{- if .IncludeDarwin }}
+    darwin = {
+      url = {{ .DarwinRef | nixStr }};
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+{{- end }}
+    flake-parts = {
+      url = "github:hercules-ci/flake-parts";
+      inputs.nixpkgs-lib.follows = "nixpkgs";
+    };
+    home-manager = {
+      url = {{ .HMRef | nixStr }};
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    import-tree.url = "github:vic/import-tree";
+    neusis.url = {{ .NeusisRef | nixStr }};
+    nixpkgs.url = {{ .NixpkgsRef | nixStr }};
+  };
+
+  outputs =
+    inputs:
+    inputs.flake-parts.lib.mkFlake { inherit inputs; } {
+      imports = [
+        # neusis library: `flake.neusis.*` option schema + `neusisOS`
+        # builders (mkNeusisFlake, mkNeusisOS, …).
+        inputs.neusis.flakeModules.lib
+        # Auto-import every module under ./modules.
+        (inputs.import-tree ./modules)
+      ];
+    };
+}

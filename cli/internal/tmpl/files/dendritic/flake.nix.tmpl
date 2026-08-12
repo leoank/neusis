@@ -1,0 +1,36 @@
+# DO-NOT-EDIT. This file was auto-generated using github:vic/flake-file.
+# Use `nix run .#write-flake` to regenerate it after changing any
+# `flake-file.inputs` declaration (e.g. in modules/dendritic.nix).
+{
+  outputs =
+    inputs: inputs.flake-parts.lib.mkFlake { inherit inputs; } (inputs.import-tree ./modules);
+
+  inputs = {
+    agenix = {
+      url = "github:ryantm/agenix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    agenix-rekey = {
+      url = "github:oddlama/agenix-rekey";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+{{- if .IncludeDarwin }}
+    darwin = {
+      url = {{ .DarwinRef | nixStr }};
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+{{- end }}
+    flake-file.url = "github:vic/flake-file";
+    flake-parts = {
+      url = "github:hercules-ci/flake-parts";
+      inputs.nixpkgs-lib.follows = "nixpkgs";
+    };
+    home-manager = {
+      url = {{ .HMRef | nixStr }};
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    import-tree.url = "github:vic/import-tree";
+    neusis.url = {{ .NeusisRef | nixStr }};
+    nixpkgs.url = {{ .NixpkgsRef | nixStr }};
+  };
+}

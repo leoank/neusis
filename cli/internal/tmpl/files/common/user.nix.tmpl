@@ -1,0 +1,27 @@
+{{- /* One person. Defines the user and joins them to a lab by role. */ -}}
+{ self, ... }:
+{
+  flake.neusis.users.{{ .Name }}.neusisOS = {
+    username = {{ .Username | nixStr }};
+    fullName = {{ .FullName | nixStr }};
+    shell = {{ .Shell | nixStr }};
+    sshKeys = [
+{{- if .KeyFile }}
+      {{ .KeyFile }}
+{{- else }}
+      # Add public SSH key paths authorized for this user, e.g.
+      # ./keys/{{ .Name }}.pub
+{{- end }}
+    ];
+
+    # Map each host to the home-manager module fragments this user
+    # should get there, e.g.
+    #   myhost = [ ./homes/{{ .Name }}/myhost.nix ];
+    machineToBundlesMap = { };
+  };
+
+  # Join this user to lab {{ .Lab | nixStr }} as a {{ .Role }}.
+  flake.neusis.registry.users.{{ .Lab }}.{{ .RolePlural }} = [
+    self.neusis.users.{{ .Name }}.neusisOS
+  ];
+}
