@@ -10,6 +10,7 @@ import (
 	"github.com/leoank/neusis/cli/internal/nix"
 	"github.com/leoank/neusis/cli/internal/scaffold"
 	"github.com/leoank/neusis/cli/internal/schema"
+	"github.com/leoank/neusis/cli/internal/source"
 	"github.com/leoank/neusis/cli/internal/tmpl"
 	"github.com/leoank/neusis/cli/internal/wizard"
 	"github.com/spf13/cobra"
@@ -25,7 +26,10 @@ func newAddCmd() *cobra.Command {
 }
 
 // openRepo finds the enclosing repo and returns a writer rooted there.
+// It also kicks off a best-effort, TTL-gated refresh of templates/schema
+// from the neusis repo so `add` uses the latest copies when online.
 func openRepo(force bool) (*scaffold.Writer, string, error) {
+	source.MaybeRefresh(allSpecs())
 	cwd, err := os.Getwd()
 	if err != nil {
 		return nil, "", err

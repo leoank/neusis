@@ -7,25 +7,47 @@ package schema
 import (
 	_ "embed"
 	"encoding/json"
+	"sync"
+
+	"github.com/leoank/neusis/cli/internal/source"
 )
 
 //go:embed files/schema.json
-var raw []byte
+var embedded []byte
 
 type snapshot struct {
 	Machine map[string]string `json:"machine"`
 	User    map[string]string `json:"user"`
 }
 
-var data = func() snapshot {
-	var s snapshot
-	_ = json.Unmarshal(raw, &s)
-	return s
-}()
+var (
+	loadOnce sync.Once
+	data     snapshot
+)
+
+// load resolves the snapshot, preferring a cached remote copy over the
+// embedded one, and falling back to embedded on a malformed override.
+// Lazy so a same-run refresh (before first use) is picked up.
+func load() {
+	raw := source.Resolve("schema", "schema.json", embedded)
+	if json.Unmarshal(raw, &data) != nil {
+		_ = json.Unmarshal(embedded, &data)
+	}
+}
+
+// Spec is the source refresh spec for the schema snapshot.
+func Spec() source.Spec {
+	return source.Spec{
+		Subdir:     "schema",
+		Rel:        "schema.json",
+		RemotePath: "cli/internal/schema/files/schema.json",
+	}
+}
 
 // Help returns the schema description for field in category
 // ("machine" or "user"), or "" if absent.
 func Help(category, field string) string {
+	loadOnce.Do(load)
 	switch category {
 	case "machine":
 		return data.Machine[field]
