@@ -9,6 +9,7 @@ import (
 	"github.com/leoank/neusis/cli/internal/gen"
 	"github.com/leoank/neusis/cli/internal/nix"
 	"github.com/leoank/neusis/cli/internal/scaffold"
+	"github.com/leoank/neusis/cli/internal/source"
 	"github.com/leoank/neusis/cli/internal/tmpl"
 	"github.com/leoank/neusis/cli/internal/wizard"
 	"github.com/spf13/cobra"
@@ -42,6 +43,9 @@ Run with no flags to be guided interactively, or pass flags (with
 --yes) to script it.`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Best-effort refresh so a new repo uses the latest templates.
+			source.MaybeRefresh(allSpecs())
+
 			target := "."
 			if len(args) == 1 {
 				target = args[0]

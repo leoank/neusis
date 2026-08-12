@@ -28,6 +28,7 @@ to be installed, though it will use nix and git when they are present.`,
 	root.AddCommand(
 		newInitCmd(),
 		newAddCmd(),
+		newUpdateCmd(),
 		newVersionCmd(),
 	)
 	return root

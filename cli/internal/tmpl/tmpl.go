@@ -6,7 +6,10 @@ package tmpl
 import (
 	"embed"
 	"strings"
+	"sync"
 	"text/template"
+
+	"github.com/leoank/neusis/cli/internal/source"
 )
 
 //go:embed files
@@ -81,24 +84,23 @@ var funcs = template.FuncMap{
 	},
 }
 
-// tmpls parses every embedded template once, keyed by its path under
-// files/ (e.g. "common/systems.nix.tmpl").
-var tmpls = func() map[string]*template.Template {
-	out := map[string]*template.Template{}
-	entries, err := allFiles("files")
+var (
+	parseMu sync.Mutex
+	parsed  = map[string]*template.Template{}
+)
+
+// Files returns every template key (path relative to files/).
+func Files() []string {
+	names, err := allFiles("files")
 	if err != nil {
-		panic(err)
+		return nil
 	}
-	for _, name := range entries {
-		b, err := files.ReadFile(name)
-		if err != nil {
-			panic(err)
-		}
-		key := strings.TrimPrefix(name, "files/")
-		out[key] = template.Must(template.New(key).Funcs(funcs).Parse(string(b)))
+	out := make([]string, 0, len(names))
+	for _, n := range names {
+		out = append(out, strings.TrimPrefix(n, "files/"))
 	}
 	return out
-}()
+}
 
 func allFiles(dir string) ([]string, error) {
 	var out []string
@@ -121,6 +123,38 @@ func allFiles(dir string) ([]string, error) {
 	return out, nil
 }
 
-// Get returns the parsed template registered under key (path relative to
-// files/), or nil if absent.
-func Get(key string) *template.Template { return tmpls[key] }
+// Get returns the parsed template for key (path relative to files/),
+// preferring a cached remote copy over the embedded one, or nil if the
+// key is unknown. A malformed remote override falls back to embedded.
+func Get(key string) *template.Template {
+	parseMu.Lock()
+	defer parseMu.Unlock()
+	if t, ok := parsed[key]; ok {
+		return t
+	}
+	embedded, err := files.ReadFile("files/" + key)
+	if err != nil {
+		return nil
+	}
+	b := source.Resolve("tmpl", key, embedded)
+	t, err := template.New(key).Funcs(funcs).Parse(string(b))
+	if err != nil {
+		t = template.Must(template.New(key).Funcs(funcs).Parse(string(embedded)))
+	}
+	parsed[key] = t
+	return t
+}
+
+// Specs lists the source refresh specs for every template file.
+func Specs() []source.Spec {
+	keys := Files()
+	out := make([]source.Spec, 0, len(keys))
+	for _, k := range keys {
+		out = append(out, source.Spec{
+			Subdir:     "tmpl",
+			Rel:        k,
+			RemotePath: "cli/internal/tmpl/files/" + k,
+		})
+	}
+	return out
+}
