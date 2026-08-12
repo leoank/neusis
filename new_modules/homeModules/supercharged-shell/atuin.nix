@@ -13,6 +13,7 @@
     {
       config,
       lib,
+      pkgs,
       ...
     }:
     let
@@ -49,13 +50,31 @@
         };
       };
 
-      config = lib.mkIf cfg.enable {
-        programs.atuin = {
-          enable = true;
-          daemon.enable = true;
-          inherit (cfg) flags settings;
-          enableZshIntegration = true;
-        };
-      };
+      config = lib.mkIf cfg.enable (lib.mkMerge [
+        {
+          programs.atuin = {
+            enable = true;
+            daemon.enable = true;
+            inherit (cfg) flags settings;
+            enableZshIntegration = true;
+          };
+        }
+
+        # Darwin-only: atuin's daemon does not clean up its unix socket on
+        # unclean shutdown, so after a hard reboot the stale socket file makes
+        # the daemon crash-loop with "Address already in use (os error 48)"
+        # while clients see "Connection refused". (On Linux the systemd socket
+        # unit sets RemoveOnStop, so this only bites launchd.) Wrap the daemon
+        # to remove the stale socket before starting. nix-darwin wraps this
+        # again with /bin/wait4path, so store availability is still handled.
+        (lib.mkIf pkgs.stdenv.hostPlatform.isDarwin {
+          launchd.agents.atuin-daemon.config.ProgramArguments = lib.mkForce [
+            "${pkgs.writeShellScript "atuin-daemon-cleanup" ''
+              rm -f ${lib.escapeShellArg config.programs.atuin.settings.daemon.socket_path}
+              exec ${lib.getExe config.programs.atuin.package} daemon
+            ''}"
+          ];
+        })
+      ]);
     };
 }
