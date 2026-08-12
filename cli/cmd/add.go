@@ -19,7 +19,7 @@ func newAddCmd() *cobra.Command {
 		Use:   "add",
 		Short: "Add a machine, user, or registry to the current repository",
 	}
-	add.AddCommand(newAddMachineCmd(), newAddUserCmd(), newAddRegistryCmd())
+	add.AddCommand(newAddMachineCmd(), newAddUserCmd(), newAddRegistryCmd(), newAddSecretsCmd())
 	return add
 }
 
@@ -73,6 +73,7 @@ func newAddMachineCmd() *cobra.Command {
 				PrimaryUser:  primaryUser,
 				Lab:          lab,
 				StateVersion: wizard.DefaultStateVersion,
+				Secrets:      secretsEnabled(root),
 			}
 			if len(args) == 1 {
 				m.Name = args[0]
@@ -344,4 +345,80 @@ func newAddRegistryCmd() *cobra.Command {
 	}
 	cmd.Flags().BoolVar(&force, "force", false, "overwrite an existing file")
 	return cmd
+}
+
+// ---- add secrets ----
+
+func newAddSecretsCmd() *cobra.Command {
+	var (
+		masterID  string
+		masterPub string
+		force     bool
+		yes       bool
+	)
+	cmd := &cobra.Command{
+		Use:   "secrets [name]",
+		Short: "Set up agenix-rekey secrets, or scaffold a named secret",
+		Long: `Ensure the repo's agenix-rekey secrets infrastructure exists
+(secrets/ tree + master identity), then, if a secret name is given,
+print the operator workflow to create and wire it.
+
+The first run bootstraps: it records your master identity and, going
+forward, machines added with 'neusis add machine' are wired to it.`,
+		Args: cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			w, root, err := openRepo(force)
+			if err != nil {
+				return err
+			}
+			out := cmd.OutOrStdout()
+
+			if !secretsEnabled(root) {
+				id := tmpl.MasterIdentity{IdentityPath: masterID, Pubkey: masterPub}
+				if !yes && isTTY() {
+					if err := runMasterIdentityForm(&id); err != nil {
+						return err
+					}
+				}
+				if id.IdentityPath == "" || id.Pubkey == "" {
+					return fmt.Errorf("no secrets infrastructure yet; provide --master-identity and --master-pubkey (or run interactively)")
+				}
+				if err := gen.MasterIdentities(w, id); err != nil {
+					return err
+				}
+				fmt.Fprintln(out, "Bootstrapped secrets infrastructure:")
+				finish(cmd, w, root)
+				fmt.Fprintln(out, "\nMachines added from now on will be wired to this identity.")
+				fmt.Fprintln(out, "Re-run `neusis add machine` for existing hosts, or add the")
+				fmt.Fprintln(out, "neusis.services.secrets block to them by hand.")
+			} else {
+				fmt.Fprintln(out, "Secrets infrastructure already present (secrets/master-identities.nix).")
+			}
+
+			if len(args) == 1 {
+				printSecretWorkflow(cmd, args[0])
+			}
+			return nil
+		},
+	}
+	f := cmd.Flags()
+	f.StringVar(&masterID, "master-identity", "", "path to your agenix-rekey master private key")
+	f.StringVar(&masterPub, "master-pubkey", "", "public key matching --master-identity")
+	f.BoolVar(&force, "force", false, "overwrite existing files")
+	f.BoolVar(&yes, "yes", false, "non-interactive: use flags, skip prompts")
+	return cmd
+}
+
+// printSecretWorkflow explains how to create and wire one named secret.
+// Per-machine `age.secrets.<name>` wiring is a system-level option that
+// lives inside a host's module, so the CLI points at the operator steps
+// rather than editing machine files.
+func printSecretWorkflow(cmd *cobra.Command, name string) {
+	out := cmd.OutOrStdout()
+	fmt.Fprintf(out, "\nTo add the secret %q:\n", name)
+	fmt.Fprintf(out, "  1. Create + encrypt it:   agenix edit secrets/common/%s.age\n", name)
+	fmt.Fprintf(out, "  2. Wire it into a host's module (modules/machines/<host>.nix):\n")
+	fmt.Fprintf(out, "       age.secrets.%s.rekeyFile = ../../secrets/common/%s.age;\n", name, name)
+	fmt.Fprintln(out, "  3. Rekey for every host:  agenix rekey")
+	fmt.Fprintln(out, "  4. git add secrets/ && commit")
 }

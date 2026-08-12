@@ -41,6 +41,13 @@ func reportWritten(out io.Writer, w *scaffold.Writer) {
 	}
 }
 
+// secretsEnabled reports whether a repo has agenix-rekey set up, keyed
+// on the presence of secrets/master-identities.nix.
+func secretsEnabled(root string) bool {
+	_, err := os.Stat(filepath.Join(root, "secrets", "master-identities.nix"))
+	return err == nil
+}
+
 // isTTY reports whether stdin looks interactive.
 func isTTY() bool {
 	fi, err := os.Stdin.Stat()

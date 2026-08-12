@@ -14,14 +14,21 @@ var files embed.FS
 
 // Repo describes a whole generated fleet repository (used by `init`).
 type Repo struct {
-	Name         string // flake description / project name
-	Style        string // "dendritic" | "plain"
-	NeusisRef    string // flake ref for the neusis library input
-	NixpkgsRef   string
-	HMRef        string
-	DarwinRef    string
+	Name          string // flake description / project name
+	Style         string // "dendritic" | "plain"
+	NeusisRef     string // flake ref for the neusis library input
+	NixpkgsRef    string
+	HMRef         string
+	DarwinRef     string
 	IncludeDarwin bool // pull in the nix-darwin input
-	Systems      []string
+	Secrets       bool // set up agenix-rekey secrets infrastructure
+	Systems       []string
+}
+
+// MasterIdentity is an agenix-rekey operator identity.
+type MasterIdentity struct {
+	IdentityPath string // string path to the private key (read at rekey time)
+	Pubkey       string // its public key
 }
 
 // Lab describes a registry grouping (a lab / site).
@@ -40,6 +47,7 @@ type Machine struct {
 	PrimaryUser  string // optional
 	Lab          string // registry lab this host joins
 	StateVersion string // NixOS state version, e.g. "25.11"
+	Secrets      bool   // wire the agenix-rekey secrets block for this host
 }
 
 // User is one person atom.
