@@ -19,7 +19,7 @@
       ];
     };
   flake.neusis.users.ank.hmBundles.agent-harness =
-    { ... }:
+    { lib, pkgs, ... }:
     {
       imports = [
         #self.homeModules.msgvault-sync
@@ -33,7 +33,21 @@
         enable = true;
 
         tools = {
-          claude.enable = true;
+          claude = {
+            enable = true;
+            # Headless browser for developing/checking web pages (e.g.
+            # the docs site). nixpkgs pins its own Chromium, so no
+            # `npx` downloads; snapshots go to /tmp, not the repo.
+            mcpServers.playwright = {
+              command = lib.getExe pkgs.playwright-mcp;
+              args = [
+                "--headless"
+                "--isolated"
+                "--output-dir"
+                "/tmp/playwright-mcp"
+              ];
+            };
+          };
           opencode.enable = true;
           gemini.enable = true;
           antigravity.enable = true;
