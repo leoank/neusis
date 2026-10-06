@@ -20,9 +20,10 @@
     # taps = map (key: builtins.replaceStrings [ "homebrew-" ] [ "" ] key) (
     #   builtins.attrNames config.nix-homebrew.taps
     # );
-    taps = builtins.attrNames (
-      lib.filterAttrs (n: _: !lib.hasPrefix "homebrew/" n) config.nix-homebrew.taps
-    );
+    taps = builtins.map (name: {
+      inherit name;
+      trusted = !lib.hasPrefix "homebrew/" name;
+    }) (builtins.attrNames config.nix-homebrew.taps);
 
     # Casks are managed via brew-nix in the per-user `casks`
     # hmBundle (see `homeModules/brew-cask.nix`). The list below
@@ -42,9 +43,10 @@
         })
         [
           "deskflow"
+          "fiji"
         ];
     onActivation = {
-      cleanup = "none";
+      cleanup = "uninstall";
       autoUpdate = true;
       upgrade = true;
     };
