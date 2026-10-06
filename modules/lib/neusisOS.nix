@@ -192,25 +192,18 @@ in
 
     # ---- System builders ----
 
-    # NixOS system with neusis-managed users. home-manager wiring is
-    # pulled in automatically whenever `userRegistries` is non-empty.
-    mkNeusisOS =
+    # The NixOS module list a neusis machine is made of: the machine's own
+    # module, platform/hostname defaults, the initial-password secret, one
+    # account module per registered user and the home-manager wiring
+    # (whenever `userRegistries` is non-empty). `mkNeusisOS` feeds this to
+    # `nixosSystem`; a NixOS VM test can hand the same list to a test node
+    # so it boots exactly the configuration the builder would produce.
+    mkNeusisOSModules =
       {
         machineName,
-        computerName ? null,
         userModule,
-        specialArgs ? { },
         userRegistries ? [ ],
         system ? "x86_64-linux",
-        # Optional per-machine nixpkgs override. `null` falls back to
-        # the flake-wide `inputs.nixpkgs`.
-        nixpkgs ? null,
-        # Accepted for signature parity with `mkNeusisDarwinOS` so
-        # `mkNeusisFlake` can forward `machine.primaryUser` uniformly.
-        # Currently a no-op on NixOS (no canonical "primary user"
-        # option); declare it freely on machines and read it back via
-        # `machine.primaryUser` if you wire it yourself.
-        primaryUser ? null,
         # Path to an agenix secret holding the hashed password seeded for
         # every non-locked account on this host. Deliberately has NO
         # default — a hidden default would silently point a consumer's
@@ -235,22 +228,54 @@ in
 
         There is no default: neusis will not silently seed accounts from a secret
         you cannot decrypt.'';
+      [
+        userModule
+        {
+          nixpkgs.hostPlatform = lib.mkDefault system;
+          networking.hostName = lib.mkDefault machineName;
+        }
+      ]
+      ++ lib.optional (initialHashedPassword != null) {
+        age.secrets.commonInitialHashedPassword.file = initialHashedPassword;
+      }
+      ++ mkUserAccountModules userRegistries
+      ++ mkHmInitModules {
+        platform = "nixos";
+        inherit userRegistries;
+      };
+
+    # NixOS system with neusis-managed users. home-manager wiring is
+    # pulled in automatically whenever `userRegistries` is non-empty.
+    mkNeusisOS =
+      {
+        machineName,
+        computerName ? null,
+        userModule,
+        specialArgs ? { },
+        userRegistries ? [ ],
+        system ? "x86_64-linux",
+        # Optional per-machine nixpkgs override. `null` falls back to
+        # the flake-wide `inputs.nixpkgs`.
+        nixpkgs ? null,
+        # Accepted for signature parity with `mkNeusisDarwinOS` so
+        # `mkNeusisFlake` can forward `machine.primaryUser` uniformly.
+        # Currently a no-op on NixOS (no canonical "primary user"
+        # option); declare it freely on machines and read it back via
+        # `machine.primaryUser` if you wire it yourself.
+        primaryUser ? null,
+        # See `mkNeusisOSModules`.
+        initialHashedPassword ? null,
+      }:
       (chooseNixpkgs nixpkgs).lib.nixosSystem {
         specialArgs = mkSpecialArgs specialArgs;
-        modules = [
-          userModule
-          {
-            nixpkgs.hostPlatform = lib.mkDefault system;
-            networking.hostName = lib.mkDefault machineName;
-          }
-        ]
-        ++ lib.optional (initialHashedPassword != null) {
-          age.secrets.commonInitialHashedPassword.file = initialHashedPassword;
-        }
-        ++ mkUserAccountModules userRegistries
-        ++ mkHmInitModules {
-          platform = "nixos";
-          inherit userRegistries;
+        modules = mkNeusisOSModules {
+          inherit
+            machineName
+            userModule
+            userRegistries
+            system
+            initialHashedPassword
+            ;
         };
       };
 
