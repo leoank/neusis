@@ -177,7 +177,7 @@ bools and lists (`pkgNames`, `config.home.file."x".text`,
 | `features/*` | T0 | `nix-settings` sets experimental features; `darwin.defaults` composes without conflicts; `distributed-builds` drops the local host from `nix.buildMachines` given the fixture builders registry; `mac-app-util` imports |
 | `machines/*` | T0 invariants + T2 build | hostName / computerName / primaryUser; `home.stateVersion == "25.11"` and `system.stateVersion == 5` (encodes the "do not bump" policy); every registry user has an HM entry; `checks.aarch64-darwin.darwin-<host>` and `home-<user>@<host>` auto-generated from the registry |
 | fixture NixOS machine | T0 | the only place `mkNeusisOS` runs end to end: users, groups, HM wiring, password guard |
-| `packages/*` | T2 | `checks.<sys>.pkg-<name>` for kalam, kalam-full, kalam-v2, gclb, neusis (`buildGoModule` runs `go test` in its check phase, so the CLI is covered by its build). `kalam-py` excluded (pre-existing Wayland failure on Darwin, see porting log) |
+| `packages/*` | T2 | `checks.<sys>.pkg-<name>` for kalam, kalam-full, gclb, neusis (`buildGoModule` runs `go test` in its check phase, so the CLI is covered by its build) |
 | `flakeModules.*` | T0 consumer smoke | a nested `mkFlake` importing `self.flakeModules.default` the way `examples/flake-parts-consumer` does; asserts `flake.neusis.lib.neusisOS.mkNeusisFlake` exists and a one-machine registry produces `nixosConfigurations.fixture` |
 
 ### 3.6 Conventions
@@ -266,20 +266,18 @@ glue files, one fixtures directory, one CI workflow.
 
 ## 6. Findings (2026-10-06)
 
-Everything below was found by the first run of the suite and is **pinned**
-with `expectedError` (search `KNOWN BUG` / `KNOWN COUPLING` under
-`modules/tests/`). Fixing one means replacing the pin with the real
-expectation.
+The first run of the suite found the issues below. All of them were fixed
+the same day (commits on `main` after `27b0358`), and the tests that had
+pinned them with `expectedError` now assert the fixed behaviour.
 
-| Where | What | Fix candidate |
+| Where | What the suite found | Resolution |
 |---|---|---|
-| `agnosticModules/kanata/kanata.nix` | Does not evaluate on NixOS: the Darwin block is gated with `lib.mkIf pkgs.stdenv.isDarwin`, which still registers `launchd` / `system.activationScripts.preActivation` on Linux; while NixOS formats that error it hits `kanata.passthru.darwinDriver = null`. The Linux forwarding to `services.kanata` is also commented out. | Dispatch on `options ? launchd` like tailscale.nix; re-enable the Linux branch. |
-| `agnosticModules/build-server.nix` | Does not evaluate on NixOS, even disabled: `users.knownUsers` (Darwin-only) under `mkIf pkgs.stdenv.isDarwin`. | Same `options ? launchd` dispatch. |
-| `homeModules/terminal-velocity/sesh.nix` | `tools.sesh` without `tools.tmux` fails home-manager's assertion (`programs.fzf.tmux.enableShellIntegration`). | Set it in sesh.nix, or expose `enableTmuxIntegration`. |
-| `homeModules/secrets.nix` | Importing without enabling fails: agenix-rekey's HM module asserts `age.rekey.masterIdentities`. | Document "import ⇒ enable", or guard the imports. |
-| `features/hm/setup-terminals.nix` | Reads `./wezterm.lua`, `./gclb.py`, `./zellij*.kdl` that do not exist under `modules/features/hm/`; the feature cannot evaluate. Unused (terminal-velocity replaced it). | Move the files in or delete the feature. |
-| `registry/users/all.nix`, `cslab.nix`, `cslab_karkinos.nix` | Stale `self.registry` / `self.lib` / `self.users` paths (now under `self.neusis.*`); `cslab_karkinos.nix` defines `cslab` a second time. Unused by any machine. | Update the paths; rename the karkinos key. |
-| `packages/kalam/kalam.nix` | `kalam-py` cannot evaluate on Darwin (Wayland `badPlatforms`), which made `nix flake check` fail. **Fixed in this effort**: the flavour is dropped on Darwin. | — |
-| `homeModules/supercharged-git/multi-account.nix` | home-manager 26.05 deprecation: `programs.ssh.matchBlocks` → `programs.ssh.settings`; the default `programs.ssh` values will be removed. Warnings only today. | Port to `programs.ssh.settings` and set `enableDefaultConfig = false`. |
-| `examples/flake-parts-consumer`, `examples/external-flake` | Use the pre-refactor API (`userConfig`, `homeManager`, `neusisOS.homeModules`, `self.flake.neusis`); they would not evaluate against today's `mkNeusisOS`. Not part of the flake, so not pinned. | Rewrite against `userRegistries` / `machineToBundlesMap` (the consumer smoke test in `tests/flakeModules.test.nix` is the working template). |
-
+| `agnosticModules/kanata/kanata.nix` | Did not evaluate on NixOS: the Darwin block was gated with `lib.mkIf pkgs.stdenv.isDarwin`, which still registers `launchd` / `system.activationScripts.preActivation` on Linux; the Linux forwarding to `services.kanata` was commented out. | Dispatch on `options ? launchd` / `options ? systemd` like tailscale.nix; Linux forwarding restored and tested. |
+| `agnosticModules/build-server.nix` | Did not evaluate on NixOS, even disabled: `users.knownUsers` (Darwin-only) under `mkIf pkgs.stdenv.isDarwin`. | Same dispatch; NixOS system user tested. |
+| `homeModules/terminal-velocity/sesh.nix` | `tools.sesh` without `tools.tmux` tripped home-manager's `programs.fzf.tmux.enableShellIntegration` assertion. | sesh.nix sets it itself. |
+| `homeModules/secrets.nix` | Importing without enabling failed: agenix-rekey's HM module asserts `age.rekey.masterIdentities` once loaded. | Import means enable: `enable` defaults to `true`; `false` is rejected with a neusis assertion. |
+| `features/hm/setup-terminals.nix` | Read `./wezterm.lua`, `./gclb.py`, `./zellij*.kdl` that were never ported; unused since terminal-velocity. | Removed. |
+| `registry/users/{all,cslab,cslab_karkinos}.nix` | Stale `self.registry` / `self.lib` / `self.users` paths; `cslab_karkinos.nix` defined `cslab` a second time; `all` omitted `kumaranklab`. | Paths fixed, karkinos has its own key, `all` merges every lab. |
+| `packages/kalam` | `kalam-py` could not evaluate on Darwin (Wayland `badPlatforms`), breaking `nix flake check`. | `py` and `v2` flavours removed; `kalam` and `kalam-full` remain. |
+| `homeModules/supercharged-git/multi-account.nix` | home-manager 26.05 deprecation warnings: `programs.ssh.matchBlocks` → `settings`, legacy `Host *` defaults. | Ported to `programs.ssh.settings`; `enableDefaultConfig = mkDefault false`. The suite now runs warning-free. |
+| `examples/{external-flake,flake-parts-consumer}` | Used the pre-refactor API (`userConfig`, `homeManager`, `neusisOS.homeModules`, `self.flake.neusis`), referenced files that did not exist, and the flake-parts one imported `flakeModules.lib` which lacks the integration modules `mkNeusisOS` needs. | Rewritten against `userRegistries` / `machineToBundlesMap` / `flakeModules.default` with placeholder key and secret; both evaluate (`nix eval .#nixosConfigurations.myhost…` in each directory). |

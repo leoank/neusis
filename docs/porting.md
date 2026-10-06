@@ -2220,3 +2220,23 @@ references files that were never moved; `registry/users/{all,cslab,cslab_karkino
 use pre-namespace `self.*` paths. `kalam-py` is now dropped on Darwin (it
 cannot evaluate there) so the flake check passes. The `examples/` consumers
 use the pre-refactor API and need a rewrite. VM tests deferred.
+
+## 2026-10-06 — fixes for what the test suite found; kalam py/v2 and beads removed
+
+Every finding in `docs/testing.md` §6 is fixed and its pinned test replaced
+by the real expectation: kanata and build-server dispatch on `options ?
+launchd` / `options ? systemd` (both evaluate on NixOS now; kanata forwards
+to `services.kanata` on Linux again); sesh sets
+`programs.fzf.tmux.enableShellIntegration` itself; the home secrets module
+treats import as enable (`enable` defaults to true, disabling is rejected
+with a clear assertion); the dead `features.hm.setup-terminals` is gone;
+`registry/users/{all,cslab,cslab_karkinos}` use `self.neusis.*`, karkinos
+has its own key and `all` merges every lab; multi-account uses
+`programs.ssh.settings` (no HM 26.05 deprecation warnings left); both
+`examples/` consumers are rewritten against the current API and evaluate.
+`kalam-py` and `kalam-v2` flavours are removed (only `kalam` and
+`kalam-full` remain). The beads (`bd`) integration is removed from
+`AGENTS.md` and `.claude/settings.json`; the `beads` / `beads-viewer`
+packages in the agent-harness extras bundle are untouched. Also committed:
+the `_homebrew.nix` tap `{ name; trusted; }` form + `cleanup = "uninstall"`
+that fixed homebrew failing at activation.

@@ -245,8 +245,8 @@ Folds follow syntactic structure (functions, classes, blocks).
 ## 6. LSP (`lsp.nix`)
 
 **Base ships two servers: `nixd` for Nix and `pyright` for
-Python.** Everything else is delegated to flavors (`kalam-v2`
-adds its full polyglot set, future flavors layer their own).
+Python.** Everything else is delegated to flavors (`kalam-full`
+adds LaTeX and more; future flavors layer their own).
 What you get for free:
 
 - `plugins.lsp.enable = true` with inlay hints on.
@@ -401,7 +401,7 @@ keybind needed — it follows your cursor.
 ### Snippets
 
 LuaSnip is the snippet engine; base doesn't ship any snippets.
-When a flavor adds one (e.g. `kalam-v2` adds Lean snippets), it
+When a flavor adds one (e.g. `kalam-full` adds LaTeX snippets), it
 appears in the same blink menu alongside LSP results.
 
 ---
