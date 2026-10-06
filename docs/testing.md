@@ -256,6 +256,7 @@ command green before the next starts. Commit per item
 | 7.6 | `vm-packages`: neusis CLI, gclb, kalam run inside a VM | T3 |
 | 7.7 | CI: VM tests on the x86_64 runner (KVM), pushes to main | workflow green |
 | **Phase 8 — deferred** | | |
+| 8.0 | **Revisit the VM tests**: the first six prove the tier works; add/modify tests for more behaviours (e.g. tailscale profile switching, kanata remapping with a virtual keyboard, build-cluster with substitutes, home bundles for the other tools, a second NixOS node for hm-system-init across hosts) | T3 |
 | 8.1 | `nix-unit` flake input so T0 joins `nix flake check` | — |
 | 8.2 | namaka snapshots for generated config files | — |
 
