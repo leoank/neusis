@@ -49,19 +49,42 @@ in
   nix.linux-builder = {
     enable = true;
     ephemeral = true;
-    maxJobs = 10;
+    systems = [
+      "x86_64-linux"
+      "aarch64-linux"
+    ];
+    supportedFeatures = [
+      "kvm"
+      "benchmark"
+      "big-parallel"
+      "nixos-test"
+    ];
+    maxJobs = 8;
     config = {
+      boot.binfmt.emulatedSystems = [ "x86_64-linux" ];
+      nix.settings.sandbox = false;
       virtualisation = {
         darwin-builder = {
-          diskSize = 100 * 1024;
+          diskSize = 80 * 1024;
           memorySize = 24 * 1024;
         };
-        cores = 10;
+        cores = 8;
       };
     };
   };
 
+  launchd.daemons.linux-builder = {
+    serviceConfig = {
+      StandardOutPath = "/var/log/linux-builder.log";
+      StandardErrorPath = "/var/log/linux-builder.log";
+    };
+  };
+
   nix.settings = {
+    # system-features = [
+    #   "nixos-test"
+    #   "apple-virt"
+    # ];
     trusted-users = [
       "@admin"
       "ank"

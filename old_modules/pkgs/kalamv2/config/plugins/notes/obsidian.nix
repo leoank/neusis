@@ -1,6 +1,8 @@
+{ unstable, ... }:
 {
   plugins.obsidian = {
     enable = true;
+    package = unstable.vimPlugins.obsidian-nvim;
     settings = {
       workspaces = [
         {
@@ -11,8 +13,7 @@
 
       legacy_commands = false;
 
-      note_id_func.__raw = "require('obsidian.builtin').title_id";
-
+      note_id_func.__raw = ''require("obsidian.builtin").title_id'';
       notes_subdir = "Notes";
       new_notes_location = "notes_subdir";
 
