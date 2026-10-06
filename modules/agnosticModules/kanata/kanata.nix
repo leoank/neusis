@@ -51,7 +51,7 @@
       mkDarwinDaemon = name: keyboard: {
         serviceConfig = {
           ProgramArguments = [
-            (lib.getExe cfg.package)
+            "/run/current-system/sw/bin/kanata"
             "--cfg"
             (toString (mkDarwinConfig name keyboard))
           ]
@@ -63,6 +63,8 @@
           ProcessType = "Interactive";
           Label = "org.nixos.${mkName name}";
           KeepAlive = true;
+          StandardOutPath = "/Library/Logs/${mkName name}.out.log";
+          StandardErrorPath = "/Library/Logs/${mkName name}.err.log";
         };
       };
 
@@ -203,7 +205,7 @@
             system.activationScripts.preActivation.text = ''
               rm -rf ${parentAppDir}
               mkdir -p ${parentAppDir}
-              cp -r ${pkgs.karabiner-elements.driver}/Applications/.Karabiner-VirtualHIDDevice-Manager.app ${parentAppDir}
+              cp -Rf ${cfg.package.passthru.darwinDriver}/Applications/.Karabiner-VirtualHIDDevice-Manager.app ${parentAppDir}
             '';
 
             # Activate the kernel extension on user login.
@@ -216,7 +218,7 @@
             };
 
             # The Karabiner driver daemon + one kanata daemon per
-            # keyboard. NOTE: each kanata binary also needs "Input
+            # keyboard. NOTE: /run/current-system/sw/bin/kanata needs "Input
             # Monitoring" permission via System Settings → Privacy &
             # Security → Input Monitoring on first launch.
             launchd.daemons = {
@@ -228,6 +230,8 @@
                   ProcessType = "Interactive";
                   Label = "org.pqrs.Karabiner-DriverKit-VirtualHIDDevice-Daemon";
                   KeepAlive = true;
+                  StandardOutPath = "/Library/Logs/Karabiner-DriverKit-VirtualHIDDevice-Daemon.out.log";
+                  StandardErrorPath = "/Library/Logs/Karabiner-DriverKit-VirtualHIDDevice-Daemon.err.log";
                 };
               };
             }
