@@ -117,6 +117,11 @@ in
           text = ''
             # Run neusis's nix-unit suite for this system. Extra args go
             # to nix-unit (e.g. a test-name filter).
+            #
+            # nix-unit evaluates on a thread with the default stack and
+            # segfaults on deep derivations (texliveFull); raise the
+            # stack to the hard limit like `nix` itself does.
+            ulimit -s "$(ulimit -Hs)" 2>/dev/null || true
             exec nix-unit --flake ".#tests.${system}" "$@"
           '';
         };
