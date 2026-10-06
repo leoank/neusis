@@ -57,21 +57,35 @@
             buildUser = true;
             trusted = true;
             client = true;
-            machines = [ "darwin001" ];
+            machines = [
+              "spirit"
+              "oppy"
+              "darwin001"
+            ];
             sshKey = [ "/etc/nix/remote-build-key" ];
-            knownHosts = [ "darwin001" ];
+            knownHosts = [
+              "darwin001"
+              "oppy"
+              "spirit"
+            ];
             failed = [ ];
           };
         };
 
         test-darwin001-offloads-to-rogue = {
           expr = map (m: "${m.hostName}:${toString m.maxJobs}:${toString m.speedFactor}") (onHost "darwin001").nix.buildMachines;
-          expected = [ "rogue:8:2" ];
+          expected = [
+            "spirit:300:10"
+            "oppy:300:10"
+            "rogue:8:2"
+          ];
         };
 
         test-unregistered-host-offers-every-builder = {
           expr = map (m: m.hostName) (onHost "laptop").nix.buildMachines;
           expected = [
+            "spirit"
+            "oppy"
             "rogue"
             "darwin001"
           ];

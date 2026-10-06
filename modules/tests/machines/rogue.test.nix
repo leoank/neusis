@@ -86,6 +86,8 @@
             buildServer = true;
             # darwin001 from the registry + the local linux-builder VM
             buildsOffloadTo = [
+              "spirit"
+              "oppy"
               "darwin001"
               "linux-builder"
             ];

@@ -18,6 +18,42 @@ in
 {
   flake.neusis.registry.builders.anklab = [
     {
+      hostName = "spirit";
+      sshUser = "ank";
+      systems = [
+        "x86_64-linux"
+        "aarch64-linux"
+      ];
+      maxJobs = 300;
+      speedFactor = 10;
+      supportedFeatures = [
+        "big-parallel"
+        "benchmark"
+        "kvm"
+        "nixos-test"
+      ];
+      mandatoryFeatures = [ ];
+      hostPubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJUYYQCN1rhnyZ8HIIy4SgF3wvoapeqiCJRhfusTDFiK";
+    }
+    {
+      hostName = "oppy";
+      sshUser = "ank";
+      systems = [
+        "x86_64-linux"
+        "aarch64-linux"
+      ];
+      maxJobs = 300;
+      speedFactor = 10;
+      supportedFeatures = [
+        "big-parallel"
+        "benchmark"
+        "kvm"
+        "nixos-test"
+      ];
+      mandatoryFeatures = [ ];
+      hostPubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINCW3CZ4r7VhI7+4rC+oOE4n3AMXEy3F2vm8jjHeTClR";
+    }
+    {
       hostName = m.rogue.hostname;
       sshUser = "nixremote";
       systems = [ m.rogue.system ];

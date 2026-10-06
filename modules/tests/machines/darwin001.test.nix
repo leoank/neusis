@@ -79,7 +79,11 @@
           expected = {
             linuxBuilder = false;
             kanata = true;
-            buildsOffloadTo = [ "rogue" ];
+            buildsOffloadTo = [
+              "spirit"
+              "oppy"
+              "rogue"
+            ];
             tailscale = true;
             defaultMesh = "leoank";
             meshes = [

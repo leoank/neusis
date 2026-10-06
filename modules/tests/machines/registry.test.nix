@@ -82,15 +82,45 @@
           };
         };
 
-        test-builders-mirror-the-machines = {
-          expr = map (b: {
-            inherit (b) hostName systems hostPubkey;
-          }) r.builders.anklab;
-          expected = map (m: {
-            inherit (m) hostPubkey;
-            hostName = m.hostname;
-            systems = [ m.system ];
-          }) r.machines.anklab.darwin;
+        # spirit and oppy are dedicated Linux builders (not neusis-managed
+        # machines); every neusis machine in the lab is also offered as one.
+        test-builders-are-the-linux-builders-plus-the-machines = {
+          expr = {
+            order = map (b: b.hostName) r.builders.anklab;
+            linuxBuilders = lib.genAttrs [ "spirit" "oppy" ] (
+              name:
+              let
+                b = lib.findFirst (b: b.hostName == name) null r.builders.anklab;
+              in
+              {
+                inherit (b) sshUser systems;
+                vmCapable = builtins.elem "kvm" b.supportedFeatures && builtins.elem "nixos-test" b.supportedFeatures;
+              }
+            );
+            machinesMirrored = lib.all (
+              m:
+              lib.any (
+                b: b.hostName == m.hostname && b.hostPubkey == m.hostPubkey && b.systems == [ m.system ]
+              ) r.builders.anklab
+            ) r.machines.anklab.darwin;
+          };
+          expected = {
+            order = [
+              "spirit"
+              "oppy"
+              "rogue"
+              "darwin001"
+            ];
+            linuxBuilders = lib.genAttrs [ "spirit" "oppy" ] (_: {
+              sshUser = "ank";
+              systems = [
+                "x86_64-linux"
+                "aarch64-linux"
+              ];
+              vmCapable = true;
+            });
+            machinesMirrored = true;
+          };
         };
 
         test-every-user-has-bundles-for-their-hosts = {
