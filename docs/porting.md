@@ -1759,3 +1759,190 @@ HM secrets from *both* the darwin-integrated config
   (`agenix edit new_modules/secrets/ank/<name>.age`).
 - Nothing deployed yet (`darwin-rebuild switch`); branch still not merged
   to `main`; legacy `pkgs/`/`flakeModules/`/`homes/` still on disk.
+
+## 2026-08-16 — tailscale mesh: agnostic multi-profile module, ank/cslab split, tailmux spec
+
+Ported the old NixOS-only `neusis.tailscale` (`modules/nixos/tailscale.nix`)
+into a **single agnostic system module**, `flake.agnosticModules.tailscale`
+(re-exported to `nixosModules.tailscale` / `darwinModules.tailscale`). It runs
+**one** system-wide tailnet at a time but lets you declare several **profiles**
+and switch the active one at runtime, with a **default profile** brought up at
+boot. The opinionated wiring is split into two config-only features,
+`features.agnostic.ank_mesh` (personal `leoank` tailnet, the default) and
+`features.agnostic.cslab_mesh` (the `shntnu.github` lab mesh). Concurrent
+tailnets were deliberately deferred to a future tsnet application-proxy — spec
+written in `docs/tailmux-proxy-spec.md` + a hand-off prompt in
+`docs/tailmux-proxy-agent-prompt.md`.
+
+### What shipped
+
+- **`new_modules/agnosticModules/tailscale/`** — `tailscale.nix` +
+  `force-claim.sh` + `disable-key-expiry.sh` (the two OAuth scripts copied
+  verbatim from the old module). Option surface `neusis.services.tailscale`:
+  `enable`, `package`, `defaultProfile`, `autoConnect`, `openFirewall`
+  (NixOS), `useRoutingFeatures` (NixOS), `overrideLocalDns` (Darwin), and
+  `profiles.<name>` = `{ authKeyFile, hostName, extraUpFlags, ephemeral,
+  forceHostName, tailnetOrg, clientIdFile, clientSecretFile, disableKeyExpiry }`.
+- **All old features ported**: persistent/ephemeral auth keys, custom
+  `--hostname`, OAuth **force-claim hostname** (renames conflicts to
+  `<name>-old-<ts>`, never deletes), OAuth **disable-key-expiry**, `tailnetOrg`,
+  OAuth client id/secret. The dead `isUserSpace` flag (declared but never
+  wired in the old module) was dropped.
+- **Per-profile `neusis-ts-<name>` command** on PATH (a `writeShellApplication`)
+  that makes `<name>` the active profile; the default profile's script is
+  reused as the boot autoconnect.
+- **`features.agnostic.{ank_mesh,cslab_mesh}`** — config + agenix secrets only.
+- **Secrets** copied into `new_modules/secrets/common/`
+  (`persistent_tsauthkey`, `persistent_cslab_mesh`, `tsclient`, `tssecret`) and
+  rekeyed; originals under repo-root `secrets/` left untouched.
+- Machines `rogue` + `darwin001` import
+  `self.darwinModules.tailscale` + both mesh features.
+
+### Design decisions (with rationale)
+
+- **Abandoned running multiple tailnets simultaneously.** The reference gist
+  (multiple `tailscaled` via a systemd template + per-instance tun +
+  `netfilterMode=off`) is **Linux+root only**, doesn't port to macOS (the
+  current hosts) or to home-manager (non-root), and breaks exit-nodes / MSS
+  clamping. Instead: **one system tailnet, switchable profiles** (Tailscale's
+  built-in fast user switching), and defer true concurrency to an app-level
+  **tsnet** proxy (see tailmux spec). This was an explicit scope change mid-task.
+- **No home-manager tailscale module** (per instruction) — the HM/concurrent
+  slot is the tsnet proxy's job.
+- **Profiles, not daemons.** Each profile is a distinct login stored in one
+  `tailscaled`; only one is active at a time. `defaultProfile` is required and
+  auto-connected; others are reached with `neusis-ts-<name>` / `tailscale
+  switch <name>`.
+- **Two mesh features, composable.** Splitting `mesh` → `ank_mesh` +
+  `cslab_mesh` keeps each tailnet's profile + secrets self-contained.
+  `ank_mesh` sets `defaultProfile = "leoank"` at **normal** priority;
+  `cslab_mesh` sets `defaultProfile = lib.mkDefault "cslab"`. So: both imported
+  → `leoank` wins; cslab alone → cslab; and a machine can `mkForce` its own.
+  Both set `enable = true` (bool `mergeEqualOption` tolerates identical defs).
+- **Module is imported by the machine; features are config-only.** The features
+  fill in `neusis.services.tailscale.profiles.*` + `age.secrets.*`; the machine
+  imports `self.<plat>Modules.tailscale` (which declares the options + wires the
+  daemon). Mirrors how `distributed-builds` leaves the platform agenix imports
+  to the machine.
+- **Secrets: copy + rekey, not placeholders.** The real `.age` files list
+  `ank`'s key (= the agenix-rekey master identity) as a recipient — verified
+  from `secrets/secrets.nix` **without decrypting** — so they work directly as
+  `rekeyFile`s. Splitting the mesh feature did **not** require re-keying: the
+  secret *names* (`tsAuthKeyLeoank`, `tsClientId`, `tsClientSecret`,
+  `tsAuthKeyCslab`) are unchanged, only which file declares them moved.
+
+### The agnostic-module platform-key problem (the reusable lesson)
+
+The hard part: the autoconnect needs `launchd.daemons` on Darwin and
+`systemd.services` on NixOS — **top-level option keys that don't exist on the
+other platform** — inside one module. Three approaches, only the last works:
+
+1. `lib.mkIf pkgs.stdenv.isLinux { systemd.services… }` — **fails.** `mkIf`
+   pushes its condition down onto each leaf, which registers the option *path*
+   before the condition is evaluated, so it errors *"option does not exist"* on
+   the other platform even when the branch is inactive. (Verified with a
+   minimal `darwinSystem` eval: `mkIf false { services.tailscale.openFirewall =
+   true; }` throws.)
+2. `lib.optionalAttrs pkgs.stdenv.isLinux { … }` at the **top level** — **fails
+   with infinite recursion.** Deciding whether a top-level config key is
+   present forces `pkgs` → the nixpkgs instantiation → which needs the config →
+   cycle.
+3. **Dispatch on the OPTIONS set** — **works.**
+   ```nix
+   isDarwin = options ? launchd;   # nix-darwin declares `launchd`
+   isLinux  = options ? systemd;   # NixOS declares `systemd`
+   config = lib.mkMerge [
+     (lib.mkIf cfg.enable { …core…; services.tailscale = { enable = true; }
+        // lib.optionalAttrs isLinux  { openFirewall = …; useRoutingFeatures = …; }
+        // lib.optionalAttrs isDarwin { overrideLocalDns = …; }; })
+     (lib.optionalAttrs isLinux  { systemd.services.neusis-tailscale-autoconnect = …; })
+     (lib.optionalAttrs isDarwin { launchd.daemons.neusis-tailscale-autoconnect = …; })
+   ];
+   ```
+   `options ? launchd` reads the merged option **declarations** (available
+   without forcing `pkgs`), so `optionalAttrs` omits the foreign top-level key
+   with no recursion. For a `services.X` **sub-option** that exists on only one
+   platform, gate it *deep* at the value level (`services.tailscale = {…} //
+   optionalAttrs isLinux {openFirewall=…}`) — safe because the `services` key
+   is present on both. Proven both directions: the same module yields
+   `systemd.services…Type = "oneshot"` + `openFirewall` on a NixOS eval (no
+   `launchd`), and `launchd.daemons` on Darwin (no `systemd`).
+
+   This is why an earlier interim design (splitting into
+   `features.{nixos,darwin}.tailscale`) was **reverted** — the `options ?`
+   dispatch makes a single `agnosticModules.tailscale` viable, which is the
+   right home (reusable, re-exported to both). Note also: you **cannot** add a
+   second definition to `flake.{nixos,darwin}Modules.<name>` directly — those
+   are undeclared flake outputs that `re-export-all.nix` already defines once
+   (`= config.flake.agnosticModules`), so a 2nd definition fails "defined
+   multiple times". Put reusable modules in `agnosticModules`; put things that
+   genuinely need to differ per platform-namespace under `features.{nixos,darwin}`.
+
+### Tailscale profiles: the runtime model
+
+- `tailscale switch <name>` / `tailscale switch --list` — switch/list profiles;
+  only one active at a time (Tailscale "fast user switching").
+- `tailscale login --auth-key file:<path>` is the **add-account** verb — with a
+  *different* tailnet's key it creates a fresh profile; `tailscale up` operates
+  on the current one. So `neusis-ts-<name>` does: `switch` fast-path → else
+  `login --auth-key` + `set --nickname <name>` → `up <flags>` → force-claim /
+  disable-expiry. Profiles are **runtime state** (persisted in
+  `tailscaled.state`), so they can't be pre-seeded declaratively; the scripts
+  establish them on first use and switch instantly thereafter.
+
+### nix-darwin's `services.tailscale` is auth-less
+
+nix-darwin's module is minimal: `enable` + `package` + `overrideLocalDns`, and
+a `launchd.daemons.tailscaled` that runs `tailscaled` but **never `up`s** (no
+`authKeyFile` like NixOS). So the Darwin branch adds its own launchd bring-up
+daemon (`KeepAlive.SuccessfulExit = false` → retry until it connects, then
+stop). NixOS's `services.tailscale` gives the daemon + firewall; we still run
+our own systemd oneshot rather than nixpkgs' `authKeyFile` autoconnect, so the
+nickname / force-claim sequencing is identical on both platforms.
+
+### Deferred: concurrent tailnets via tsnet (tailmux)
+
+`docs/tailmux-proxy-spec.md` specifies an app-level proxy that embeds one
+`tsnet.Server` **per profile** (own `Dir`, identity, MagicDNS), routes each
+connection to the owning tailnet **by hostname** through a loopback
+CONNECT/SOCKS5 router + PAC, and needs no root — the true "multiple tailnets at
+once" path, complementing (not replacing) this single-tailnet system module.
+`docs/tailmux-proxy-agent-prompt.md` is a self-contained build prompt.
+
+### Incidental fix
+
+`rogue.nix` still imported `self.neusis.features.darwin.homebrew-defaults`,
+which commit `fba069f` had deleted — so `rogue` failed to evaluate **at HEAD**,
+before any of this work. Removed the one orphaned import to unblock eval +
+`agenix rekey` (which iterates every darwin config). Flagged separately; if
+homebrew-defaults is wanted it needs re-adding.
+
+### Verification ladder (all green)
+
+1. `nix eval` of `neusis.services.tailscale.*` + `services.tailscale.*` +
+   `launchd.daemons.neusis-tailscale-autoconnect` on `darwin001`/`rogue`
+   (default profile `leoank`, both profiles' orgs, hostnames, runtime authkey
+   paths).
+2. **Agnostic proof**: an inline `nixosSystem` importing
+   `self.nixosModules.tailscale` yields `systemd.services…Type = "oneshot"` +
+   `openFirewall` and `options ? launchd == false`; the Darwin side has no
+   `systemd`.
+3. Built the generated `neusis-ts-leoank` derivation directly — `shellcheck`
+   (which `writeShellApplication` runs) passes; body is exactly the
+   switch→login→up→force-claim→disable-expiry sequence.
+4. `agenix rekey` — the four tailscale secrets rekeyed for both hosts
+   (master key read without a passphrase); rekeyed `.age` committed under
+   `new_modules/secrets/rekeyed/`.
+5. Full `nix build .#darwinConfigurations.{darwin001,rogue}.system` — both
+   build end-to-end (incl. `org.neusis.tailscale-autoconnect.plist` + agenix
+   activation).
+
+### Still open
+
+- **Not deployed** (`darwin-rebuild switch`). First switch will force-claim the
+  `leoank` hostname on that tailnet (renaming any conflicting device to
+  `<name>-old-<ts>`).
+- **cslab has no OAuth creds** in this copy → its `forceHostName` /
+  `disableKeyExpiry` stay off until cslab OAuth secrets are added.
+- Cross-host SSH name resolution still absent (shared with distributed-builds).
+- Nothing committed/pushed on this ephemeral `refactor` branch yet.
