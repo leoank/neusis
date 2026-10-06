@@ -2,7 +2,7 @@
 {
   flake.neusis.registry.users.cslab = {
     admins = [
-      self.users.ank.neusisOS
+      self.neusis.users.ank.neusisOS
 
     ];
 

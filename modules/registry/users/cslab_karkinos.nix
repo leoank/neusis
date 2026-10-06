@@ -1,9 +1,9 @@
 { self, ... }:
 {
 
-  flake.neusis.registry.users.cslab = {
+  flake.neusis.registry.users.cslab_karkinos = {
     admins = [
-      self.users.ank.neusisOS
+      self.neusis.users.ank.neusisOS
     ];
 
     regulars = [

@@ -39,11 +39,11 @@
 
         test-users = {
           expr = {
-            # cslab_karkinos.nix defines `cslab` too, so there is no
-            # `cslab_karkinos` key (see the pinned tests below).
             labs = builtins.attrNames r.users;
             anklab = names r.users.anklab.admins;
             kumaranklab = names r.users.kumaranklab.admins;
+            cslab = names r.users.cslab.admins;
+            cslab_karkinos = names r.users.cslab_karkinos.admins;
             declared = builtins.attrNames self.neusis.users;
           };
           expected = {
@@ -51,10 +51,13 @@
               "all"
               "anklab"
               "cslab"
+              "cslab_karkinos"
               "kumaranklab"
             ];
             anklab = [ "ank" ];
             kumaranklab = [ "kumarank" ];
+            cslab = [ "ank" ];
+            cslab_karkinos = [ "ank" ];
             declared = [
               "ank"
               "kumarank"
@@ -62,26 +65,20 @@
           };
         };
 
-        # KNOWN BUG, pinned: registry/users/all.nix reads `self.registry.users.*`
-        # and `self.lib.neusisOS`, which live under `self.neusis.*` since the
-        # schema moved. Nothing live uses `all`, so it only fails when read.
-        test-all-registry-uses-stale-self-paths = {
-          expr = names r.users.all.admins;
-          expectedError = {
-            type = "EvalError";
-            msg = "attribute 'lib' missing";
-          };
-        };
-
-        # KNOWN BUG, pinned: registry/users/cslab.nix and cslab_karkinos.nix
-        # both define `cslab` from `self.users.ank.neusisOS` (should be
-        # `self.neusis.users.ank.neusisOS`), so the merged list has two broken
-        # entries and `cslab_karkinos` is never declared.
-        test-cslab-registries-use-stale-self-paths = {
-          expr = names r.users.cslab.admins;
-          expectedError = {
-            type = "EvalError";
-            msg = "attribute 'users' missing";
+        # `all` is the per-role merge of every lab (cslab, cslab_karkinos,
+        # anklab, kumaranklab — in that order).
+        test-all-merges-every-lab = {
+          expr = lib.mapAttrs (_: names) r.users.all;
+          expected = {
+            admins = [
+              "ank"
+              "ank"
+              "ank"
+              "kumarank"
+            ];
+            regulars = [ ];
+            guests = [ ];
+            locked = [ ];
           };
         };
 

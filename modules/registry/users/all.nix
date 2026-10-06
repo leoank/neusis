@@ -1,11 +1,13 @@
 { self, ... }:
 let
-  userRegistries = [
-    self.registry.users.cslab
-    self.registry.users.cslab_karkinos
-    self.registry.users.anklab
+  # Every lab registry; `all` is their merge (per role).
+  userRegistries = with self.neusis.registry.users; [
+    cslab
+    cslab_karkinos
+    anklab
+    kumaranklab
   ];
 in
 {
-  flake.neusis.registry.users.all = self.lib.neusisOS.mergeUserConfigs userRegistries;
+  flake.neusis.registry.users.all = self.neusis.lib.neusisOS.mergeUserConfigs userRegistries;
 }
