@@ -49,6 +49,10 @@
           enable = true;
           inherit (cfg) package tmuxKey;
         };
+        # home-manager's sesh module asserts this for its tmux integration
+        # (the `prefix + tmuxKey` picker). Set it here so sesh works without
+        # `tools.tmux`; harmless when fzf is not enabled.
+        programs.fzf.tmux.enableShellIntegration = true;
       };
     };
 }
