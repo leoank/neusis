@@ -14,6 +14,11 @@
     in
     {
       tests.feature-hm-mac-app-util = {
+        test-exported-hm-features = {
+          expr = builtins.attrNames self.neusis.features.hm;
+          expected = [ "mac-app-util" ];
+        };
+
         test-adds-trampoline-activation = {
           expr =
             if isDarwin then
