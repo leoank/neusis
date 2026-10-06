@@ -8,3 +8,5 @@
 /src/reference/*
 !/src/reference/index.md
 /src/upstream/
+# Python bytecode
+__pycache__/
