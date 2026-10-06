@@ -15,6 +15,7 @@ let
         inputs
         outputs
         ;
+      unstable = pkgs.unstable;
     }
     // import ./lib {
       inherit pkgs lib;
