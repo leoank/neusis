@@ -10,7 +10,7 @@
   flake-file.inputs = {
     # Nixpkgs
     flake-parts.url = "github:hercules-ci/flake-parts";
-    flake-file.url = lib.mkDefault "github:vic/flake-file";
+    flake-file.url = lib.mkDefault "github:denful/flake-file";
   };
 
   # generate the flake output string
