@@ -30,6 +30,7 @@ to be installed, though it will use nix and git when they are present.`,
 		newAddCmd(),
 		newUpdateCmd(),
 		newVersionCmd(),
+		newAnywhereCmd(),
 	)
 	return root
 }

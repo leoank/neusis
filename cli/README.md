@@ -28,6 +28,8 @@ neusis add machine       # add a host
 neusis add user          # add a person
 neusis add registry      # add a lab (grouping)
 neusis add secrets       # set up agenix-rekey secrets
+neusis anywhere deploy   # deploy with nixos-anywhere and decrypted age secrets
+neusis anywhere decrypt  # decrypt age files into a root directory for inspection
 ```
 
 Every command runs as a wizard when invoked interactively, and accepts
