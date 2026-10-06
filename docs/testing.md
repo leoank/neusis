@@ -382,18 +382,19 @@ Two consequences, both only visible on a store that has never built it
 (CI runners; a fresh machine):
 
 - `nix flake check --no-build` validates `darwinConfigurations.<host>.system`
-  on every runner and refuses to build the IFD input, so it fails with
-  "path … base16-schemes … is not valid". On macOS, realise that one
-  derivation first (`nix build --no-link
-  .#darwinConfigurations.rogue.pkgs.base16-schemes`); on Linux it cannot
-  pass at all, so CI instantiates the Linux checks with `nix eval` instead.
+  on every runner and refuses to build any IFD input, so on a cold store it
+  fails with "path … is not valid" — first for stylix's `base16-schemes`,
+  then for agenix-rekey's per-host rekeyed directories, and so on. Treat it
+  as a warm-store command (the hosts). CI instantiates `checks.<system>`
+  with `nix eval` instead, which realises IFD inputs as it goes and still
+  builds no check; on Linux the Darwin checks cannot be instantiated at all
+  (aarch64-darwin IFD), so the macOS job does those.
 - `builtins.readFile` of a derivation output inside a test is also IFD;
   prefer attributes that carry the content (`writeText`'s `.text`).
 
 CI layout that follows from this: the ubuntu jobs run T0 for both test
 sets (pure evaluation), `nix eval` of the Linux checks, the Linux package
 builds and the six VM tests under KVM; the `macos-latest` job runs T0
-natively, the full `nix flake check --no-build`, the Darwin checks'
-instantiation and the Darwin package builds. Darwin *system* builds stay
-on the hosts.
+natively, `nix eval` of the Darwin checks and the Darwin package builds.
+Darwin *system* builds stay on the hosts.
 
