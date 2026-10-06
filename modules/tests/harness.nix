@@ -124,7 +124,22 @@ in
             # segfaults on deep derivations (texliveFull); raise the
             # stack to the hard limit like `nix` itself does.
             ulimit -s "$(ulimit -Hs)" 2>/dev/null || true
-            exec nix-unit --flake ".#tests.''${NEUSIS_TEST_SYSTEM:-${system}}" "$@"
+
+            # nix-unit wants somewhere to park GC roots; give it a scratch dir.
+            roots=$(mktemp -d)
+            trap 'rm -rf "$roots"' EXIT
+
+            # nix-unit links the evaluator only, so it does not know the
+            # daemon-side settings nix-darwin writes to /etc/nix/nix.conf
+            # (allowed-users, trusted-users) and warns about each. Those
+            # warnings are noise for a pure-eval run; drop just them.
+            status=0
+            nix-unit --gc-roots-dir "$roots" --flake ".#tests.''${NEUSIS_TEST_SYSTEM:-${system}}" "$@" \
+              2> >(grep -v --line-buffered -e "warning: unknown setting 'allowed-users'" \
+                                           -e "warning: unknown setting 'trusted-users'" >&2) \
+              || status=$?
+            wait
+            exit "$status"
           '';
         };
       };
