@@ -26,6 +26,14 @@ class Context:
     rev: str
     repo_url: str
     nav_paths: set[str] = field(default_factory=set)  # every path listed in nav.md
+    # Inline-code term → "page.md#anchor", for gen/autolink.py. A term
+    # registered with two different targets is ambiguous and maps to None.
+    symbols: dict[str, str | None] = field(default_factory=dict)
+
+    def symbol(self, term: str, target: str) -> None:
+        if self.symbols.get(term, target) != target:
+            target = None
+        self.symbols[term] = target
 
     def options(self, scope: str) -> dict:
         return json.loads((self.options_dir / f"{scope}.json").read_text())

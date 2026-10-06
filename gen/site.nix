@@ -29,6 +29,7 @@ let
     fileset = lib.fileset.unions [
       ../book.toml
       ../nav.md
+      ./autolink.py
       ../src
       ../theme
     ];
@@ -59,6 +60,8 @@ let
 in
 runCommand "neusis-site"
   {
+    # for the autolink preprocessor
+    nativeBuildInputs = [ python3 ];
     passthru = {
       inherit
         optionsJson

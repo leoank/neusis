@@ -47,6 +47,35 @@ def _entries(entries: list[Entry], indent: str) -> list[str]:
     return out
 
 
+def _write_symbols(ctx: Context, out: Path) -> None:
+    """Add option namespaces to the symbol index and write it for autolink.
+
+    `neusis.supercharged-git` links to the page holding all of its direct
+    child options; a namespace whose children are spread over several
+    pages (`neusis.supercharged-git.tools`, `neusis.services`) stays plain.
+    """
+    children: dict[str, list[tuple[str, str]]] = {}  # namespace → [(option, target)]
+    on_page: dict[str, list[str]] = {}  # page → options documented there
+    for name, target in list(ctx.symbols.items()):
+        if target and "#opt-" in target:
+            page = target.split("#")[0]
+            children.setdefault(name.rsplit(".", 1)[0], []).append((name, target))
+            on_page.setdefault(page, []).append(name)
+    for prefix, kids in children.items():
+        owners = {t.split("#")[0] for _, t in kids}
+        if prefix.count(".") < 1 or len(owners) != 1 or prefix in ctx.symbols:
+            continue
+        page = owners.pop()
+        # A page wholly about this namespace (a module page) links to its
+        # top; on a mixed page (the flake schema), jump to the first option.
+        if all(o.startswith(prefix + ".") for o in on_page[page]):
+            ctx.symbol(prefix, page)
+        else:
+            ctx.symbol(prefix, min(kids)[1])
+    symbols = {k: v for k, v in sorted(ctx.symbols.items()) if v}
+    out.write_text(json.dumps(symbols, indent=1) + "\n")
+
+
 def main() -> None:
     p = argparse.ArgumentParser()
     for flag in ("root", "neusis", "options", "meta", "cli", "rev", "repo-url"):
@@ -67,6 +96,7 @@ def main() -> None:
     )
 
     results = {name: gen(ctx) for name, gen in GENERATORS.items()}
+    _write_symbols(ctx, root / "symbols.json")
 
     summary = []
     for line in nav.splitlines():

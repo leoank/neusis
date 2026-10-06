@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 from . import md, nixsrc
 from .context import Context, Entry
 
@@ -17,8 +19,25 @@ def lib(ctx: Context) -> list[Entry]:
             f"Available as `self.neusis.lib.{group}` inside a flake that imports "
             f"`neusis.flakeModules.default`, or directly as `inputs.neusis.neusis.lib.{group}`.",
         ]
+        page = f"reference/lib/{group}.md"
+        for prefix in ("", "neusis.", "self.neusis.", "inputs.neusis.neusis.", "flake.neusis."):
+            ctx.symbol(f"{prefix}lib.{group}", page)
         for name in sorted(fns):
             fn = fns[name]
+            target = f"{page}#{name}"
+            # Bare names only when they read as a function name (camelCase),
+            # not a common word like `icons`.
+            if re.search(r"[a-z][A-Z]", name):
+                ctx.symbol(name, target)
+            for prefix in (
+                "",
+                "lib.",
+                "neusis.lib.",
+                "self.neusis.lib.",
+                "inputs.neusis.neusis.lib.",
+                "flake.neusis.lib.",
+            ):
+                ctx.symbol(f"{prefix}{group}.{name}", target)
             lines += ["", f"## `{name}` {{#{name}}}", ""]
             src = ctx.read_source(fn["file"]) if fn["file"] else []
             doc = nixsrc.comment_above(src, fn["line"]) if src else ""
@@ -43,7 +62,6 @@ def lib(ctx: Context) -> list[Entry]:
 
             if fn["file"]:
                 lines += [f"Defined in {ctx.source_link(fn['file'], fn['line'])}."]
-        page = f"reference/lib/{group}.md"
         ctx.write(page, "\n".join(lines))
         entries.append(Entry(group, page))
 

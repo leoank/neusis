@@ -31,6 +31,7 @@
           program = toString (
             pkgs.writeShellScript "serve" ''
               set -euo pipefail
+              export PATH=${pkgs.python3}/bin:$PATH  # autolink preprocessor
               ${self.packages.${pkgs.stdenv.hostPlatform.system}.site.passthru.prepare}/bin/prepare-site
               exec ${pkgs.mdbook}/bin/mdbook serve --open "$@"
             ''

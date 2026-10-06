@@ -55,6 +55,16 @@ gen/render/       Python: JSON + source comments → src/reference/*.md,
 gen/site.nix      ties it together and runs `mdbook build`
 ```
 
+Inline code that names something the reference documents (an option,
+module, feature, flakeModule, lib function or CLI command) is linked to
+its reference page by an mdBook preprocessor, `gen/autolink.py`, on every
+page, including hand-written and upstream ones. The term index,
+`symbols.json`, is written by the generators. Each one registers what it
+documents with `ctx.symbol(term, "page.md#anchor")`. Terms that could mean
+something else are deliberately left out, such as single-word names like
+`tailscale` or names registered for two different pages. Code blocks,
+headings and code that is already part of a link are never touched.
+
 Each generated section is one function in `gen/render/`, registered in
 `GENERATORS` in `gen/render/__main__.py`. A marker comment `gen:<name>`
 on its own line in `nav.md` inserts that generator's pages into the

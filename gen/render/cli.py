@@ -24,6 +24,8 @@ def _flags(flags: list[dict]) -> str:
 
 def _render(ctx: Context, cmd: dict) -> Entry:
     page = _page(cmd)
+    if " " in cmd["path"]:  # not bare `neusis`, which usually means the project
+        ctx.symbol(cmd["path"], page)
     lines = [f"# {cmd['path']}", "", cmd["short"], ""]
     if cmd["long"]:
         lines += [md.prose(cmd["long"]), ""]

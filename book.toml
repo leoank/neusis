@@ -10,6 +10,11 @@ src = "src"
 # silently create an empty page.
 create-missing = false
 
+# Links inline `code` naming an option, module, lib function, CLI
+# command, … to its reference page (index: symbols.json, from gen/render).
+[preprocessor.autolink]
+command = "python3 gen/autolink.py"
+
 [output.html]
 git-repository-url = "https://github.com/leoank/neusis"
 git-repository-icon = "fab-github"
