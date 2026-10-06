@@ -1,0 +1,62 @@
+[project]
+name = "pixi-multienv"
+version = "0.1.0"
+description = "Multi-Environment Demo: Handling Incompatible Dependencies with Pixi"
+authors = [{name = "Shantanu Singh", email = "shsingh@broadinstitute.org"}]
+requires-python = ">= 3.9"  # Different environments use different Python versions
+
+[build-system]
+build-backend = "hatchling.build"
+requires = ["hatchling"]
+
+# Pixi configuration
+[tool.pixi.project]
+channels = ["rapidsai", "nvidia", "conda-forge", "bioconda"]
+platforms = ["linux-64"]
+
+# Feature: RAPIDS GPU workloads (numpy 2.x)
+# Demonstrates: GPU/CUDA computation with modern numpy
+[tool.pixi.feature.rapids.dependencies]
+python = "3.12.*"
+rapids = "25.02.*"
+cuda-version = "12.8.*"  # CUDA runtime (compatible with dc_535 driver 12.2)
+cudnn = "*"
+cutensor = "*"
+cusparselt = "*"
+numpy = ">=2"  # RAPIDS 25.02 requires numpy 2.x
+cupy = "*"
+anndata = "*"
+pandas = "*"
+scikit-learn = "*"
+duckdb = "*"
+typer = "*"
+loguru = "*"
+snakemake = "*"
+
+[tool.pixi.feature.rapids.pypi-dependencies]
+rapids-singlecell = "*"
+copairs-runner = { git = "https://github.com/broadinstitute/monorepo.git", subdirectory = "libs/copairs_runner", rev = "copairs-runner" }
+upsetplot = "*"
+
+# Feature: Chemical SMILES standardization (numpy 1.x)
+# Demonstrates: Legacy package compatibility
+[tool.pixi.feature.smiles.dependencies]
+python = "3.12.*"  # jump-smiles requires python >=3.11,<3.13
+numpy = "<2"  # jump-smiles requires numpy < 2
+pandas = "*"
+scikit-learn = "*"
+matplotlib = "*"
+duckdb = "*"
+typer = "*"
+loguru = "*"
+snakemake = "*"
+
+[tool.pixi.feature.smiles.pypi-dependencies]
+jump-smiles = { git = "https://github.com/broadinstitute/monorepo.git", subdirectory = "libs/jump_smiles", rev = "main" }
+upsetplot = "*"
+
+# Environments: Define which features to activate together
+# Usage: pixi shell -e rapids  OR  pixi shell -e smiles
+[tool.pixi.environments]
+rapids = ["rapids"]  # GPU/RAPIDS environment (numpy 2.x)
+smiles = ["smiles"]  # Chemical standardization (numpy 1.x)

@@ -1,0 +1,58 @@
+[project]
+name = "pixi-demo"
+version = "0.1.0"
+description = "2025 Best Practice: Pure Pixi for GPU/RAPIDS Python Development"
+authors = [{name = "Shantanu Singh", email = "shsingh@broadinstitute.org"}]
+requires-python = ">= 3.12"
+
+[build-system]
+build-backend = "hatchling.build"
+requires = ["hatchling"]
+
+# Pixi configuration - based on rapids_singlecell conda env
+[tool.pixi.project]
+channels = ["rapidsai", "nvidia", "conda-forge", "bioconda"]
+platforms = ["linux-64"]
+
+[tool.pixi.dependencies]
+# Core RAPIDS environment (provides numpy, pandas, cupy, etc.)
+rapids = "25.02.*"
+python = "3.12.*"
+cuda-version = "12.8.*"  # CUDA runtime (compatible with dc_535 driver 12.2)
+cudnn = "*"
+cutensor = "*"
+cusparselt = "*"
+
+# Additional packages for demo (not in rapids)
+typer = "*"
+loguru = "*"
+snakemake = "*"
+duckdb = "*"
+anndata = "*"
+
+[tool.pixi.feature.jupyter.dependencies]
+ipykernel = ">=6.30.1,<7"
+jupyterlab = ">=4.4.9,<5"
+jupyter = ">=1.1.1,<2"
+jupytext = ">=1.17.3,<2"
+
+[tool.pixi.feature.marimo.dependencies]
+marimo = ">=0.16.5,<0.17"
+
+[tool.pixi.environments]
+default = { features = ["jupyter", "marimo"], solve-group = "default" }
+minimal = { features = [], solve-group = "default" }
+
+[tool.pixi.pypi-dependencies]
+# PyPI-only packages
+upsetplot = "*"
+decoupler = "*"
+omnipath = "*"
+gdown = "*"
+wget = "*"
+rapids-singlecell = "*"
+
+# Git sources (fully supported in 2025 pixi+uv)
+copairs-runner = { git = "https://github.com/broadinstitute/monorepo.git", subdirectory = "libs/copairs_runner", rev = "copairs-runner" }
+
+[tool.pixi.tasks]

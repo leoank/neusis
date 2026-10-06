@@ -1,0 +1,29 @@
+[project]
+name = "uv-demo"
+version = "0.1.0"
+description = "2025 Best Practice: Pure uv for Python/PyPI Development"
+requires-python = ">= 3.12"
+dependencies = [
+    # Standard data science
+    "numpy>=1.26.0",
+    "pandas>=2.2.0",
+    "scikit-learn>=1.5.0",
+    "matplotlib>=3.9.0",
+
+    # Common tools
+    "typer>=0.16.0",
+    "loguru>=0.7.3",
+    "snakemake>=9.0.0",
+    "duckdb<1.4.0",
+
+    # PyPI-only packages
+    "upsetplot>=0.9.0",
+
+    # Git sources (both work without RAPIDS numpy conflict)
+    "copairs-runner",
+    "jump-smiles",
+]
+
+[tool.uv.sources]
+jump-smiles = { git = "https://github.com/broadinstitute/monorepo.git", subdirectory = "libs/jump_smiles", rev = "smiles-updates" }
+copairs-runner = { git = "https://github.com/broadinstitute/monorepo.git", subdirectory = "libs/copairs_runner", rev = "copairs-runner" }

@@ -11,9 +11,10 @@ they are ported.
   so the tree is still a self-contained flake:
   `nix build path:./old_modules#darwinConfigurations.<host>.system`.
 - `flake.nix.bak` is an intermediate refactor-era flake kept for reference.
-- `scripts/` and `templates/` were moved back out to the repo root after the
-  merge (the old `flake.nix` here still references `./templates`, so
-  `templates` is the one output of this nested flake that no longer evaluates).
+- `scripts/` and `templates/` were promoted back to the repo root after the
+  merge; the copies here are kept so this archive stays complete and its
+  `flake.nix` (`templates = import ./templates;`) still evaluates. The root
+  copies are the live ones.
 - `homes/common/astroank` is a git submodule (see `.gitmodules` at the
   repo root).
 - The same code is also archived at the `v1` tag / `v1` branch.

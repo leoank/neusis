@@ -2176,3 +2176,7 @@ pythonml, python-nix, python-uv, python-pixi, python-pixi-multienv, rust).
 referenced by any module; it is a standalone `uv run` script. Note
 `old_modules/flake.nix` still says `templates = import ./templates;`, so
 that one output of the archived flake no longer evaluates.
+
+Follow-up: copies of `scripts/` and `templates/` were put back under
+`old_modules/` as well, so the archive is complete and its nested flake's
+`templates` output evaluates again. Root copies are the live ones.
