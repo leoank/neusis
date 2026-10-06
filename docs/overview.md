@@ -7,28 +7,6 @@ These modules are automatically imported into the flake using the `import-tree` 
 No file based imports are used in this flake. Every output of the flake can be accessed through the `self` property.
 Every `flake-parts` module gets a perconfigured `pkgs` based on the configuration here: `modules/system-pkgs.nix`
 
-# Bootstrapping the flake.nix
-Don't follow the instruction in the official docs of `flake-file`. Manually create a flake.nix with following contents:
-```
-{
-  outputs = inputs: inputs.flake-parts.lib.mkFlake { inherit inputs; } (inputs.import-tree ./modules);
-
-  inputs = {
-    flake-file.url = "github:vic/flake-file";
-    flake-parts = {
-      url = "github:hercules-ci/flake-parts";
-      inputs.nixpkgs-lib.follows = "nixpkgs-lib";
-    };
-    import-tree.url = "github:vic/import-tree";
-    nixpkgs.url = "https://channels.nixos.org/nixpkgs-unstable/nixexprs.tar.xz";
-    nixpkgs-lib.follows = "nixpkgs";
-  };
-}
-```
-and then run `nix run .#write-flake`
-
-> Note: Make sure the `modules` path in the output string matches with you modules folder path. Also that folder should be added to git staging area if you are doing this is inside a git repo.
-
 > Note: after adding a new flake-file.input, run `nix run .#write-flake` before using the flake input in code. Otherwise this command will fail eventually.
 
 # Modules inside the modules folder
