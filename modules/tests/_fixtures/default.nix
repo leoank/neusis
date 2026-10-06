@@ -17,10 +17,11 @@ rec {
       home.stateVersion = "25.11";
     };
 
+  # No hostName here: the system builders set it with mkDefault and a
+  # plain value in the base would shadow them.
   darwinBase = {
     system.stateVersion = 5;
     system.primaryUser = "alice";
-    networking.hostName = "fixture-darwin";
   };
 
   nixosBase = {
@@ -30,7 +31,18 @@ rec {
     };
     boot.loader.grub.enable = false;
     system.stateVersion = "25.11";
-    networking.hostName = "fixture";
+  };
+
+  # What a real NixOS host with login users carries: agenix (for the
+  # initial-password secret), openssh (agenix's identity paths) and the
+  # zsh program (users with a zsh login shell).
+  nixosLogin = {
+    imports = [
+      nixosBase
+      inputs.agenix.nixosModules.default
+    ];
+    services.openssh.enable = true;
+    programs.zsh.enable = true;
   };
 
   # ---- A fake user and registry in the shape of flake.neusis.users.* /
@@ -71,31 +83,37 @@ rec {
   # Fake host key, used for `hostPubkey` fields.
   hostPubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA fixture";
 
-  # ---- Machines in the shape of flake.neusis.machines.*.
+  # ---- Machines in the shape of flake.neusis.machines.* — every field
+  # the option type would default is spelled out, because
+  # `mkNeusisFlake` reads them all off the attrset directly.
 
   machines = {
     fixture = {
       hostname = "fixture";
+      computerName = null;
       system = "x86_64-linux";
+      nixpkgs = null;
+      primaryUser = null;
+      modulesSpecialArgs = { };
       inherit hostPubkey;
       userRegistries = [ lab ];
       initialHashedPassword = ./placeholder.age;
-      module = {
-        imports = [
-          nixosBase
-          inputs.agenix.nixosModules.default
-        ];
-      };
+      module = nixosLogin;
     };
 
     fixture-darwin = {
       hostname = "fixture-darwin";
       computerName = "Fixture Mac";
       system = "aarch64-darwin";
+      nixpkgs = null;
       primaryUser = "alice";
+      modulesSpecialArgs = { };
       inherit hostPubkey;
       userRegistries = [ lab ];
-      module = darwinBase;
+      initialHashedPassword = null;
+      module = {
+        system.stateVersion = 5;
+      };
     };
   };
 

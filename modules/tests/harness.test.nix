@@ -35,12 +35,12 @@
 
         test-darwin-base-evaluates = {
           expr = {
-            host = darwin.networking.hostName;
+            primaryUser = darwin.system.primaryUser;
             stateVersion = darwin.system.stateVersion;
             failed = t.failedAssertions darwin;
           };
           expected = {
-            host = "fixture-darwin";
+            primaryUser = "alice";
             stateVersion = 5;
             failed = [ ];
           };
@@ -48,13 +48,11 @@
 
         test-nixos-base-evaluates = {
           expr = {
-            host = nixos.networking.hostName;
             stateVersion = nixos.system.stateVersion;
             system = nixos.nixpkgs.hostPlatform.system;
             failed = t.failedAssertions nixos;
           };
           expected = {
-            host = "fixture";
             stateVersion = "25.11";
             system = "x86_64-linux";
             failed = [ ];
