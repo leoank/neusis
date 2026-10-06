@@ -83,8 +83,9 @@
         };
 
         # spirit and oppy are dedicated Linux builders (not neusis-managed
-        # machines); every neusis machine in the lab is also offered as one.
-        test-builders-are-the-linux-builders-plus-the-machines = {
+        # machines); rogue is offered to its peers; darwin001 deliberately
+        # is not (Nix would prefer its slow slots over building on rogue).
+        test-builders-are-the-linux-builders-plus-rogue = {
           expr = {
             order = map (b: b.hostName) r.builders.anklab;
             linuxBuilders = lib.genAttrs [ "spirit" "oppy" ] (
@@ -93,23 +94,21 @@
                 b = lib.findFirst (b: b.hostName == name) null r.builders.anklab;
               in
               {
-                inherit (b) sshUser systems;
+                inherit (b) sshUser systems maxJobs;
                 vmCapable = builtins.elem "kvm" b.supportedFeatures && builtins.elem "nixos-test" b.supportedFeatures;
               }
             );
-            machinesMirrored = lib.all (
-              m:
-              lib.any (
-                b: b.hostName == m.hostname && b.hostPubkey == m.hostPubkey && b.systems == [ m.system ]
-              ) r.builders.anklab
-            ) r.machines.anklab.darwin;
+            rogueMirrored = lib.any (
+              b:
+              b.hostName == "rogue" && b.hostPubkey == self.neusis.machines.rogue.hostPubkey && b.systems == [ "aarch64-darwin" ]
+            ) r.builders.anklab;
+            darwin001Absent = !(lib.any (b: b.hostName == "darwin001") r.builders.anklab);
           };
           expected = {
             order = [
               "spirit"
               "oppy"
               "rogue"
-              "darwin001"
             ];
             linuxBuilders = lib.genAttrs [ "spirit" "oppy" ] (_: {
               sshUser = "ank";
@@ -117,9 +116,12 @@
                 "x86_64-linux"
                 "aarch64-linux"
               ];
+              # their daemons run cores = 0, so concurrency is capped here
+              maxJobs = 12;
               vmCapable = true;
             });
-            machinesMirrored = true;
+            rogueMirrored = true;
+            darwin001Absent = true;
           };
         };
 

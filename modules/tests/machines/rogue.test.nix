@@ -85,10 +85,10 @@
             kanata = true;
             buildServer = true;
             # darwin001 from the registry + the local linux-builder VM
+            # darwin001 is deliberately not a builder for rogue
             buildsOffloadTo = [
               "spirit"
               "oppy"
-              "darwin001"
               "linux-builder"
             ];
             tailscale = false;

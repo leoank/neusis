@@ -16,6 +16,12 @@ let
   m = self.neusis.machines;
 in
 {
+  # Builders every anklab host offers to its peers (build-client drops the
+  # entry matching its own hostname). darwin001 is deliberately NOT a
+  # builder: Nix sends a derivation to any eligible remote with a free
+  # slot before building locally, so rogue's own Darwin builds would queue
+  # on darwin001's four slow slots first. darwin001 still offloads to
+  # rogue and the Linux builders.
   flake.neusis.registry.builders.anklab = [
     {
       hostName = "spirit";
@@ -24,7 +30,10 @@ in
         "x86_64-linux"
         "aarch64-linux"
       ];
-      maxJobs = 300;
+      # Their daemons run `cores = 0` (every build may use all 384
+      # threads), so cap concurrency here instead: a dozen jobs keep the
+      # box busy without parallel-internal builds fighting each other.
+      maxJobs = 12;
       speedFactor = 10;
       supportedFeatures = [
         "big-parallel"
@@ -42,7 +51,10 @@ in
         "x86_64-linux"
         "aarch64-linux"
       ];
-      maxJobs = 300;
+      # Their daemons run `cores = 0` (every build may use all 384
+      # threads), so cap concurrency here instead: a dozen jobs keep the
+      # box busy without parallel-internal builds fighting each other.
+      maxJobs = 12;
       speedFactor = 10;
       supportedFeatures = [
         "big-parallel"
@@ -65,18 +77,6 @@ in
       ];
       mandatoryFeatures = [ ];
       hostPubkey = m.rogue.hostPubkey;
-    }
-    {
-      hostName = m.darwin001.hostname;
-      sshUser = "nixremote";
-      systems = [ m.darwin001.system ];
-      maxJobs = 4;
-      speedFactor = 1;
-      supportedFeatures = [
-        "big-parallel"
-      ];
-      mandatoryFeatures = [ ];
-      hostPubkey = m.darwin001.hostPubkey;
     }
   ];
 }

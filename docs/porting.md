@@ -2265,3 +2265,15 @@ emulation). The shared build public key had to be added to `ank`'s
 `~/.ssh/authorized_keys` on each (done by hand; both are NixOS, so this can
 move into their configs). After `darwin-rebuild switch`, plain
 `nix build .#checks.x86_64-linux.vm-*` picks them from `/etc/nix/machines`.
+
+## 2026-10-06 — builder tuning: spirit/oppy maxJobs 12, darwin001 no longer a builder
+
+Nix hands a derivation to any eligible remote with a free slot before it
+builds locally, so with darwin001 (4 slots, speedFactor 1) in the list,
+rogue's own Darwin builds queued there first; darwin001 is removed from the
+anklab builders (it still offloads to rogue and the Linux builders). spirit
+and oppy run `cores = 0` on their daemons and cannot be changed right now, so
+concurrency is capped from this side: `maxJobs = 12` each instead of 300.
+Effective lists — rogue: spirit, oppy, linux-builder; darwin001: spirit,
+oppy, rogue. When the two hosts can be touched, set `cores = 16` there and
+raise `maxJobs` toward 24.

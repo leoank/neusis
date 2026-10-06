@@ -39,7 +39,7 @@
     in
     {
       tests.feature-distributed-builds = {
-        test-rogue-serves-and-offloads-to-darwin001 = {
+        test-rogue-serves-and-offloads-to-the-linux-builders = {
           expr = {
             server = rogue.neusis.services.build-server.enable;
             serverKeyFiles = map baseNameOf rogue.neusis.services.build-server.authorizedKeyFiles;
@@ -57,14 +57,13 @@
             buildUser = true;
             trusted = true;
             client = true;
+            # darwin001 is not a builder (see registry/builders/anklab.nix)
             machines = [
               "spirit"
               "oppy"
-              "darwin001"
             ];
             sshKey = [ "/etc/nix/remote-build-key" ];
             knownHosts = [
-              "darwin001"
               "oppy"
               "spirit"
             ];
@@ -75,8 +74,8 @@
         test-darwin001-offloads-to-rogue = {
           expr = map (m: "${m.hostName}:${toString m.maxJobs}:${toString m.speedFactor}") (onHost "darwin001").nix.buildMachines;
           expected = [
-            "spirit:300:10"
-            "oppy:300:10"
+            "spirit:12:10"
+            "oppy:12:10"
             "rogue:8:2"
           ];
         };
@@ -87,7 +86,6 @@
             "spirit"
             "oppy"
             "rogue"
-            "darwin001"
           ];
         };
       };
