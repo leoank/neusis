@@ -2017,3 +2017,96 @@ earlier commits' input declarations.
 - msgvault-sync, agent-deck and hermes are parked, not fixed.
 - Earlier open items unchanged: cslab OAuth creds, cross-host SSH name
   resolution, `refactor` not merged to `main`, legacy dirs still on disk.
+
+## 2026-10-06 — migrate to nixpkgs 26.05 / nix-darwin 26.05 / home-manager 26.05
+
+Moved every release-branch pin one release forward and fixed the fallout.
+Both darwin systems build end-to-end; both standalone home configs and
+all flake packages (except the pre-broken `kalam-py`) evaluate clean with
+no deprecation warnings.
+
+### Pins moved (declared in modules; `flake.nix` regenerated)
+
+| input | from | to | declared in |
+|---|---|---|---|
+| `nixpkgs` | `nixos-25.11` | `nixos-26.05` | `system-pkgs.nix` |
+| `darwin` | `nix-darwin-25.11` | `nix-darwin-26.05` | `system-pkgs.nix` |
+| `home-manager` | `release-25.11` | `release-26.05` | `homeModules/home-manager.nix`, `features/flake/agenix-rekey.nix` |
+| `nixvim` | `nixos-25.11` | `nixos-26.05` | `packages/kalam/kalam.nix` |
+| `stylix` | `release-25.11` | `release-26.05` | `users/ank/theming.nix` |
+
+`nix flake update nixpkgs darwin home-manager stylix nixvim` for the lock.
+There is no 26.11 branch yet for any of these.
+
+### Breakages fixed
+
+- **`gh-copilot` removed from nixpkgs** (archived upstream). Dropped from
+  `supercharged-git-gh`'s default `extensions`; now `[ gh-dash ]`. The
+  suggested replacement `github-copilot-cli` is a standalone CLI, not a
+  `gh` extension, so it was not substituted — add it to `home.packages` if
+  wanted.
+- **`pkgs.nodePackages` removed.** `nodePackages.prettier` → `pkgs.prettier`
+  in kalam py/v2 `lang/{css,html}.nix` (kalam-v2 failed to eval).
+
+### Deprecation warnings fixed
+
+- `programs.claude-code.skillsDir` → `programs.claude-code.skills` (now
+  `either attrsOf … path`; a plain path still works) in `agent-harness`.
+- `programs.gemini-cli` → `programs.antigravity-cli` (HM renamed the module;
+  the package is still gemini-cli). Set `useLegacyGeminiConfig = true`
+  explicitly so the `~/.gemini/` layout we also write `agents/commands/skills`
+  into is kept — the auto-detect keys on `getName pkg == "gemini-cli"`, which
+  the jailed Linux wrapper doesn't match.
+- `programs.yazi.shellWrapperName` default flipped `yy` → `y` for
+  `stateVersion >= 26.05`; pinned to `"yy"` explicitly (no behaviour change).
+- `nixfmt-rfc-style` is now an alias of `nixfmt` → `pkgs.nixfmt` in kalam
+  (`formatting.nix`, py/v2 `lang/nix.nix`).
+- nixvim: `plugins.treesitter.settings.highlight.disable` → native
+  `plugins.treesitter.highlight.disable` (kalam-full latex/VimTeX hand-off).
+
+### Deliberately NOT bumped
+
+- **`home.stateVersion` stays `25.11`** (`hm-system-init.defaultStateVersion`
+  and the `neusisOS` standalone default). stateVersion records the release a
+  home was *created* under; bumping it on existing homes silently changes
+  defaults (e.g. the yazi wrapper above). New users inherit it too — bump
+  per-user only when intended.
+- **`system.stateVersion = 5`** on both darwin hosts. nix-darwin 26.05's
+  max is **7**. What ≥6 changes: `environment.darwinConfig` default moves to
+  `/etc/nix-darwin/configuration.nix` (irrelevant for flakes), tmux
+  `enableSensible` default, and `system.requiresPrimaryUser` is dropped for
+  `environment.darwinConfig`. Low-risk to bump but not done here — do it
+  as its own change after reading the 26.05 release notes.
+
+### CLI defaults (new consumer repos)
+
+`cli/internal/wizard/wizard.go` `Default{Nixpkgs,HM,Darwin}Ref` → 26.05,
+`DefaultStateVersion` → `"26.05"`; darwin `machine.nix.tmpl`
+`system.stateVersion` 6 → 7 (fresh machines should start at max). Go deps
+are current (`go list -m -u all` shows no updates); `go test ./...` green.
+
+### Verification
+
+1. `nix eval` of `darwinConfigurations.{rogue,darwin001}.system.drvPath`,
+   `homeConfigurations."ank@rogue"` / `"kumarank@darwin001"`, and
+   `packages.aarch64-darwin.{kalam,kalam-full,kalam-v2,neusis,gclb}` — all
+   clean, zero warnings.
+2. `nix build .#darwinConfigurations.{rogue,darwin001}.system` — both built.
+   **Gotcha:** building with `--builders ''` fails with 38
+   "required system aarch64-linux" errors — rogue's `linux-builder` VM
+   config is part of its closure and needs the `linux-builder` entry in
+   `/etc/nix/machines`. Don't disable builders when testing rogue.
+3. `kalam-py` fails to eval on **both** 25.11 and 26.05 (`wayland` not
+   available on aarch64-darwin) — pre-existing, not a regression.
+
+### Other upgrade candidates (not done)
+
+- `llm-agents` and `fresh-apps` are behind upstream HEAD (both unpinned;
+  `nix flake update llm-agents fresh-apps`). Everything else unpinned is at
+  HEAD as of today.
+- `system.stateVersion` 5 → 7 (see above).
+- `agent-deck`, `hermes`, `msgvault-sync` still parked from the rogue fix-up.
+
+### Still open
+
+- Not deployed (`darwin-rebuild switch`) on either host.
