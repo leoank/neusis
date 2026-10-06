@@ -1,0 +1,30 @@
+[book]
+title = "neusis"
+description = "A flake-based NixOS / nix-darwin / home-manager configuration library"
+authors = ["Ankur Kumar"]
+language = "en"
+src = "src"
+
+[build]
+# Every page comes from nav.md; a typo there should fail the build, not
+# silently create an empty page.
+create-missing = false
+
+[output.html]
+git-repository-url = "https://github.com/leoank/neusis"
+git-repository-icon = "fab-github"
+site-url = "/neusis/"
+default-theme = "light"
+preferred-dark-theme = "navy"
+additional-css = ["theme/neusis.css"]
+additional-js = ["theme/sidebar.js"]
+no-section-label = true
+# Keep `--flag` from turning into an en dash in prose.
+smart-punctuation = false
+
+[output.html.fold]
+enable = true
+level = 1
+
+[output.html.search]
+limit-results = 40
