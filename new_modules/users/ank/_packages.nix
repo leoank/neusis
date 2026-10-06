@@ -7,6 +7,7 @@
   home.packages =
     with pkgs;
     [
+      android-tools
       duckdb
       jq
       pkgs.unstable.mpv
