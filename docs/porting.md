@@ -2240,3 +2240,28 @@ has its own key and `all` merges every lab; multi-account uses
 packages in the agent-harness extras bundle are untouched. Also committed:
 the `_homebrew.nix` tap `{ name; trusted; }` form + `cleanup = "uninstall"`
 that fixed homebrew failing at activation.
+
+## 2026-10-06 — T3 NixOS VM tests; spirit and oppy as lab builders
+
+Six VM tests under `modules/tests/vm/` (`checks.<linux-system>.vm-*`),
+built on `pkgs.testers.runNixOSTest` through `flake.neusis.lib.tests.mkVmTest`
+with TEST-ONLY fixtures in `modules/tests/_fixtures/vm/` (age identity,
+encrypted `neusis-test` password, SSH keys): `vm-neusis-os` boots the
+fixture machine from the new `mkNeusisOSModules` (roles, agenix-seeded
+password, home-manager activation); `vm-tailscale`, `vm-kanata`,
+`vm-build-cluster` (two nodes, ssh-ng store access + an offloaded build),
+`vm-home-bundle` (git/shell/terminal tools rendered and runnable for a
+user), `vm-packages` (neusis CLI, gclb, kalam headless). All six pass.
+Design, run modes and gotchas in `docs/testing.md` §7; CI runs them under
+KVM on pushes to main.
+
+`spirit` and `oppy` (NixOS, 384 cores, KVM, x86_64 + aarch64) joined the
+anklab builders registry as `ank@<host>` with the shared build key. Both
+verified end to end before the config was applied anywhere: host keys
+match the pins, trivial builds for both systems went through rogue's daemon
+with an explicit `--builders` spec, and the VM tests ran on them under KVM
+(test scripts in 25–40 s vs minutes under the linux-builder's software
+emulation). The shared build public key had to be added to `ank`'s
+`~/.ssh/authorized_keys` on each (done by hand; both are NixOS, so this can
+move into their configs). After `darwin-rebuild switch`, plain
+`nix build .#checks.x86_64-linux.vm-*` picks them from `/etc/nix/machines`.

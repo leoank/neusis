@@ -1,7 +1,7 @@
 # Testing neusis — design and work scope
 
-Status: **implemented** (2026-10-06): phases 0–6 of the work scope are
-in; phase 7 is deferred. Section 6 lists what the suite found. Decisions
+Status: **implemented** (2026-10-06): phases 0–7 of the work scope are
+in, including the NixOS VM tier; phase 8 is deferred. Section 6 lists what the suite found. Decisions
 marked ✅ are final; section 5 records how each open question was settled.
 
 Quick start:
@@ -12,6 +12,7 @@ NEUSIS_TEST_SYSTEM=x86_64-linux nix run .#neusis-test # T0, the Linux set (from 
 nix run .#neusis-test -- --help                       # extra args go to nix-unit
 nix flake check --no-build --all-systems              # T1 (~40 s)
 nix build .#checks.aarch64-darwin.darwin-rogue        # T2, one check
+nix build .#checks.x86_64-linux.vm-neusis-os -L        # T3, one VM test (on a KVM builder)
 ```
 
 ## 1. Why
@@ -253,7 +254,7 @@ command green before the next starts. Commit per item
 | 7.4 | `vm-build-cluster`: build-server + build-client nodes, `nix store info` over ssh-ng, a remote build | T3 |
 | 7.5 | `vm-home-bundle`: supercharged-git/-shell/terminal-velocity tools rendered and runnable for a user | T3 |
 | 7.6 | `vm-packages`: neusis CLI, gclb, kalam run inside a VM | T3 |
-| 7.7 | CI: VM tests on the x86_64 runner (KVM) | workflow green |
+| 7.7 | CI: VM tests on the x86_64 runner (KVM), pushes to main | workflow green |
 | **Phase 8 — deferred** | | |
 | 8.1 | `nix-unit` flake input so T0 joins `nix flake check` | — |
 | 8.2 | namaka snapshots for generated config files | — |
@@ -304,14 +305,26 @@ the same agnostic modules on their NixOS side here.
 
 ### 7.2 Where they run
 
-- **Locally from a Mac**: `nix build .#checks.aarch64-linux.vm-<name>` is
-  dispatched to rogue's `linux-builder` (which advertises `kvm` and
-  `nixos-test`). There is no nested virtualisation inside that VM, so QEMU
-  falls back to software emulation: the smoke test (boot, `uname`) takes
-  about 2 minutes wall-clock; service tests a few minutes; the packages
-  test longer because kalam's closure must be fetched for aarch64-linux.
+- **On the lab builders (preferred)**: `spirit` and `oppy` (anklab
+  builders registry; NixOS, 384 cores each, `/dev/kvm`, `kvm` +
+  `nixos-test` features, x86_64 and aarch64) run the tests under KVM:
+  `nix build .#checks.x86_64-linux.vm-<name>` from a host whose applied
+  config lists them. Measured test-script times: neusis-os ~100 s under
+  emulation vs kanata 33 s, home-bundle 24 s, packages 36 s under KVM; the
+  wall-clock is dominated by fetching the x86_64 closure the first time.
+  Until a host has applied the registry, the same builders can be used
+  with an explicit `--builders 'ssh-ng://ank@spirit x86_64-linux,aarch64-linux
+  /etc/nix/remote-build-key 300 10 big-parallel,benchmark,kvm,nixos-test - <base64 host key>'`
+  (trusted users only). The shared build key
+  (`modules/secrets/common/remote-build.pub`) must be in `ank`'s
+  `authorized_keys` on each builder.
+- **Locally from a Mac without them**: `checks.aarch64-linux.vm-*` are
+  dispatched to rogue's `linux-builder`. There is no nested
+  virtualisation inside that VM, so QEMU falls back to software emulation:
+  the smoke test (boot, `uname`) takes about 2 minutes wall-clock, the
+  service tests 2–3 minutes each; it works, just slowly.
 - **CI**: GitHub's ubuntu runners have KVM, so `checks.x86_64-linux.vm-*`
-  run at native speed there (Phase 7.7).
+  run at native speed there (Phase 7.7, pushes to `main` only).
 - `nix flake check --no-build --all-systems` evaluates every VM test
   derivation (cheap) without running it.
 
@@ -338,4 +351,26 @@ files, command output), never Nix values; nodes avoid
 overlays would conflict); heavy closures (texlive, browsers, the
 agent CLIs) stay out of VM nodes — the eval tests already cover their
 wiring.
+
+### 7.4 What the VM tests found
+
+- `age.identityPaths = [ ./key ]` renders as a subpath of the flake's
+  source store path, which a VM node's closure does not contain; agenix
+  then finds "no readable identities". Interpolate the file
+  (`"${./key}"`) so it becomes its own store path (fixture `vmNode`).
+- Role groups such as `docker` are dropped silently on hosts where the
+  group does not exist (NixOS warns), so account tests assert on `wheel`
+  only.
+- `nix store info --store ssh-ng://…` does not read the machines file;
+  the key has to be named in the URI (`?ssh-key=`). Builds do get it from
+  `nix.buildMachines`.
+- The Nix sandbox hostname is always `localhost`; a remote build proves
+  itself through `--max-jobs 0` succeeding, not through output content.
+- `--builders ''` inside a Nix indented string ends the string — use
+  `\"\"`.
+- A `grep -q … $(…)` whose inner command matches nothing reads stdin and
+  hangs the test forever (the driver never closes stdin). Extract first,
+  assert non-empty, then grep the file.
+- home-manager 26.05 wires delta through `interactive.diffFilter` and
+  per-command `[pager]` entries, not `core.pager`.
 

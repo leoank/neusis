@@ -73,13 +73,18 @@ nix run .#neusis-test                                 # T0: nix-unit eval tests 
 NEUSIS_TEST_SYSTEM=x86_64-linux nix run .#neusis-test # T0 for the Linux variants
 nix flake check --no-build --all-systems              # T1: every machine/home/package check instantiates
 nix flake check                                       # T2: build them all (slow)
+nix build .#checks.aarch64-linux.vm-neusis-os -L      # T3: a NixOS VM test via the linux-builder (minutes)
 ```
 
 Verification ladder before claiming something works (details in
 `docs/testing.md`): **T0** `nix run .#neusis-test` (nix-unit, both test
 sets); **T1** `nix flake check --no-build --all-systems` (automates the old
 `drvPath` eval of every host and home and prints deprecation warnings);
-**T2** `nix build .#checks.aarch64-darwin.darwin-rogue` etc. Do **not** pass
+**T2** `nix build .#checks.aarch64-darwin.darwin-rogue` etc.; **T3** the
+NixOS VM tests `checks.<linux-system>.vm-*` (`modules/tests/vm/`), which
+boot the fixture machine, the services, a two-node build cluster, a home
+bundle and the packages — software-emulated through rogue's linux-builder,
+native under KVM in CI. Do **not** pass
 `--builders ''` when building `rogue` — its linux-builder VM closure needs
 the aarch64-linux builder from `/etc/nix/machines`.
 

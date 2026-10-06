@@ -7,6 +7,9 @@
 #   T2  build the cheap package checks (the Go CLI runs `go test` in its
 #       check phase)
 #
+#   T3  NixOS VM tests (checks.x86_64-linux.vm-*) under KVM, on pushes to
+#       main only — they are the slow tier
+#
 # Darwin system builds (T2 for the machines) are left to the hosts; a
 # macOS runner can run `nix build .#checks.aarch64-darwin.darwin-rogue`.
 name: tests
@@ -59,3 +62,27 @@ jobs:
           extra-conf: |
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
       - run: nix build --no-link .#checks.x86_64-linux.pkg-neusis .#checks.x86_64-linux.pkg-gclb
+
+  vm-tests:
+    name: T3 VM ${{ matrix.test }}
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        test: [neusis-os, tailscale, kanata, build-cluster, home-bundle, packages]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enable KVM for the runner user
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: DeterminateSystems/nix-installer-action@v16
+        with:
+          extra-conf: |
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+            system-features = nixos-test benchmark big-parallel kvm
+      - run: nix build --no-link -L .#checks.x86_64-linux.vm-${{ matrix.test }}
+
