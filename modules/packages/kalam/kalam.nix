@@ -15,16 +15,12 @@
   };
 
   perSystem =
-    { pkgs, lib, ... }:
+    { pkgs, ... }:
     {
-      # kalam-py pulls in Wayland (badPlatforms darwin) and cannot even
-      # evaluate there; drop it on Darwin so `nix flake check` can pass.
-      packages =
-        lib.filterAttrs (name: _: !(pkgs.stdenv.isDarwin && name == "kalam-py"))
-          (self.neusis.lib.kalam.mkKalamVariants {
-            pkgs = pkgs.extend self.outputs.overlays.git-worktree;
-            inherit (self) inputs outputs;
-            root = ./_flavors;
-          });
+      packages = self.neusis.lib.kalam.mkKalamVariants {
+        pkgs = pkgs.extend self.outputs.overlays.git-worktree;
+        inherit (self) inputs outputs;
+        root = ./_flavors;
+      };
     };
 }

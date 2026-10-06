@@ -122,8 +122,6 @@
           expected = [
             "kalam"
             "kalam-full"
-            "kalam-py"
-            "kalam-v2"
           ];
         };
       };
