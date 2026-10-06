@@ -298,7 +298,7 @@
         # Umbrella bundle: always-on extras shared by every agent.
         (lib.mkIf cfg.enable {
           home.packages = with llmPkgs; [
-            agent-deck
+            #agent-deck
             beads
             beads-viewer
             spec-kit

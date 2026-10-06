@@ -28,7 +28,7 @@
           opencode.enable = true;
           gemini.enable = true;
           pi.enable = true;
-          hermes.enable = true;
+          hermes.enable = false;
         };
       };
 
