@@ -111,6 +111,35 @@
           };
         };
 
+        test-claude-forwards-mcp-servers = {
+          expr =
+            let
+              server = {
+                command = "/bin/example-mcp";
+                args = [ "--headless" ];
+              };
+              cfg = harness {
+                tools.claude = {
+                  enable = true;
+                  mcpServers.example = server;
+                };
+              };
+            in
+            {
+              none = (harness { tools.claude.enable = true; }).programs.claude-code.mcpServers;
+              forwarded = cfg.programs.claude-code.mcpServers;
+              failed = t.failedAssertions cfg;
+            };
+          expected = {
+            none = { };
+            forwarded.example = {
+              command = "/bin/example-mcp";
+              args = [ "--headless" ];
+            };
+            failed = [ ];
+          };
+        };
+
         test-opencode-wires-settings-and-xdg-dirs = {
           expr =
             let

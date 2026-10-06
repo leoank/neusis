@@ -195,6 +195,24 @@
               };
               description = "Contents of `~/.claude/settings.json` (via `programs.claude-code.settings`).";
             };
+            mcpServers = lib.mkOption {
+              type = lib.types.attrsOf lib.types.attrs;
+              default = { };
+              example = lib.literalExpression ''
+                {
+                  playwright = {
+                    command = lib.getExe pkgs.playwright-mcp;
+                    args = [ "--headless" "--isolated" ];
+                  };
+                }
+              '';
+              description = ''
+                MCP servers for Claude Code (via
+                `programs.claude-code.mcpServers`), keyed by server name.
+                Each value is the server's entry in `.mcp.json`; `type`
+                defaults to `stdio` when `command` is set.
+              '';
+            };
           };
 
           opencode = {
@@ -335,7 +353,7 @@
             skills = cfg.skillsDir;
             commandsDir = cfg.commandsDir;
             agentsDir = cfg.agentsDir;
-            inherit (cfg.tools.claude) settings;
+            inherit (cfg.tools.claude) settings mcpServers;
           };
           # NOTE: legacy path is `.calude/CLAUDE.md` (typo
           # preserved). `programs.claude-code` already manages
