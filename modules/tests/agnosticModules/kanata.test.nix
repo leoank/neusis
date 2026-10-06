@@ -1,8 +1,6 @@
-# Tests for flake.agnosticModules.kanata. Darwin gets the Karabiner
-# driver daemon plus one launchd daemon per keyboard; Linux currently
-# only installs the package (the forwarding to nixpkgs's
-# `services.kanata` is commented out in the module — the Linux test pins
-# that behaviour and must be updated when it is re-enabled).
+# Tests for flake.agnosticModules.kanata on both platforms. Darwin gets
+# the Karabiner driver daemon plus one launchd daemon per keyboard; Linux
+# forwards to nixpkgs's `services.kanata`.
 { self, ... }:
 {
   perSystem =
@@ -117,19 +115,69 @@
           };
         };
 
-        # KNOWN BUG, pinned: the module does not evaluate on NixOS. Its
-        # Darwin block is gated with `lib.mkIf pkgs.stdenv.isDarwin`, which
-        # still registers the `launchd` / `system.activationScripts.preActivation`
-        # option paths on Linux ("option does not exist"), and while NixOS
-        # formats that error it hits `pkgs.kanata.passthru.darwinDriver`,
-        # which is null on Linux. Fix: dispatch on `options ? launchd` like
-        # tailscale.nix does. Replace this test with real Linux expectations
-        # once fixed.
-        test-nixos-does-not-evaluate-yet = {
-          expr = t.hasPkg "kanata" nixos.environment.systemPackages;
-          expectedError = {
-            type = "TypeError";
-            msg = "cannot coerce null to a string";
+        test-nixos-forwards-to-services-kanata = {
+          expr = {
+            pkg = t.hasPkg "kanata" nixos.environment.systemPackages;
+            forwarded = nixos.services.kanata.enable;
+            keyboards = builtins.attrNames nixos.services.kanata.keyboards;
+            cfgFile = toString nixos.services.kanata.keyboards.default.configFile;
+            noLaunchd = !(nixos ? launchd);
+            failed = t.failedAssertions nixos;
+          };
+          expected = {
+            pkg = true;
+            forwarded = true;
+            keyboards = [ "default" ];
+            cfgFile = toString ../../agnosticModules/kanata/custom.kbd;
+            noLaunchd = true;
+            failed = [ ];
+          };
+        };
+
+        test-nixos-null-config-file-lets-nixpkgs-synthesize = {
+          expr =
+            let
+              cfg = t.evalNixos {
+                modules = [
+                  self.nixosModules.kanata
+                  {
+                    neusis.services.kanata = {
+                      enable = true;
+                      keyboards.laptop = {
+                        config = "(defsrc caps) (deflayer base esc)";
+                        devices = [ "/dev/input/by-id/kbd" ];
+                        port = 6666;
+                      };
+                    };
+                  }
+                ];
+              };
+              kbd = cfg.services.kanata.keyboards.laptop;
+            in
+            {
+              synthesized = lib.hasPrefix builtins.storeDir (toString kbd.configFile);
+              devices = kbd.devices;
+              port = kbd.port;
+            };
+          expected = {
+            synthesized = true;
+            devices = [ "/dev/input/by-id/kbd" ];
+            port = 6666;
+          };
+        };
+
+        test-nixos-disabled-forwards-nothing = {
+          expr =
+            let
+              cfg = t.evalNixos { modules = [ self.nixosModules.kanata ]; };
+            in
+            {
+              forwarded = cfg.services.kanata.enable;
+              pkg = t.hasPkg "kanata" cfg.environment.systemPackages;
+            };
+          expected = {
+            forwarded = false;
+            pkg = false;
           };
         };
 

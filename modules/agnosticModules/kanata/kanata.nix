@@ -22,12 +22,20 @@
   flake.agnosticModules.kanata =
     {
       config,
+      options,
       lib,
       pkgs,
       ...
     }:
     let
       cfg = config.neusis.services.kanata;
+
+      # Platform discriminators read from the OPTIONS set (not `pkgs`), so
+      # they can gate top-level option keys that only exist on one platform
+      # (`launchd`, `services.kanata`) without forcing nixpkgs or
+      # registering a non-existent option path. See tailscale.nix.
+      isDarwin = options ? launchd;
+      isLinux = options ? systemd;
       parentAppDir = "/Applications/.Nix-Karabiner";
 
       mkName = name: "kanata-${name}";
@@ -166,62 +174,64 @@
         };
       };
 
-      config = lib.mkIf cfg.enable (
-        lib.mkMerge [
-          # Both platforms: install the kanata binary.
-          {
-            environment.systemPackages = [ cfg.package ];
-          }
+      config = lib.mkMerge [
+        # Both platforms: install the kanata binary.
+        (lib.mkIf cfg.enable {
+          environment.systemPackages = [ cfg.package ];
+        })
 
-          # Linux: forward to nixpkgs's services.kanata. Skip
-          # `configFile` when `null` so nixpkgs's computed default
-          # (`mkConfig name keyboard`) takes over.
-          # (lib.mkIf pkgs.stdenv.isLinux {
-          #   services.kanata = {
-          #     enable = true;
-          #     package = cfg.package;
-          #     keyboards = lib.mapAttrs (
-          #       _: kbd:
-          #       {
-          #         inherit (kbd)
-          #           devices
-          #           config
-          #           extraDefCfg
-          #           extraArgs
-          #           port
-          #           ;
-          #       }
-          #       // lib.optionalAttrs (kbd.configFile != null) { inherit (kbd) configFile; }
-          #     ) cfg.keyboards;
-          #   };
-          # })
+        # Linux: forward to nixpkgs's services.kanata. Skip `configFile`
+        # when `null` so nixpkgs's computed default (`mkConfig name
+        # keyboard`) takes over. `optionalAttrs isLinux` omits the
+        # `services.kanata` key entirely on Darwin.
+        (lib.optionalAttrs isLinux {
+          services.kanata = lib.mkIf cfg.enable {
+            enable = true;
+            package = cfg.package;
+            keyboards = lib.mapAttrs (
+              _: kbd:
+              {
+                inherit (kbd)
+                  devices
+                  config
+                  extraDefCfg
+                  extraArgs
+                  port
+                  ;
+              }
+              // lib.optionalAttrs (kbd.configFile != null) { inherit (kbd) configFile; }
+            ) cfg.keyboards;
+          };
+        })
 
-          # Darwin: Karabiner-VirtualHIDDevice driver staging + one
-          # launchd daemon per keyboard.
-          (lib.mkIf pkgs.stdenv.isDarwin {
-            # Kernel extensions must reside in /Applications and can't
-            # be symlinks, so stage the driver app there during system
-            # activation.
-            system.activationScripts.preActivation.text = ''
-              rm -rf ${parentAppDir}
-              mkdir -p ${parentAppDir}
-              cp -Rf ${cfg.package.passthru.darwinDriver}/Applications/.Karabiner-VirtualHIDDevice-Manager.app ${parentAppDir}
-            '';
+        # Darwin: Karabiner-VirtualHIDDevice driver staging + one launchd
+        # daemon per keyboard. `optionalAttrs isDarwin` omits the launchd /
+        # activation keys entirely on NixOS.
+        (lib.optionalAttrs isDarwin {
+          # Kernel extensions must reside in /Applications and can't be
+          # symlinks, so stage the driver app there during system
+          # activation.
+          system.activationScripts.preActivation.text = lib.mkIf cfg.enable ''
+            rm -rf ${parentAppDir}
+            mkdir -p ${parentAppDir}
+            cp -Rf ${cfg.package.passthru.darwinDriver}/Applications/.Karabiner-VirtualHIDDevice-Manager.app ${parentAppDir}
+          '';
 
-            # Activate the kernel extension on user login.
-            launchd.user.agents.activate_karabiner_system_ext = {
-              serviceConfig.ProgramArguments = [
-                "${parentAppDir}/.Karabiner-VirtualHIDDevice-Manager.app/Contents/MacOS/Karabiner-VirtualHIDDevice-Manager"
-                "activate"
-              ];
-              serviceConfig.RunAtLoad = true;
-            };
+          # Activate the kernel extension on user login.
+          launchd.user.agents.activate_karabiner_system_ext = lib.mkIf cfg.enable {
+            serviceConfig.ProgramArguments = [
+              "${parentAppDir}/.Karabiner-VirtualHIDDevice-Manager.app/Contents/MacOS/Karabiner-VirtualHIDDevice-Manager"
+              "activate"
+            ];
+            serviceConfig.RunAtLoad = true;
+          };
 
-            # The Karabiner driver daemon + one kanata daemon per
-            # keyboard. NOTE: /run/current-system/sw/bin/kanata needs "Input
-            # Monitoring" permission via System Settings → Privacy &
-            # Security → Input Monitoring on first launch.
-            launchd.daemons = {
+          # The Karabiner driver daemon + one kanata daemon per keyboard.
+          # NOTE: /run/current-system/sw/bin/kanata needs "Input Monitoring"
+          # permission via System Settings → Privacy & Security → Input
+          # Monitoring on first launch.
+          launchd.daemons = lib.mkIf cfg.enable (
+            {
               Karabiner-DriverKit-VirtualHIDDevice-Daemon = {
                 serviceConfig = {
                   ProgramArguments = [
@@ -235,11 +245,9 @@
                 };
               };
             }
-            // lib.mapAttrs' (
-              name: kbd: lib.nameValuePair (mkName name) (mkDarwinDaemon name kbd)
-            ) cfg.keyboards;
-          })
-        ]
-      );
+            // lib.mapAttrs' (name: kbd: lib.nameValuePair (mkName name) (mkDarwinDaemon name kbd)) cfg.keyboards
+          );
+        })
+      ];
     };
 }
