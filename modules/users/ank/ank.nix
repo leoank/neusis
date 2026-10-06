@@ -9,6 +9,15 @@
         self.packages.${pkgs.stdenv.hostPlatform.system}.kalam
       ];
     };
+  # neusis CLI — this flake's own package; added here (not in
+  # _packages.nix) because `self` is only in scope at the flake-parts level.
+  flake.neusis.users.ank.hmBundles.neusis-cli =
+    { pkgs, ... }:
+    {
+      home.packages = [
+        self.packages.${pkgs.stdenv.hostPlatform.system}.neusis
+      ];
+    };
   flake.neusis.users.ank.hmBundles.agent-harness =
     { ... }:
     {
@@ -179,6 +188,7 @@
         self.neusis.features.agnostic.nix-pkgs
         self.neusis.features.hm.mac-app-util
         self.neusis.users.ank.hmBundles.kalam-ide
+        self.neusis.users.ank.hmBundles.neusis-cli
         self.neusis.users.ank.hmBundles.terminal-life
         self.neusis.users.ank.hmBundles.agent-harness
         self.neusis.users.ank.hmBundles.darwin-tools
