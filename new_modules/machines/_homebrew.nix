@@ -3,7 +3,7 @@
 # `hmBundles.casks` bundle). Only brews + taps + masApps remain
 # here — brew-nix is cask-only, so CLI tools that don't have a
 # clean nixpkgs equivalent stay on real homebrew.
-{ config, ... }:
+{ config, lib, ... }:
 {
   homebrew = {
     enable = true;
@@ -17,9 +17,13 @@
       "pumas"
       "libusb"
     ];
-    taps = map (key: builtins.replaceStrings [ "homebrew-" ] [ "" ] key) (
-      builtins.attrNames config.nix-homebrew.taps
+    # taps = map (key: builtins.replaceStrings [ "homebrew-" ] [ "" ] key) (
+    #   builtins.attrNames config.nix-homebrew.taps
+    # );
+    taps = builtins.attrNames (
+      lib.filterAttrs (n: _: !lib.hasPrefix "homebrew/" n) config.nix-homebrew.taps
     );
+
     # Casks are managed via brew-nix in the per-user `casks`
     # hmBundle (see `homeModules/brew-cask.nix`). The list below
     # is the fallback path for casks brew-nix can't currently
@@ -40,7 +44,7 @@
           "deskflow"
         ];
     onActivation = {
-      cleanup = "uninstall";
+      cleanup = "none";
       autoUpdate = true;
       upgrade = true;
     };
