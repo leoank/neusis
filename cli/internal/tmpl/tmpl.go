@@ -49,7 +49,7 @@ type Machine struct {
 	HostPubkey   string
 	PrimaryUser  string // optional
 	Lab          string // registry lab this host joins
-	StateVersion string // NixOS state version, e.g. "25.11"
+	StateVersion string // NixOS state version, e.g. "26.05"
 	Secrets      bool   // wire the agenix-rekey secrets block for this host
 }
 

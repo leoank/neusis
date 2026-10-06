@@ -15,10 +15,10 @@ import (
 // sync with neusis's own inputs (system-pkgs.nix / flakeModules).
 const (
 	DefaultNeusisRef    = "github:leoank/neusis"
-	DefaultNixpkgsRef   = "github:nixos/nixpkgs/nixos-25.11"
-	DefaultHMRef        = "github:nix-community/home-manager/release-25.11"
-	DefaultDarwinRef    = "github:LnL7/nix-darwin/nix-darwin-25.11"
-	DefaultStateVersion = "25.11"
+	DefaultNixpkgsRef   = "github:nixos/nixpkgs/nixos-26.05"
+	DefaultHMRef        = "github:nix-community/home-manager/release-26.05"
+	DefaultDarwinRef    = "github:LnL7/nix-darwin/nix-darwin-26.05"
+	DefaultStateVersion = "26.05"
 	DefaultLab          = "home"
 	DefaultStyle        = "dendritic"
 )

@@ -49,7 +49,7 @@
 {{ if .IsDarwin }}
         # nix-darwin configuration for {{ .Hostname }}. Add homebrew,
         # `system.defaults`, and other host options here.
-        system.stateVersion = 6;
+        system.stateVersion = 7;
 {{- else }}
         # NixOS configuration for {{ .Hostname }}. Replace the
         # placeholders below with this host's real hardware settings
