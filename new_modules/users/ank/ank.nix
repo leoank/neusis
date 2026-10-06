@@ -27,6 +27,7 @@
           claude.enable = true;
           opencode.enable = true;
           gemini.enable = true;
+          antigravity.enable = true;
           pi.enable = true;
           hermes.enable = false;
         };

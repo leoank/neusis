@@ -2107,6 +2107,26 @@ are current (`go list -m -u all` shows no updates); `go test ./...` green.
 - `system.stateVersion` 5 → 7 (see above).
 - `agent-deck`, `hermes`, `msgvault-sync` still parked from the rogue fix-up.
 
+### Follow-up: Antigravity CLI added (`tools.antigravity`)
+
+The HM rename made it look like gemini had become "antigravity", but
+`llm-agents` ships both: `gemini-cli` (binary `gemini`) and
+`antigravity-cli` (binary `agy`, Google's Antigravity agentic platform).
+After the migration only gemini was installed, so `agy` was missing.
+
+- New `neusis.agent-harness.tools.antigravity` (`enable`, `extraPkgs`,
+  `settings`) in `agent-harness.nix`; enabled for ank.
+- Installed as a **plain package**, not via `programs.antigravity-cli`: HM
+  has one module for both products and it is already bound to gemini
+  (`useLegacyGeminiConfig = true`). The native layout is written by hand,
+  mirroring what the HM module does for a non-gemini package:
+  `~/.gemini/antigravity-cli/settings.json` + `~/.gemini/config/skills` →
+  `skillsDir`. Context `~/.gemini/GEMINI.md` is shared with gemini and only
+  written by the antigravity block when gemini is disabled.
+- Linux: jailed like the others (`mkJailed "agy" … [ "~/.gemini" ]`).
+- Verified: `ank@rogue` home has both `antigravity-cli-1.2.16` and
+  `gemini-cli-0.62.0`; both darwin systems eval + rogue builds.
+
 ### Still open
 
 - Not deployed (`darwin-rebuild switch`) on either host.

@@ -1,7 +1,7 @@
 # Neusis agent-harness home-manager module.
 # Ports `homes/ank/configs/agent_harness/` into a single opt-in
 # umbrella. Wires up several LLM CLIs (claude-code, opencode,
-# gemini-cli, pi, hermes) and a curated bundle of related tooling
+# gemini-cli, antigravity-cli, pi, hermes) and a curated bundle of related tooling
 # (agent-deck, beads, beads-viewer, spec-kit, skills, qmd).
 #
 # Layout:
@@ -102,6 +102,12 @@
       geminiPkg = mkJailed "gemini" llmPkgs.gemini-cli [
         "~/.gemini"
       ] cfg.tools.gemini.extraPkgs;
+
+      # Antigravity CLI (`agy`) shares `~/.gemini` with gemini-cli but
+      # keeps its own settings/skills paths under it.
+      antigravityPkg = mkJailed "agy" llmPkgs.antigravity-cli [
+        "~/.gemini"
+      ] cfg.tools.antigravity.extraPkgs;
 
       piPkg = mkJailed "pi" llmPkgs.pi [
         "~/.pi"
@@ -232,6 +238,20 @@
             };
           };
 
+          antigravity = {
+            enable = lib.mkEnableOption "Antigravity CLI (`agy`)";
+            extraPkgs = lib.mkOption {
+              type = lib.types.listOf lib.types.package;
+              default = [ ];
+              description = "Extra packages added to antigravity's jail (Linux only).";
+            };
+            settings = lib.mkOption {
+              type = lib.types.attrs;
+              default = { };
+              description = "Contents of `~/.gemini/antigravity-cli/settings.json`.";
+            };
+          };
+
           pi = {
             enable = lib.mkEnableOption "pi agent";
             extraPkgs = lib.mkOption {
@@ -355,6 +375,21 @@
             ".gemini/agents".source = cfg.agentsDir;
             ".gemini/commands".source = cfg.commandsDir;
             ".gemini/skills".source = cfg.skillsDir;
+          };
+        })
+
+        # antigravity-cli. Installed as a plain package: HM's
+        # `programs.antigravity-cli` is already taken by gemini above (one
+        # module, one package), so the native layout is written by hand —
+        # settings.json + skills dir, matching what the HM module does when
+        # `useLegacyGeminiConfig = false`. Context (`~/.gemini/GEMINI.md`) is
+        # shared with gemini-cli; only written here if gemini is off.
+        (lib.mkIf cfg.tools.antigravity.enable {
+          home.packages = [ antigravityPkg ];
+          home.file = {
+            ".gemini/antigravity-cli/settings.json".text = builtins.toJSON cfg.tools.antigravity.settings;
+            ".gemini/config/skills".source = cfg.skillsDir;
+            ".gemini/GEMINI.md" = lib.mkIf (!cfg.tools.gemini.enable) { source = cfg.agentsMd; };
           };
         })
 
