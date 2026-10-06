@@ -51,16 +51,23 @@
         test-accounts-produce-ssh-aliases-includes-and-url-rewrites = {
           expr =
             let
-              # matchBlocks is a DAG: each entry is { after; before; data; }
-              work = home.programs.ssh.matchBlocks."github.com-work".data;
+              # settings is a DAG: each entry is { after; before; data; }
+              work = home.programs.ssh.settings."github.com-work".data;
             in
             {
               aliases = lib.sort lib.lessThan (
-                lib.filter (n: n != "*") (builtins.attrNames home.programs.ssh.matchBlocks)
+                lib.filter (n: n != "*") (builtins.attrNames home.programs.ssh.settings)
               );
               work = {
-                inherit (work) hostname user identityFile identitiesOnly;
+                inherit (work)
+                  HostName
+                  User
+                  IdentityFile
+                  IdentitiesOnly
+                  ;
               };
+              legacyDefaults = home.programs.ssh.enableDefaultConfig;
+              noLegacyBlocks = home.programs.ssh.matchBlocks;
               includes = map (i: {
                 inherit (i) condition;
                 user = i.contents.user;
@@ -74,11 +81,13 @@
               "github.com-work"
             ];
             work = {
-              hostname = "github.com";
-              user = "git";
-              identityFile = [ "~/.ssh/id_ed25519_work" ];
-              identitiesOnly = true;
+              HostName = "github.com";
+              User = "git";
+              IdentityFile = "~/.ssh/id_ed25519_work";
+              IdentitiesOnly = true;
             };
+            legacyDefaults = false;
+            noLegacyBlocks = { };
             includes = [
               {
                 condition = "gitdir:~/code/work/";

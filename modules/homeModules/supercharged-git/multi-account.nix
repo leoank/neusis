@@ -143,15 +143,21 @@
         # One SSH host alias per account.
         programs.ssh = {
           enable = true;
-          matchBlocks = lib.mapAttrs' (
+          # home-manager 26.05: `matchBlocks` is deprecated in favour of
+          # `settings`, keyed by Host pattern with upstream directive names.
+          settings = lib.mapAttrs' (
             name: account:
             lib.nameValuePair (aliasFor name account) {
-              hostname = "github.com";
-              user = "git";
-              identityFile = account.sshKey;
-              identitiesOnly = true;
+              HostName = "github.com";
+              User = "git";
+              IdentityFile = account.sshKey;
+              IdentitiesOnly = true;
             }
           ) cfg.accounts;
+          # The legacy `Host *` defaults home-manager used to write are
+          # OpenSSH's own defaults anyway and are slated for removal; opt out
+          # (overridable) so nothing is implied behind the user's back.
+          enableDefaultConfig = lib.mkDefault false;
         };
 
         # Per-directory git identity overrides via `[includeIf]`.
