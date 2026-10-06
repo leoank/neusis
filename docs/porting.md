@@ -1795,8 +1795,9 @@ written in `docs/tailmux-proxy-spec.md` + a hand-off prompt in
 - **Secrets** copied into `new_modules/secrets/common/`
   (`persistent_tsauthkey`, `persistent_cslab_mesh`, `tsclient`, `tssecret`) and
   rekeyed; originals under repo-root `secrets/` left untouched.
-- Machines `rogue` + `darwin001` import
-  `self.darwinModules.tailscale` + both mesh features.
+- `darwin001` imports `self.darwinModules.tailscale` + both mesh features.
+  `rogue` imports the module only — both mesh features are commented out
+  there for now (see 2026-10-06 entry).
 
 ### Design decisions (with rationale)
 
@@ -1945,4 +1946,74 @@ homebrew-defaults is wanted it needs re-adding.
 - **cslab has no OAuth creds** in this copy → its `forceHostName` /
   `disableKeyExpiry` stay off until cslab OAuth secrets are added.
 - Cross-host SSH name resolution still absent (shared with distributed-builds).
-- Nothing committed/pushed on this ephemeral `refactor` branch yet.
+- ~~Nothing committed/pushed on this ephemeral `refactor` branch yet.~~
+  Committed + pushed 2026-10-06 (see next entry).
+
+## 2026-10-06 — rogue build fixes, commits landed, `cli` branch merged
+
+Housekeeping session: the 2026-08-16 tailscale work plus a round of
+hand-made fixes to get `rogue` building were split into focused commits
+on `refactor`, the `cli` branch was merged in, and its worktree removed.
+
+### Changes made to get `rogue` building
+
+- **flake-file / import-tree moved to `github:denful/*` forks** (from
+  `github:vic/*`). `flake.nix` regenerated via `nix run .#write-flake`;
+  `flake.lock` updated with all inputs bumped.
+- **msgvault-sync parked.** `homeModules/msgvault-sync.nix` →
+  `_msgvault-sync.nix` so import-tree skips it; its `flake-file.inputs`
+  block, the `inputs.msgvault` package in ank's package list, and the
+  import/enable in `users/ank/ank.nix` are commented out. Module body kept
+  intact for re-enabling; the `msgvault` input is gone from `flake.nix`.
+- **agent-harness:** `agent-deck` commented out of the umbrella bundle;
+  `hermes.enable = false` for ank. Both from `llm-agents`, both blocked the
+  build.
+- **homebrew taps:** the old list stripped the `homebrew-` prefix from
+  `nix-homebrew.taps` keys, producing names brew rejects. Now
+  `builtins.attrNames (lib.filterAttrs (n: _: !lib.hasPrefix "homebrew/" n)
+  config.nix-homebrew.taps)`. `onActivation.cleanup` → `"none"` so a
+  rebuild stops uninstalling hand-installed formulae.
+- **`features.hm.mac-app-util`** — new feature that declares the
+  `hraban/mac-app-util` input and imports its HM module (Spotlight/Dock
+  trampolines for nix-installed `.app`s). Added to ank's `rogue` bundle
+  list. Two typos in the first draft (`setup-terminals` attr name,
+  `import` for `imports`) fixed.
+- `android-tools` added to ank's packages.
+- **rogue's mesh features are commented out** (`ank_mesh`, `cslab_mesh`);
+  rogue still imports `self.darwinModules.tailscale`. `darwin001` keeps
+  both. Re-enable on rogue when ready to force-claim its hostname.
+
+### Commits (on `refactor`, pushed)
+
+Eight commits from this work: `feat(tailscale)`, `docs(porting)`,
+`chore(msgvault)`, `feat(hm): mac-app-util`, `fix(homebrew)`,
+`chore(agent-harness)`, `feat(ank): android-tools`, `chore(flake)`. The
+flake commit is last because `flake.nix` is generated and reflects the
+earlier commits' input declarations.
+
+### `cli` branch merged, worktree removed
+
+- 14 commits from `cli` (the Go `neusis` CLI under `cli/`, its
+  `flake.packages.<system>.neusis` wrapper, `flakeModules.default`
+  exposing hm-system-init + secrets, parameterised `secrets.nix`, explicit
+  `initialHashedPassword`, `lib/neusis-options.nix`). Design notes live in
+  `cli/docs/INSIDER.md`. No file overlap with the refactor changes; clean
+  merge.
+- The `neusis/cli` worktree and local `cli` branch are gone. Only ignored
+  artifacts were left behind (goreleaser `dist/`, nix `result`, a
+  CLI-generated `scratch/neutest` test scaffold).
+- **Gotcha:** `git pull --rebase` before the push flattened the merge
+  commit — the cli commits were replayed linearly with new hashes on top of
+  the refactor commits. Tree is identical, nothing lost, but there is no
+  merge commit and the hashes no longer match `origin/cli`. Use
+  `git pull --rebase=merges` (or plain `git pull`) when the branch carries a
+  merge.
+
+### Still open
+
+- `origin/cli` still exists on the remote — delete once `refactor` is
+  confirmed good.
+- Nothing deployed yet (`darwin-rebuild switch` on rogue/darwin001).
+- msgvault-sync, agent-deck and hermes are parked, not fixed.
+- Earlier open items unchanged: cslab OAuth creds, cross-host SSH name
+  resolution, `refactor` not merged to `main`, legacy dirs still on disk.
