@@ -80,20 +80,46 @@
           };
         };
 
-        # KNOWN COUPLING, pinned: importing the module without enabling it
-        # does not evaluate, because the agenix-rekey home-manager module is
-        # imported unconditionally and asserts `age.rekey.masterIdentities`.
-        # Fix candidate: a consumer that imports this module must enable it;
-        # or guard the agenix imports / set defaults under mkIf.
-        test-imported-but-disabled-fails-rekey-assertion = {
+        # Importing the module means enabling it (it loads agenix-rekey,
+        # which must be configured), so `enable` defaults to true …
+        test-import-enables-by-default = {
           expr =
-            (t.evalHm {
-              pkgs = testPkgs;
-              modules = [ self.homeModules.secrets ];
-            }).neusis.service.secrets.enable;
+            let
+              cfg = t.evalHm {
+                pkgs = testPkgs;
+                modules = [
+                  self.homeModules.secrets
+                  {
+                    neusis.service.secrets.userPubkey = f.hostPubkey;
+                    neusis.service.secrets.masterIdentities = [
+                      {
+                        identity = "/Users/alice/.ssh/id_ed25519";
+                        pubkey = f.hostPubkey;
+                      }
+                    ];
+                  }
+                ];
+              };
+            in
+            {
+              enable = cfg.neusis.service.secrets.enable;
+              wired = cfg.age.rekey.hostPubkey == f.hostPubkey;
+              failed = t.failedAssertions cfg;
+            };
+          expected = {
+            enable = true;
+            wired = true;
+            failed = [ ];
+          };
+        };
+
+        # … and switching it off is rejected with our own message rather
+        # than agenix-rekey's.
+        test-disabling-after-import-is-rejected = {
+          expr = (secrets { enable = false; }).age.rekey.storageMode;
           expectedError = {
             type = "ThrownError";
-            msg = "rekey.masterIdentities must be set";
+            msg = "cannot be disabled once imported";
           };
         };
       };

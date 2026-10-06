@@ -1,8 +1,11 @@
 # Neusis secrets service (home-manager).
 # Flake-parts module that registers a home-manager module at
-# `flake.homeModules.secrets` exposing `neusis.service.secrets.enable`.
-# Import from a home-manager configuration to opt the user into
-# neusis-managed secrets handling.
+# `flake.homeModules.secrets`. Importing it opts the user into
+# neusis-managed secrets handling: it pulls in agenix + agenix-rekey, and
+# agenix-rekey requires `age.rekey.masterIdentities` whenever it is
+# loaded, so the module cannot be imported and left disabled. `enable`
+# therefore defaults to `true`; setting it to `false` fails with a clear
+# assertion instead of agenix-rekey's.
 { ... }:
 {
   flake.homeModules.secrets =
@@ -23,7 +26,16 @@
         inputs.agenix-rekey.homeManagerModules.default
       ];
       options.neusis.service.secrets = {
-        enable = lib.mkEnableOption "neusis-managed secrets service";
+        enable = mkOption {
+          type = types.bool;
+          default = true;
+          description = ''
+            Whether neusis manages this home's secrets. Defaults to `true`
+            because importing this module already loads agenix-rekey, which
+            must be configured; to opt out, drop the import rather than
+            setting this to `false`.
+          '';
+        };
         userPubkey = mkOption {
           type = types.str;
           example = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOy3dC8cCbucumHphroUzZUTKkM0jL3mG3+tkeAWgIdX";
@@ -46,21 +58,34 @@
         };
       };
 
-      config = lib.mkIf cfg.enable {
+      config = mkMerge [
+        {
+          assertions = [
+            {
+              assertion = cfg.enable;
+              message = ''
+                neusis.service.secrets cannot be disabled once imported: the
+                agenix-rekey module it pulls in requires rekey configuration.
+                Remove `self.homeModules.secrets` from the imports instead.
+              '';
+            }
+          ];
+        }
 
-        # Configure agenix
-        age.rekey = {
-          # agenix-rekey calls the target pubkey `hostPubkey` in every
-          # context (there is no `userPubkey`); for a home config it's the
-          # user's key.
-          hostPubkey = cfg.userPubkey;
-          masterIdentities = cfg.masterIdentities;
-          storageMode = "local";
-          # Home configs have no `networking.hostName`; key the store by
-          # user instead (works in both integrated and standalone HM).
-          localStorageDir = ../secrets/rekeyed + "/hm/${config.home.username}";
-        };
-
-      };
+        (lib.mkIf cfg.enable {
+          # Configure agenix
+          age.rekey = {
+            # agenix-rekey calls the target pubkey `hostPubkey` in every
+            # context (there is no `userPubkey`); for a home config it's the
+            # user's key.
+            hostPubkey = cfg.userPubkey;
+            masterIdentities = cfg.masterIdentities;
+            storageMode = "local";
+            # Home configs have no `networking.hostName`; key the store by
+            # user instead (works in both integrated and standalone HM).
+            localStorageDir = ../secrets/rekeyed + "/hm/${config.home.username}";
+          };
+        })
+      ];
     };
 }
