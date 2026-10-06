@@ -147,7 +147,7 @@ html {
 .content :not(pre) > code {
   background: var(--inline-code-bg, var(--quote-bg));
   color: var(--inline-code-color);
-  padding: 0.15em 0.4em;
+  padding: 0.1em 0.3em;
   border-radius: 5px;
   font-size: 0.85em;
 }
@@ -156,6 +156,11 @@ html {
 .content a :not(pre) > code,
 .content a > code {
   color: var(--links);
+}
+
+/* …except in headings, whose anchor links should look like headings. */
+.content a.header code {
+  color: inherit;
 }
 
 .content pre {
@@ -212,7 +217,8 @@ html {
 }
 
 /* Keep identifiers (flags, option and module names) on one line. */
-.content table td:first-child code {
+.content table td:first-child > code,
+.content table td:first-child > a {
   white-space: nowrap;
 }
 
@@ -254,6 +260,12 @@ html {
   border-radius: var(--radius);
   padding: 0.6em 1em;
   box-shadow: none;
+}
+
+#mdbook-searchbar:focus {
+  outline: none;
+  border-color: var(--links);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--links) 20%, transparent);
 }
 
 /* ---- Sidebar ---- */
@@ -308,10 +320,53 @@ html {
   opacity: 1;
 }
 
+/* Draw the chevron instead of using the ❱ glyph, which renders unevenly
+   across fonts. mdBook rotates the div 90° when the section is open. */
+.chapter-fold-toggle div {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  height: 12px;
+  font-size: 0;
+  transition: transform 0.2s ease;
+}
+
+.chapter-fold-toggle div::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+}
+
 .chapter li .section {
   margin-left: 0.5em;
   padding-left: 0.4em;
   border-left: 1px solid var(--border, transparent);
+}
+
+/* "On this page" list mdBook adds under the current chapter: show only
+   the page's top-level sections — reference pages have one heading per
+   option, which would otherwise flood the sidebar. */
+.chapter li.header-item ol.section,
+.chapter .header-toggle {
+  display: none;
+}
+
+.on-this-page {
+  margin-left: 14px;
+  border-inline-start: 1px solid var(--border, var(--sidebar-header-border-color));
+}
+
+.chapter a.header-in-summary {
+  font-size: 0.95em;
+  color: var(--muted, var(--sidebar-fg));
+}
+
+.chapter a.header-in-summary.current-header {
+  color: var(--sidebar-active);
 }
 
 .chapter .spacer {

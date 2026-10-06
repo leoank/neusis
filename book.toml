@@ -23,8 +23,9 @@ no-section-label = true
 smart-punctuation = false
 
 [output.html.fold]
+# Sections stay folded until you navigate into them (or click the chevron).
 enable = true
-level = 1
+level = 0
 
 [output.html.search]
 limit-results = 40
