@@ -33,16 +33,5 @@
       # Tell agenix-rekey which hosts to consider
       agenix-rekey.nixosConfigurations = self.nixosConfigurations;
       agenix-rekey.darwinConfigurations = self.darwinConfigurations;
-
-      # Add agenix-rekey to your devshell, so you can use the `agenix rekey` command
-      devShells.default = pkgs.mkShell {
-        nativeBuildInputs = [
-          config.agenix-rekey.package
-        ];
-
-        # Automatically adds rekeyed secrets to git without
-        # requiring `agenix rekey -a`.
-        env.AGENIX_REKEY_ADD_TO_GIT = true;
-      };
     };
 }
