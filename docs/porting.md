@@ -2180,3 +2180,29 @@ that one output of the archived flake no longer evaluates.
 Follow-up: copies of `scripts/` and `templates/` were put back under
 `old_modules/` as well, so the archive is complete and its nested flake's
 `templates` output evaluates again. Root copies are the live ones.
+
+## 2026-10-06 — test suite: nix-unit harness, mirrored tests, checks, CI
+
+Design and work scope in `docs/testing.md`. Layout: `modules/tests/` mirrors
+the live tree one to one (`tests/homeModules/brave.test.nix` tests
+`homeModules/brave.nix`); `harness.nix` provides `flake.neusis.lib.tests`
+(`evalHm` / `evalDarwin` / `evalNixos` / `failedAssertions` / `pkgNames`,
+fixtures under `_fixtures/`), a `perSystem.tests` option transposed to
+`flake.tests.<system>`, and the `neusis-test` runner (`nix run .#neusis-test`,
+`NEUSIS_TEST_SYSTEM=x86_64-linux` to evaluate the Linux set from a Mac).
+70 test files / 220 nix-unit tests cover lib, agnostic modules on both
+platforms, every home module, every feature, both machines + homes, the
+registries and a consumer smoke of `flakeModules.default`. `checks.<system>`
+now carries `darwin-<host>`, `home-<user>@<host>` and `pkg-<name>`, so
+`nix flake check --no-build --all-systems` is the eval ladder and `nix
+flake check` the build ladder. `.github/workflows/tests.yml` runs T0 for both
+test sets, T1, and builds the neusis CLI + gclb checks on ubuntu.
+
+Found and pinned with `expectedError` (table in `docs/testing.md` §6): kanata
+and build-server do not evaluate on NixOS (`mkIf pkgs.stdenv.isDarwin`
+registers Darwin-only option paths); sesh without tmux trips an HM assertion;
+the HM secrets module fails when imported but disabled; `features.hm.setup-terminals`
+references files that were never moved; `registry/users/{all,cslab,cslab_karkinos}`
+use pre-namespace `self.*` paths. `kalam-py` is now dropped on Darwin (it
+cannot evaluate there) so the flake check passes. The `examples/` consumers
+use the pre-refactor API and need a rewrite. VM tests deferred.

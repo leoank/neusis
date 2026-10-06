@@ -24,6 +24,9 @@ modules/           the live flake (dendritic; one flake-parts module per file)
   registry/          machines / users / builders registries (system, roles, keys)
   secrets/           agenix-rekey: common/, <user>/ (plaintext .age), rekeyed/<host>/
   packages/          kalam (nixvim flavours), gclb, neusis-cli
+  tests/             nix-unit suite + checks glue; mirrors the live tree
+                     (tests/homeModules/brave.test.nix tests homeModules/brave.nix);
+                     harness.nix, _fixtures/ — see docs/testing.md
   lib/ shells/ overlays.nix deploy.nix
 cli/               Go `neusis` CLI that scaffolds consumer repos (flake.packages.<sys>.neusis)
 templates/         `nix flake init -t .#<name>` project templates (exposed by modules/templates.nix)
@@ -66,14 +69,27 @@ nix run .#write-flake                                 # regenerate flake.nix aft
 nix build .#kalam .#kalam-full .#kalam-v2 .#neusis    # packages
 agenix rekey                                          # after editing secrets or adding hosts
 cd cli && go test ./...                               # neusis CLI
+nix run .#neusis-test                                 # T0: nix-unit eval tests (~1 min)
+NEUSIS_TEST_SYSTEM=x86_64-linux nix run .#neusis-test # T0 for the Linux variants
+nix flake check --no-build --all-systems              # T1: every machine/home/package check instantiates
+nix flake check                                       # T2: build them all (slow)
 ```
 
-Verification ladder before claiming something works: `nix eval` the
-`.system.drvPath` of both darwin hosts and the `activationPackage.drvPath` of
-both home configs (catches option renames / removed packages, prints
-deprecation warnings), then `nix build` the systems. Do **not** pass
+Verification ladder before claiming something works (details in
+`docs/testing.md`): **T0** `nix run .#neusis-test` (nix-unit, both test
+sets); **T1** `nix flake check --no-build --all-systems` (automates the old
+`drvPath` eval of every host and home and prints deprecation warnings);
+**T2** `nix build .#checks.aarch64-darwin.darwin-rogue` etc. Do **not** pass
 `--builders ''` when building `rogue` — its linux-builder VM closure needs
 the aarch64-linux builder from `/etc/nix/machines`.
+
+Testing conventions: every module/feature/machine has a test file at the
+mirrored path under `modules/tests/` (`<name>.test.nix`, a flake-parts
+module writing `tests.<group>.test-<what>`); evaluate through
+`self.neusis.lib.tests.{evalHm,evalDarwin,evalNixos}` and compare plain
+values, never derivations; a known bug is pinned with `expectedError` and a
+comment, never skipped. Add or update the test in the same commit as the
+module change.
 
 ## Contributing guidelines
 

@@ -1,8 +1,18 @@
 # Testing neusis — design and work scope
 
-Status: **decided** (2026-10-06). Decisions marked ✅ are final; section 5
-records how each open question was settled. Implementation follows the
-work-scope table one item at a time.
+Status: **implemented** (2026-10-06): phases 0–6 of the work scope are
+in; phase 7 is deferred. Section 6 lists what the suite found. Decisions
+marked ✅ are final; section 5 records how each open question was settled.
+
+Quick start:
+
+```bash
+nix run .#neusis-test                                 # T0, this system's test set (~1 min)
+NEUSIS_TEST_SYSTEM=x86_64-linux nix run .#neusis-test # T0, the Linux set (from a Mac too)
+nix run .#neusis-test -- --help                       # extra args go to nix-unit
+nix flake check --no-build --all-systems              # T1 (~40 s)
+nix build .#checks.aarch64-darwin.darwin-rogue        # T2, one check
+```
 
 ## 1. Why
 
@@ -62,8 +72,8 @@ Patterns worth copying:
 
 | Tier | Command | Runs in | Covers |
 |---|---|---|---|
-| **T0 eval unit** | `nix run .#neusis-test` (= `nix-unit --flake .#tests.<system>`) | seconds to a minute | lib, options, every module and feature at eval level, machine invariants |
-| **T1 eval flake** | `nix flake check --no-build` | ~1 min | every `checks.*` derivation instantiates (= today's `drvPath` ladder, automated) |
+| **T0 eval unit** | `nix run .#neusis-test` (= `nix-unit --flake .#tests.<system>`) | ~65 s per test set (220 tests) | lib, options, every module and feature at eval level, machine invariants |
+| **T1 eval flake** | `nix flake check --no-build --all-systems` | ~40 s | every `checks.*` derivation instantiates (= today's `drvPath` ladder, automated) |
 | **T2 build** | `nix flake check` or `nix build .#checks.<sys>.<name>` | minutes–hours | systems, homes, packages really build |
 | **T3 VM** (optional) | `nix build .#checks.<linux-sys>.vm-<name>` | minutes each | NixOS services under systemd; needs the linux-builder |
 
@@ -143,6 +153,12 @@ Tests receive `testPkgs` (perSystem `pkgs` with neusis's overlays applied
 once per system, so `pkgs.unstable` / `pkgs.inputs.*` resolve as they do on
 real hosts) and pass it to `evalHm`.
 
+Two nix-unit facts shape the harness: it only runs attributes whose name
+starts with `test` and silently ignores the rest (the `perSystem.tests`
+option throws on any other name), and it evaluates on a thread with the
+default stack, which segfaults on deep derivations such as `texliveFull`
+(the `neusis-test` wrapper raises the stack to the hard limit first).
+
 Each `eval*` injects the same `specialArgs` the real builders do
 (`inputs`, `outputs = self`) so modules that take `outputs` work unchanged.
 
@@ -177,8 +193,17 @@ bools and lists (`pkgNames`, `config.home.file."x".text`,
   the test so the same file is valid under `tests.aarch64-darwin` and
   `tests.x86_64-linux`.
 - No network, no IFD, no building in T0.
-- A test that documents a known failure uses `expectedError`, never a
+- A test that documents a known failure uses `expectedError` plus a
+  `KNOWN BUG, pinned:` comment saying what to assert once fixed, never a
   skip.
+- Project to plain values. Submodules fill in `null` siblings
+  (launchd `KeepAlive`, `StartCalendarInterval`), DAGs wrap entries in
+  `{ after; before; data; }` (`programs.ssh.matchBlocks`), home-manager
+  normalises systemd unit values to lists and adds its own packages
+  (`man-db`, session vars) and files (`opencode/opencode.json`), nix-darwin
+  adds `activate-system` / `nix-daemon` daemons and `root` to
+  `trusted-users`, nixpkgs appends `cache.nixos.org` — compare the fields
+  you own, not whole attrsets.
 
 ## 4. Work scope
 
@@ -214,7 +239,7 @@ command green before the next starts. Commit per item
 | **Phase 5 — machines, packages, public API** | | |
 | 5.1 | auto-generated `checks` for every darwin/nixos/home config | `nix flake check --no-build`, then `nix build .#checks.aarch64-darwin.darwin-rogue` |
 | 5.2 | machine invariant tests (incl. stateVersion policy) | T0 |
-| 5.3 | fixture NixOS machine through `mkNeusisFlake` | T0 |
+| 5.3 | fixture NixOS machine through `mkNeusisFlake` (covered by `tests/lib/neusisOS.test.nix` and `tests/flakeModules.test.nix`) | T0 |
 | 5.4 | `checks.pkg-*` for packages | T1, T2 |
 | 5.5 | `flakeModules` consumer smoke | T0 |
 | **Phase 6 — docs and automation** | | |
@@ -225,7 +250,8 @@ command green before the next starts. Commit per item
 | 7.2 | `nix-unit` flake input so T0 joins `nix flake check` | — |
 | 7.3 | namaka snapshots for generated config files | — |
 
-Rough size: ~85 test files, one harness file, one fixtures directory.
+Size as implemented: 70 test files (220 tests), `harness.nix`, two checks
+glue files, one fixtures directory, one CI workflow.
 
 ## 5. Decisions log
 
@@ -237,3 +263,23 @@ Rough size: ~85 test files, one harness file, one fixtures directory.
    auto-generated `checks` are the build tests.
 4. **VM tests** — skipped for now (Phase 7).
 5. **CI** — yes, in this effort (Phase 6.2).
+
+## 6. Findings (2026-10-06)
+
+Everything below was found by the first run of the suite and is **pinned**
+with `expectedError` (search `KNOWN BUG` / `KNOWN COUPLING` under
+`modules/tests/`). Fixing one means replacing the pin with the real
+expectation.
+
+| Where | What | Fix candidate |
+|---|---|---|
+| `agnosticModules/kanata/kanata.nix` | Does not evaluate on NixOS: the Darwin block is gated with `lib.mkIf pkgs.stdenv.isDarwin`, which still registers `launchd` / `system.activationScripts.preActivation` on Linux; while NixOS formats that error it hits `kanata.passthru.darwinDriver = null`. The Linux forwarding to `services.kanata` is also commented out. | Dispatch on `options ? launchd` like tailscale.nix; re-enable the Linux branch. |
+| `agnosticModules/build-server.nix` | Does not evaluate on NixOS, even disabled: `users.knownUsers` (Darwin-only) under `mkIf pkgs.stdenv.isDarwin`. | Same `options ? launchd` dispatch. |
+| `homeModules/terminal-velocity/sesh.nix` | `tools.sesh` without `tools.tmux` fails home-manager's assertion (`programs.fzf.tmux.enableShellIntegration`). | Set it in sesh.nix, or expose `enableTmuxIntegration`. |
+| `homeModules/secrets.nix` | Importing without enabling fails: agenix-rekey's HM module asserts `age.rekey.masterIdentities`. | Document "import ⇒ enable", or guard the imports. |
+| `features/hm/setup-terminals.nix` | Reads `./wezterm.lua`, `./gclb.py`, `./zellij*.kdl` that do not exist under `modules/features/hm/`; the feature cannot evaluate. Unused (terminal-velocity replaced it). | Move the files in or delete the feature. |
+| `registry/users/all.nix`, `cslab.nix`, `cslab_karkinos.nix` | Stale `self.registry` / `self.lib` / `self.users` paths (now under `self.neusis.*`); `cslab_karkinos.nix` defines `cslab` a second time. Unused by any machine. | Update the paths; rename the karkinos key. |
+| `packages/kalam/kalam.nix` | `kalam-py` cannot evaluate on Darwin (Wayland `badPlatforms`), which made `nix flake check` fail. **Fixed in this effort**: the flavour is dropped on Darwin. | — |
+| `homeModules/supercharged-git/multi-account.nix` | home-manager 26.05 deprecation: `programs.ssh.matchBlocks` → `programs.ssh.settings`; the default `programs.ssh` values will be removed. Warnings only today. | Port to `programs.ssh.settings` and set `enableDefaultConfig = false`. |
+| `examples/flake-parts-consumer`, `examples/external-flake` | Use the pre-refactor API (`userConfig`, `homeManager`, `neusisOS.homeModules`, `self.flake.neusis`); they would not evaluate against today's `mkNeusisOS`. Not part of the flake, so not pinned. | Rewrite against `userRegistries` / `machineToBundlesMap` (the consumer smoke test in `tests/flakeModules.test.nix` is the working template). |
+
