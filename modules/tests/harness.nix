@@ -115,14 +115,16 @@ in
           name = "neusis-test";
           runtimeInputs = [ pkgs.nix-unit ];
           text = ''
-            # Run neusis's nix-unit suite for this system. Extra args go
-            # to nix-unit (e.g. a test-name filter).
+            # Run neusis's nix-unit suite for this system — or for
+            # $NEUSIS_TEST_SYSTEM, which lets a Linux CI runner evaluate the
+            # Darwin test set (pure eval, nothing is built). Extra args go
+            # to nix-unit.
             #
             # nix-unit evaluates on a thread with the default stack and
             # segfaults on deep derivations (texliveFull); raise the
             # stack to the hard limit like `nix` itself does.
             ulimit -s "$(ulimit -Hs)" 2>/dev/null || true
-            exec nix-unit --flake ".#tests.${system}" "$@"
+            exec nix-unit --flake ".#tests.''${NEUSIS_TEST_SYSTEM:-${system}}" "$@"
           '';
         };
       };

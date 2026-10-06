@@ -62,7 +62,8 @@
             if isDarwin then
               (casks [ "definitely-not-a-cask-xyz" ]).home.packages
             else
-              (builtins.getAttr "definitely-not-a-cask-xyz" { });
+              # same error class as lib.attrVals' attribute selection
+              ({ }).definitely-not-a-cask-xyz;
           expectedError = {
             type = "EvalError";
             msg = "definitely-not-a-cask-xyz";

@@ -39,10 +39,12 @@
               let
                 s = home.systemd.user.services.qmd-reindex;
                 tm = home.systemd.user.timers.qmd-reindex;
+                # home-manager normalises unit values to lists
+                execStart = lib.concatStringsSep " " (lib.toList s.Service.ExecStart);
               in
               {
                 on = s.Service.Type == "oneshot";
-                cmd = lib.hasSuffix (lib.escapeShellArg chain) s.Service.ExecStart;
+                cmd = lib.hasSuffix (lib.escapeShellArg chain) execStart;
                 schedule = [ tm.Timer.OnCalendar ];
                 err = if tm.Timer.Persistent then "/tmp/qmd-reindex.err.log" else "not persistent";
                 failed = t.failedAssertions home;
@@ -75,7 +77,13 @@
               }
             else
               {
-                cmd = lib.removeSuffix "'" (lib.last (lib.splitString "-c '" cfg.systemd.user.services.qmd-reindex.Service.ExecStart));
+                cmd = lib.removeSuffix "'" (
+                  lib.last (
+                    lib.splitString "-c '" (
+                      lib.concatStringsSep " " (lib.toList cfg.systemd.user.services.qmd-reindex.Service.ExecStart)
+                    )
+                  )
+                );
                 schedule = cfg.systemd.user.timers.qmd-reindex.Timer.OnCalendar;
                 out = "/var/log/qmd/qmd-reindex.out.log";
               };
