@@ -1,0 +1,2165 @@
+# Porting Notes
+
+A working journal of the migration from the legacy layout (`modules/`,
+`machines/`, `homes/`, `users/`, root-level `secrets/`, `lib/`) to the
+dendritic / flake-parts layout under `new_modules/`. Read
+[`overview.md`](./overview.md) first for the high-level structure; this
+file collects what bit us along the way and how to avoid it.
+
+## Where things live now
+
+```
+new_modules/
+├── dendritic.nix              # enables the dendritic pattern (flake-file)
+├── flakeModules.nix           # exports flake.flakeModules.{options,lib,default}
+├── home-manager.nix           # pulls in home-manager flake module
+├── system-pkgs.nix            # configures nixpkgs per-system
+├── lib/
+│   ├── neusis-options.nix     # SCHEMA: declares flake.neusis (typed submodule)
+│   ├── neusisOS.nix           # IMPL:   config.flake.neusis.lib.neusisOS = rec { ... }
+│   └── utils.nix              # IMPL:   config.flake.neusis.lib.utils = { ... }
+├── users/                     # per-user flake.neusis.users.<u>.neusisOS entries
+├── registry/                  # per-lab flake.neusis.registry.* groupings
+├── nixosModules/              # (in progress) NixOS modules ported from old modules/nixos/
+└── hmModules/                 # home-manager modules
+```
+
+The root `flake.nix` is **generated** by `flake-file` — never hand-edit
+it. Add inputs from inside any module via `flake-file.inputs.<name> = …`
+and re-run `nix run .#write-flake`.
+
+## The single most important rule
+
+**Any flake-parts module that writes under a namespace must also import
+the options module that declares that namespace's type.**
+
+If `flake.neusis` has no declared option, flake-parts gives it freeform
+`raw` semantics. Two files writing `flake.neusis.lib.neusisOS = …` and
+`flake.neusis.lib.utils = …` then fail to merge with:
+
+```
+error: The option `flake.neusis' is defined multiple times while it's
+expected to be unique. No option has been declared for this flake
+output attribute, so its definitions can't be merged automatically.
+```
+
+Fix: every `flake.flakeModules.<name>` whose imports write under
+`flake.neusis.*` must also import `./lib/neusis-options.nix`. See
+`new_modules/flakeModules.nix` — `options`, `lib`, and `default` all
+include the schema.
+
+## Other gotchas worth memorizing
+
+### `path:` inputs only see git-tracked files
+
+When you create a new file under `new_modules/`, the consumer flakes
+(via `neusis.url = "path:../.."` or any flake input) won't see it until
+you `git add` it. Symptom is usually:
+
+```
+error: path '/nix/store/<hash>-source/new_modules/<file>' does not exist
+```
+
+…on a file you can clearly see on disk. Run `git add <file>` and then
+`nix flake update neusis` in the consumer.
+
+### `import-tree` excludes paths containing `/_`
+
+Useful when porting data files (encrypted secrets, raw assets) into
+`new_modules/` alongside the code that owns them. Put them under a
+sibling directory whose name starts with `_` and `import-tree` will
+skip the whole subtree:
+
+```
+new_modules/nixosModules/secrets.nix          # picked up
+new_modules/nixosModules/_secrets-data/...    # skipped — leading "_"
+```
+
+Same trick for any `.nix` file you do NOT want flake-parts to interpret
+as a module (e.g. an agenix recipients file, which is a plain attrset
+not a module).
+
+### `flake.flakeModules.<name>` must be a real module
+
+Initial version was `flake.flakeModules.neusis = { lib = self.lib.neusisOS; }`
+— that's not a module, it's an arbitrary attrset, and `imports` would
+choke on it from a consumer. A proper export looks like:
+
+```nix
+flake.flakeModules.default = {
+  imports = [
+    ./lib/neusis-options.nix    # schema FIRST
+    ./lib/neusisOS.nix
+    ./lib/utils.nix
+  ];
+};
+```
+
+We currently export three:
+
+- `options` — schema only (use when you want neusis's types but your own builders)
+- `lib`     — schema + lib implementation
+- `default` — same as `lib` today; idiomatic entry point
+
+### `lazyAttrsOf raw` for lib namespaces
+
+`flake.neusis.lib` is declared as `lazyAttrsOf raw`. Top-level keys
+(`neusisOS`, `utils`) merge as distinct slots, but each namespace's
+*value* is `raw` — no internal merging. Each namespace must come from
+a single file, typically using `rec { ... }` for internal references.
+
+### `lazyAttrsOf deferredModule` for module-list registries
+
+Used for things like per-machine home-manager bundles
+(`flake.neusis.users.<u>.hmBundles.<m>`) where each value is a module
+body to be `imports`-ed later. Accepts both attrset literals and
+paths-to-modules.
+
+## Schema cheat sheet (`flake.neusis.*`)
+
+```
+flake.neusis.users.<u>.neusisOS.{username,fullName,shell,sshKeys,homeModules}
+flake.neusis.users.<u>.hmBundles.<bundle>          # deferred module
+flake.neusis.registry.users.<lab>.{admins,regulars,locked,guests}   # listOf deferredModule
+flake.neusis.registry.machines.<lab>.{nixosConfigurations,darwinConfigurations}  # raw
+flake.neusis.lib.<namespace>                       # raw (no internal merge)
+```
+
+`username` defaults to the attribute name via the submodule `{ name, ... }:`
+binder, so most users only need `fullName` and the rest.
+
+## Consumer access pattern
+
+A downstream flake using neusis sees the namespace as `outputs.neusis`,
+which flake-parts derives from `flake.neusis.*`. From a non-flake-parts
+consumer that means:
+
+```nix
+inputs.neusis.neusis.lib.utils.helloWorld
+#         │       │
+#         │       └─ outputs.neusis (from `flake.neusis.*`)
+#         └───────── the input named `neusis`
+```
+
+The doubled `neusis.neusis` reads weirdly but is correct. To avoid it,
+either:
+
+1. Rename the input: `inputs.nu.url = ...; → nu.neusis.lib.utils.…`
+2. Add a top-level alias `flake.lib = flake.neusis.lib` (needs its own
+   option declaration to avoid the merge-conflict trap above).
+
+From a flake-parts consumer it's cleaner — import
+`inputs.neusis.flakeModules.default` and use `config.flake.neusis.lib.…`
+directly inside any module.
+
+## Examples
+
+- `examples/external-flake/` — plain (non-flake-parts) consumer. Uses
+  `neusis.neusis.lib.neusisOS.mkNeusisOS` directly. Includes a smoke
+  test under `.#hello` that calls `neusis.lib.utils.helloWorld`.
+- `examples/flake-parts-consumer/` — flake-parts consumer using the
+  typed schema. Splits config across `modules/{users,registry,systems}.nix`.
+
+Verify either by running `nix eval .#<output>` from inside the example
+directory. Update its lock with `nix flake update neusis` after any
+schema-affecting change in the main repo.
+
+## Open WIP gaps (as of writing)
+
+These will trip up the next person — fix them or work around them, but
+don't be surprised:
+
+- **`mkNeusisDarwinOS` is broken.** `new_modules/lib/neusisOS.nix`
+  references `inputs.darwin.lib.darwinSystem`, but `darwin` is not a
+  declared flake input. Add it via `flake-file.inputs.darwin` (e.g.
+  `github:lnl7/nix-darwin/master`) before this code path can evaluate.
+- **`initialHashedPassword` default is wrong.** `mkNeusisOS` defaults
+  `initialHashedPassword = ../secrets/common/hashedInitialPassword.age`,
+  resolving from `new_modules/lib/` to `new_modules/secrets/` — a path
+  that doesn't exist. Until secrets are ported, every caller must
+  override this argument explicitly.
+- **Field-name inconsistency.** `users-options.nix` declares
+  `homeModules` (attrs of module-lists), but
+  `users/ank/neusisOS.nix` sets `machineToBundlesMap`, and
+  `lib/neusisOS.nix:35` reads `machineToBundleMap` (singular). Pick one
+  and propagate.
+- **Duplicate lab entries.** `registry/users/cslab.nix` and
+  `registry/users/cslab_karkinos.nix` both write
+  `flake.neusis.registry.users.cslab` — submodule merging concatenates
+  the lists, so `ank`/`amunoz`/`shsingh` currently appear twice in the
+  merged result. Split by cohort, not by machine.
+- **`registry/machines/anklab.nix`** references
+  `self.neusis.machines.<host>` which has no corresponding option in
+  `neusis-options.nix`. Either add a `machines` option to the schema
+  or rewrite anklab.nix to point at concrete module paths.
+
+## Tips for the next porting pass
+
+- **Test in isolation first.** Before wiring a ported module into a
+  machine config, evaluate the flake output it produces:
+  `nix eval .#neusis.<path>` will surface schema errors fast.
+- **Stage early, stage often.** Every new file → `git add` immediately.
+  The Nix `path:` and `git+file:` inputs cache aggressively and ignore
+  untracked files. You'll burn 20 minutes wondering why your change
+  isn't picked up.
+- **Move data files with `_` prefix.** When porting a directory that
+  mixes Nix modules and non-module data (encrypted secrets, raw files,
+  legacy attrsets), put the non-module content under a sibling
+  `_<name>/` directory so `import-tree` skips it.
+- **Read `neusis-options.nix` before adding new options.** When the
+  schema grows, prefer extending the existing `userType`,
+  `userRegistryType`, etc. over declaring loose `flake.neusis.<new>`
+  attributes. Loose attributes hit the freeform/merge trap eventually.
+- **Don't trust the doubled `neusis.neusis`.** When updating examples
+  or downstream docs, walk through the access path manually — it's
+  easy to write `neusis.lib.…` and have it silently resolve to nothing.
+- **`bd ready` and `bd remember`.** Per AGENTS.md, use beads for task
+  tracking and persistent knowledge — not TodoWrite, not MEMORY.md
+  files, not random scratch markdown.
+
+---
+
+## 2026-05-31 — schema, builder refactor, supercharged-git suite
+
+Big session. The bulk of the "Open WIP gaps" above were closed and a
+sizeable home-manager toolkit landed. Notes below capture both
+*what* changed and the *why* behind the non-obvious calls, since
+several were follow-ons to subtle eval-time bugs.
+
+### Schema additions / changes (`new_modules/lib/neusis-options.nix`)
+
+- **`flake.agnosticModules`** — `lazyAttrsOf deferredModule`. Modules
+  that touch only options present on both NixOS and nix-darwin.
+  Re-exported as `flake.{nixos,darwin}Modules` by
+  `new_modules/agnosticModules/re-export-all.nix`.
+- **`flake.neusis.machines.<name>`** typed as `machineType` with
+  `hostname` (defaults to attr key), `computerName` (nullable, Darwin
+  only), `hostPubkey` (required), `system` (default `x86_64-linux`),
+  `nixpkgs` (`nullOr raw`), `primaryUser` (`nullOr str`),
+  `modulesSpecialArgs`, `module` (deferred), and `userRegistries`
+  (`listOf userRegistryType`). Closes the "anklab references
+  `self.neusis.machines.<host>` with no option" gap.
+- **`machineRegistryType`** retyped: was
+  `nixosConfigurations`/`darwinConfigurations` attrsets-of-raw; now
+  `nixos`/`darwin` *lists of `machineType`*. Far easier to iterate.
+- **`flake.neusis.features.{nixos,darwin,agnostic,hm,flake}`** —
+  each `lazyAttrsOf deferredModule`. Mirrors the actual layout under
+  `new_modules/features/`.
+- **`userType.neusisOS.machineToBundlesMap`** replaces the old
+  `homeModules` field. Same `lazyAttrsOf (listOf deferredModule)`
+  shape; the rename is to make the *meaning* explicit (bundles, keyed
+  by hostname, with no implicit hmBundles-name-equals-hostname rule).
+- **`userRegistryType.{admins,regulars,locked,guests}`** retyped
+  from `listOf deferredModule` → **`listOf attrs`**. See the
+  deferredModule-merge note in [Patterns] below — using
+  `deferredModule` for *data* attrsets silently wraps every entry in
+  `{ imports = [orig]; }`, and `mkAdmin adminConfig.username` then
+  errors with "attribute 'username' missing".
+- **Removed `flake.neusis.darwin.primaryUser`** (flake-wide
+  setting); moved to `machineType.primaryUser` (per-machine).
+  Builders inject `system.primaryUser = lib.mkDefault primaryUser`
+  on Darwin when set. Feature modules read via
+  `config.system.primaryUser` instead of `self.neusis.darwin.…`.
+
+### Library refactor (`new_modules/lib/neusisOS.nix`)
+
+Went from ~420 lines of duplicated builders to ~300 lines of
+extracted helpers + thin public functions. Public API is stable;
+private helpers live in a top-level `let`.
+
+- **Four user builders → one `mkUser`.** `mkAdmin`/`mkRegular`/
+  `mkGuest`/`mkLocked` were ~95% identical; replaced with a single
+  `mkUser` keyed by a `roleSpecs` catalogue (`extraGroups` list per
+  role, plus `locked = true` for the no-login variant). The four
+  named functions stay as thin aliases (`mkAdmin = mkUser "admin"`)
+  for backwards compatibility.
+- **`mkNeusisFlake { machineRegistries }`** — new top-level function
+  that produces `{ nixosConfigurations; darwinConfigurations;
+  homeManagerConfigurations }` from the `flake.neusis.registry.machines`
+  attrset. Removes the need for callers to spell out per-host build
+  invocations.
+- **NixOS-only `users.users.<name>` options gated on
+  `pkgs.stdenv.isDarwin`** — `isNormalUser`,
+  `hashedPasswordFile`/`hashedPassword`, `extraGroups`, the
+  `pkgs.shadow`-based locked-account shell. Darwin gets
+  `home = "/Users/<name>"` injected because nix-darwin doesn't
+  default `users.users.<name>.home` (this was the root cause of a
+  later home-manager `home.homeDirectory = null` failure — see
+  [Patterns]).
+- **`homeManager` flag dropped.** `mkHmInitModules` now keys off
+  `userRegistries != []`; if you have users, you get home-manager
+  wiring. Simpler call sites.
+- **Per-machine `nixpkgs` override.** `mkNeusisOS` accepts a
+  `nixpkgs` arg (`null` falls back to `inputs.nixpkgs`) and uses
+  `chosenNixpkgs.lib.nixosSystem` — module system and pkgs travel
+  together. `mkNeusisDarwinOS` accepts the arg only for signature
+  parity and **asserts `nixpkgs == null`**: nix-darwin's nixpkgs is
+  wired via the `darwin` input's `nixpkgs.follows`, not per-machine.
+  Workaround for varying Darwin nixpkgs is to declare a second
+  `darwin` input with a different follows.
+- **`mkSpecialArgs`** helper threads `{ inherit inputs; outputs = self; }`
+  into every NixOS/Darwin/HM module — so any downstream module can
+  destructure `{ outputs, inputs, … }` and reach the rest of the
+  flake.
+- **Dead code removed.** `mkHomeManagerUser`, `mkHomeConfigurations`,
+  the unused `machineName` arg in `mkDynamicUsers`.
+
+### hm-system-init agnostic module (`new_modules/agnosticModules/`)
+
+- **`hm-system-init.nix`** auto-populates `home-manager.users.<u>`
+  from each user's `machineToBundlesMap.<hostname>`. Reads `outputs`
+  + `inputs` from specialArgs and ships
+  `home-manager.sharedModules = [ { home.stateVersion = mkDefault
+  defaultStateVersion; } ]` so per-bundle stateVersion is no longer
+  required boilerplate.
+- **`re-export-all.nix`** — one-liner doing
+  `flake.{nixos,darwin}Modules = config.flake.agnosticModules`. Means
+  any new agnosticModule is automatically usable as both a NixOS and
+  a Darwin module.
+- **Platform-specific home-manager flake module import moved into
+  the builders.** Previously `hm-system-init` itself did
+  `if pkgs.stdenv.isDarwin then darwinModules.home-manager else
+  nixosModules.home-manager` inside `imports`. That triggers infinite
+  recursion (see [Patterns]). The split now: builders import the
+  platform-correct home-manager flake module *before* the agnostic
+  `hm-system-init`, which only touches
+  `home-manager.users.<u>.imports` (same option name on both
+  platforms).
+
+### Features layout fixes (`new_modules/features/`)
+
+- **`features/darwin/default.nix`** registered `darwin.system-defaults`
+  (collided with `system-defaults.nix`) AND self-imported. Renamed to
+  `darwin.defaults` to match the consumer reference in
+  `machines/rogue.nix`.
+- **`features/agnostic/nix-pkgs.nix`** registered as
+  `agnostic.nix-settings` (collision with the real
+  `nix-settings.nix`). Fixed to register `agnostic.nix-pkgs`.
+
+### supercharged-git home-manager suite
+
+Ported `homes/common/dev/git.nix` to `homeModules/supercharged-git.nix`
+and grew it into an opt-in toolkit:
+
+- Umbrella (`supercharged-git.nix`) — SSH-signed commits, LFS,
+  allowed_signers, plus imports of every tool sub-module. Ships
+  `gclb` on PATH unconditionally (see below).
+- Tool sub-modules under `homeModules/supercharged-git/`:
+  - `gh`, `gh-dash`, `lazygit`, `delta`, `pre-commit`,
+    `commitizen`, `jujutsu`, `act`, `mergiraf`, `gitleaks`,
+    `graphite`, `multi-account`, `bootstrap-repos`. Each registers
+    `flake.homeModules.supercharged-git-<tool>` so they can be
+    imported individually too.
+  - `difftastic` was implemented then removed at the user's request
+    (delta-only setup); leave the pattern as a record if someone
+    wants a non-delta diff renderer.
+- `multi-account` wires up per-account SSH host aliases, per-directory
+  git identity via `programs.git.includes`, and URL rewriting via
+  `programs.git.settings.url.<alias>:.insteadOf`.
+- `bootstrap-repos` generates a `gclb-sync` script (via
+  `pkgs.writeShellApplication`) that clones every declared repo into
+  `<location>/<dest>/.bare/` via `gclb`. Idempotent — skips
+  already-cloned `.bare` dirs. Optional `autoRun` runs it during HM
+  activation via `lib.hm.dag.entryAfter ["writeBoundary"]`.
+- Tutorial at `docs/supercharged-git/tutorial.md` (per-tool sections
+  + putting-it-all-together).
+
+### `gclb` package (`new_modules/packages/gclb/`)
+
+- Python script for "bare clone + worktree bootstrap" workflow.
+  Originally `homes/common/dev/gclb.py`, ported as a flake-parts
+  **perSystem** package:
+  ```nix
+  perSystem = { pkgs, ... }: {
+    packages.gclb = pkgs.writers.writePython3Bin "gclb" {} (builtins.readFile ./gclb.py);
+  };
+  ```
+- Rewrote the Python: extracted helpers (`parse_repo_name`, `git`,
+  `default_branch`, `write_gitfile`); switched
+  `git remote show origin` → `git symbolic-ref --short HEAD` (no
+  extra network round-trip); added `text=True` everywhere
+  (eliminating the `bytes.__str__()` + `replace("\\n", "")` hack);
+  replaced `assert` with `RuntimeError`; added idempotency check
+  (refuses to overwrite existing `.git`/`.bare`); wrapped subprocess
+  errors into friendly stderr messages.
+- The umbrella references it as
+  `outputs.packages.${pkgs.stdenv.hostPlatform.system}.gclb`, so
+  any home-manager bundle that enables `neusis.supercharged-git` gets
+  `gclb` automatically.
+- Earlier draft used an overlay (`flake.overlays.gclb`); reverted at
+  user's request — flake-parts perSystem is the canonical path.
+
+### Patterns we burned hours rediscovering
+
+Add these to your mental cache before the next session.
+
+- **Infinite recursion from `pkgs.stdenv.isDarwin` in `imports`.**
+  `pkgs` comes from `_module.args.pkgs`, which is a *config* value.
+  Reading it inside `imports` forces config evaluation, which
+  requires processing imports — cycle. Nix's error message even
+  spells it out: *"if you get an infinite recursion here, you
+  probably reference `config` in `imports`"*. Push platform
+  branching *out of the agnostic module* and into the builders, or
+  use a specialArg flag.
+- **Infinite recursion from `self.<missing-key>`.** `self` is a
+  recursive fixed point. Looking up a non-existent key forces Nix to
+  evaluate `self` enough to know its key set, which means evaluating
+  every flake-parts module's `flake.*` contribution — including the
+  one that's currently trying to read `self.foo`. Fix: use
+  `config.flake.foo` (reads the in-progress merge config, no full
+  self eval) or only read keys that genuinely exist.
+- **`listOf deferredModule` for data attrsets is wrong.**
+  `deferredModule`'s `merge` wraps every value as
+  `{ imports = [originalValue]; }`. So if you store
+  `{ username = "ank"; … }` in a `listOf deferredModule`, reading
+  the list back gives a list of `{ imports = […]; }`, and
+  `entry.username` is missing. Use `listOf attrs` (or a real typed
+  submodule) for data; reserve `deferredModule` for things that
+  actually *are* modules.
+- **nix-darwin doesn't default `users.users.<n>.home`.** NixOS auto
+  fills `/home/<n>`; nix-darwin leaves it `null`. Home-manager's
+  Darwin integration then sets `home.homeDirectory = null` and
+  fails type-check ("not of type `absolute path`"). Setting
+  `home.homeDirectory` *inside the bundle* doesn't save you — the
+  bad definition from
+  `home-manager.darwinModules.home-manager`'s common.nix is
+  type-checked *before* merging, so the error fires before your
+  override is considered. Seed
+  `users.users.<n>.home = "/Users/<n>"` at the system level — done
+  in `mkUser` already.
+- **`programs.git.settings` is new (home-manager ≥ 25.05).** Older
+  setups use `programs.git.extraConfig`. We target 25.11, so
+  `settings` is fine; if you ever pin home-manager older, swap.
+- **`programs.git.includes` accepts inline `contents`.** No need to
+  write per-account git config files separately — `multi-account`
+  uses `{ condition = "gitdir:…"; contents = { user = { … }; }; }`
+  in `programs.git.includes`.
+- **Cross-platform HM modules: `lib.mkMerge` with `lib.mkIf
+  isDarwin`/`isLinux` branches.** `launchd.agents.<n>` and
+  `systemd.user.{services,timers}.<n>` only exist on their
+  respective platforms. The `mkIf` gating keeps the dormant branch
+  from touching options that don't exist — same recipe used in
+  `homeModules/{msgvault-sync,qmd-reindex}.nix`.
+- **`writeShellApplication` adds `set -euo pipefail`.** Subprocess
+  calls inside need `|| true` / `|| rc=1` to neutralize failures
+  when you want best-effort semantics (see `gclb-sync`).
+- **import-tree picks up every `*.nix` recursively.** You can't put
+  "helper" nix files (non-flake-parts modules) under `new_modules/`
+  without them getting imported as top-level flake-parts modules.
+  Either put them outside `new_modules/`, prefix the dir with `_`,
+  or have each file register a real flake-parts attribute.
+- **`outputs = self` threaded via `mkSpecialArgs`.** Lets any HM /
+  system module destructure `{ outputs, … }` and access
+  `outputs.packages.<sys>.<name>`, `outputs.neusis.X`, etc. Used by
+  the umbrella to grab `gclb`, by `bootstrap-repos` to reference
+  `gclb`, and by anything else that needs a flake-defined package.
+- **`git add -N` after creating new files.** Nix flakes evaluating
+  from a git repo skip untracked files. `nix eval` returns mysterious
+  "attribute missing" errors until you stage them. `git add -N` is
+  the lightweight "make visible to flake eval" mode that doesn't
+  stage content. Mentioned earlier in this doc — re-emphasising
+  because it keeps biting.
+
+### Open WIP gaps — updated status
+
+From the previous list at the top of this file:
+
+- ✅ **anklab references `self.neusis.machines.<host>` with no
+  option** — closed by adding `machineType` + `flake.neusis.machines`.
+- ✅ **Field-name inconsistency
+  (`homeModules` vs `machineToBundleMap`)** — closed; rename to
+  `machineToBundlesMap` (plural), one canonical name everywhere.
+- ❌ **`initialHashedPassword` default** — still references
+  `../secrets/common/hashedInitialPassword.age`. Untouched this
+  session; callers continue to override.
+- ❌ **Duplicate lab entries (`cslab.nix` +
+  `cslab_karkinos.nix`)** — untouched. Still produces duplicated
+  members in `registry.users.cslab`.
+
+### Still open, deferred for a future session
+
+- **`mkNeusisOS` + `mkNeusisDarwinOS` could collapse into a single
+  `mkSystem "nixos"|"darwin"`.** Maybe 30 lines saved; passed for
+  now because the branching read uglier than the duplication. See
+  the bottom of `lib/neusisOS.nix` for the obvious factoring.
+- **`roleSpecs` could be promoted to a `flake.neusis.roles`
+  option.** Right now adding a fifth role means editing the lib;
+  exposing it as a typed flake option lets consumers extend. Notes
+  in `docs/future-considerations.md`.
+- **`mkAdmin`/`mkRegular`/`mkGuest`/`mkLocked`** are now thin
+  aliases over `mkUser`. Keep or drop? Aliases preserve the previous
+  public API; if nothing outside this flake calls them, they can go.
+- **gh CLI multi-account** isn't solved by `tools.multi-account`.
+  `gh auth login` is single-host; this stays a manual `gh auth
+  switch` dance until upstream gets multi-account support.
+- **`features/darwin/system-defaults.nix`** still hardcodes
+  `system.stateVersion = 5` and a bunch of macOS defaults that
+  aren't per-machine. If a non-Apple-Silicon darwin host shows up,
+  factor those out.
+- **`homes/common/dev/{git,gclb}.{nix,py}`** still exist — port is
+  done, but the originals haven't been deleted. Verify the new
+  modules cover everything in real use before removing.
+- **`flake.nix.bak`** is the pre-flake-file backup of the old root
+  `flake.nix`. Useful as a reference for inputs that haven't been
+  ported yet (e.g. `msgvault`, `llm-agents`, `nix-homebrew`,
+  homebrew taps). Don't delete until the migration is complete.
+
+### Process notes
+
+- Several rounds of *test, surface a downstream error, fix it,
+  re-test* this session — typical pattern was:
+  `nix eval .#darwinConfigurations.rogue.config.<field>` → look at
+  the bottom of `--show-trace` → fix → repeat. Bottom of the trace
+  is the real error; everything above is module-system context.
+- `nix run .#write-flake` is needed any time a `.nix` file under
+  `new_modules/` adds a new `flake-file.inputs.<x>` entry. Forgot
+  this once or twice; symptom is "input X missing" on the next
+  eval.
+- The Python rewriter (gclb) was the only place this session where
+  we touched non-Nix code — `pkgs.writers.writePython3Bin` runs
+  flake8 over the input. Keep the `# flake8: noqa` header on
+  hand-rolled python files or accept that the nix build will fail
+  on long lines / unused imports.
+
+---
+
+## 2026-06-16 — supercharged toolkit family + agent-harness + ports
+
+Built three more home-manager umbrellas on top of last session's
+schema, ported the remaining personal terminal config out of
+`homes/ank/configs/`, added a cross-platform kanata module, and
+made the long-running services opt-in. Each umbrella follows the
+same shape settled on with `supercharged-git`: a single
+`homeModules/<name>.nix` file imports a directory of tool
+sub-modules, each registering `flake.homeModules.<name>-<tool>`
+and exposing `neusis.<umbrella>.tools.<x>.enable` plus a small
+handful of knobs.
+
+### Umbrellas added
+
+- **`supercharged-shell`** (`homeModules/supercharged-shell.nix` +
+  9 sub-tools): yazi (bundled `max-preview` plugin), direnv, fzf,
+  television, nix-search-tv, nix-your-shell, nix-init, zoxide,
+  atuin. Umbrella `enable` installs the curated CLI bundle: `bat`,
+  `bottom`, `chafa`, `comma`, `duf`, `eza`, `fd`, `gdu`, `htop`,
+  `imagemagick`, `nix-output-monitor`, `ouch`, `rclone`,
+  `ripgrep`, `unzip`, `wget`, `xclip` + toolchains (`cargo`,
+  `clang`, `cmake`, `deno`, `gnumake`, `ninja`, `nodejs_22`,
+  `python3`, `rustc`, `texliveFull`) + Lua (`lua51Packages.{lua,
+  luarocks}`) + `sioyek` on Linux only. `extraPackages` extends
+  without forking; bundle deliberately omits anything already
+  owned elsewhere (lazygit lives in supercharged-git, fzf/yazi/
+  zellij configurations come from their respective tool
+  sub-modules).
+
+- **`terminal-velocity`** (`homeModules/terminal-velocity.nix` + 7
+  sub-tools): wezterm (bundled `wezterm.lua`), kitty
+  (platform-aware `hide_window_decorations`: `titlebar-only` on
+  Darwin, `yes` on Linux), zellij (bundled `config.kdl` +
+  `layouts/default.kdl`, `default_mode = "locked"` so it nests
+  cleanly), tmux (vim-tmux-navigator + resurrect + continuum +
+  better-mouse-mode + tmux-toggle-popup; six prefix-bound popups
+  for scratch shell / yazi / lazygit / rmpc / agent-deck /
+  ipython; fzf-tmux integration auto-wired when
+  `supercharged-shell.tools.fzf` is on), sesh (`tmuxKey = "s"` by
+  default), mosh, eternal-terminal. No umbrella `enable` — each
+  tool stands alone. Funny-name pun: "max speed of a falling
+  object."
+
+- **`agent-harness`** (`homeModules/agent-harness/agent-harness.nix`):
+  single-file umbrella for LLM CLIs (`claude-code`, `opencode`,
+  `gemini-cli`, `pi`, `hermes`). Umbrella `enable` ships extras
+  (`agent-deck`, `beads`, `beads-viewer`, `spec-kit`, `skills`,
+  `qmd`) and shared `AGENTS.md` / `agents` / `commands` /
+  `skills` directories used by every enabled agent. Per-agent
+  `tools.<x>.{enable, settings, extraPkgs}`. On Linux every
+  agent is wrapped through `jail-nix` (common options:
+  `network`, `time-zone`, `no-new-session`, `mount-cwd`;
+  per-agent `readwrite (noescape "~/.<agent>")`; `commonPkgs`
+  bundle in every jail). On Darwin the unwrapped packages are
+  used (jail-nix is Linux-only). Bundled `skills/skill-creator/`
+  with 18 files. New flake input: `jail-nix.url =
+  "sourcehut:~alexdavid/jail.nix"`.
+
+  MCP server configuration was added then removed at user request
+  — "we will only use skills." The `pi-mcp-adapter` string inside
+  `tools.pi.settings.packages` is left intact: it's pi's own
+  package name, not an MCP server config. Override
+  `tools.pi.settings.packages` if you also want pi to skip the
+  adapter.
+
+### Other ports
+
+- **`packages/gclb/gclb.{nix,py}`** — `perSystem.packages.gclb`
+  via `pkgs.writers.writePython3Bin`. Python rewritten to use
+  `argparse.parse_known_args` so unknown flags pass through to
+  `git clone`. Bundled into `supercharged-git` umbrella's
+  `home.packages` via
+  `outputs.packages.${pkgs.stdenv.hostPlatform.system}.gclb`.
+  Earlier overlay-based draft was reverted at user request — the
+  perSystem-package path is canonical.
+
+- **`bootstrap-repos` got `extraGitArgs`** (per-repo + module
+  global). Generated `gclb-sync` shell-quotes the merged list via
+  `lib.escapeShellArgs (cfg.extraGitArgs ++ e.extraGitArgs)` and
+  the helper `clone_repo` shifts the first two args and forwards
+  `$@` to `gclb`, so users can pass arbitrary `git clone` flags
+  (e.g. `--depth=1`, `--filter=blob:none`).
+
+- **`agnosticModules/kanata/{kanata.nix, custom.kbd}`** — Mirrors
+  nixpkgs's `services.kanata` option surface (`enable`, `package`,
+  `keyboards.<name>.{devices, config, extraDefCfg, configFile,
+  extraArgs, port}`). Linux forwards to `services.kanata`; Darwin
+  sets up Karabiner-VirtualHIDDevice via
+  `system.activationScripts.preActivation` + a base
+  `launchd.daemons.Karabiner-DriverKit-VirtualHIDDevice-Daemon` +
+  one `launchd.daemons.kanata-<name>` per declared keyboard.
+  Default `keyboards.default.configFile = ./custom.kbd`.
+
+- **`users/ank/zsh.nix`** — Registers
+  `flake.neusis.users.ank.hmBundles.zsh` containing the full
+  ported zsh config (vi-mode plugin, oh-my-zsh
+  git/gh/globalias, aliases including `cat=bat`/`df=duf`/`ll=eza
+  -lah --color-scale=all --hyperlink`, `nz`/`nx`/`nxp`/`nxpc`
+  shell functions, `completionInit` cache-stable workaround,
+  `lib.mkOrder 1000` zshConfig + `lib.mkOrder 1500` zshLateInit
+  merged via `lib.mkMerge`). Wired per-host via
+  `machineToBundlesMap.<host>`.
+
+- **`homeModules/{msgvault-sync,qmd-reindex}.nix`** — Both
+  switched to opt-in via `neusis.services.<n>.enable`.
+  Configurable `package`, `launchdSchedule`,
+  `systemdOnCalendar`, `logDir`. msgvault has `extraArgs`
+  (default `["sync"]`); qmd has `subcommands` (default
+  `["update" "embed"]`) joined with `&&` via `bash -c`. Both use
+  `lib.getExe cfg.package` and `lib.escapeShellArgs`.
+
+- **`homeModules/hammerspoon/{hammerspoon.nix, init.lua,
+  Spoons/}`** — Ports `homes/ank/configs/hammerspoon/` into a
+  Darwin-only opt-in module. Vendored `init.lua` + bundled
+  `SpoonInstall`, `PaperWM`, and `ActiveSpace` spoons ride along
+  next to the module. `neusis.hammerspoon.enable` symlinks the
+  bundled directory into `~/.hammerspoon/` (hammerspoon's
+  canonical location — legacy used `xdg.configFile."hammerspoon"`
+  which resolved to `~/.config/hammerspoon`, the wrong path
+  unless `MJConfigFile` was set; the new module fixes this).
+  `configDir` swaps in a user-provided dir. Module does **not**
+  install hammerspoon itself — that's a homebrew cask, noted in
+  the tutorial. Sister tutorials' overlap tables gained a
+  `hammerspoon` row.
+
+### Tutorials added
+
+`docs/{supercharged-shell,terminal-velocity,agent-harness}/tutorial.md`
+— one per umbrella, mirroring the supercharged-git format:
+numbered tool sections, "Putting it all together" example, and
+an "Overlap with sister umbrellas" table that lists every tool
+across all four umbrellas. Update all four tables in lockstep
+when adding or moving tools between umbrellas.
+
+After `graphite` was deleted by the user mid-session, the
+supercharged-git tutorial needed §12→§11 / §13→§12 / §14→§13
+renumbering plus three `(§N)` cross-references repointed. Worth
+auditing whenever a tool sub-module is added or removed.
+
+### Patterns confirmed / new
+
+- **Cross-platform HM cookbook**: `lib.mkMerge` with `lib.mkIf
+  pkgs.stdenv.isDarwin { launchd.agents.<n> = …; }` and `lib.mkIf
+  pkgs.stdenv.isLinux { systemd.user.{services,timers}.<n> = …;
+  }`. The `mkIf` gating keeps the dormant branch from touching
+  options that don't exist — same recipe used in
+  `homeModules/{msgvault-sync,qmd-reindex}.nix` and
+  `agnosticModules/kanata/kanata.nix`.
+
+- **Bundled data alongside modules**: `kanata/{kanata.nix,
+  custom.kbd}`, `agent-harness/{agent-harness.nix, AGENTS.md,
+  skills/, …}`, `terminal-velocity/{wezterm/wezterm.lua,
+  zellij/{config.kdl,layout.kdl}}`,
+  `supercharged-shell/yazi/{yazi.nix, yazi_img_max/init.lua}`.
+  `import-tree` only picks up `*.nix`, so non-Nix data files
+  alongside are inert.
+
+- **`programs.git.settings.url.<alias>:.insteadOf` as a list**
+  serializes to multiple `insteadOf = …` lines — that's how
+  `multi-account` redirects every `org/` per SSH alias without
+  generating per-account include files.
+
+- **`programs.git.includes` `contents` form** lets the
+  multi-account module avoid materializing per-account git config
+  files on disk — config lives inline in the includes attrset.
+
+- **jail-nix `mount-cwd` is the agent escape hatch.** It's the
+  only thing letting jailed agent CLIs see your code. Without it
+  every agent is a paperweight. Per-agent `readwrite (noescape
+  "~/.<dir>")` covers state; everything else outside `cwd` is
+  opaque.
+
+- **`programs.delta` standalone** replaces the legacy
+  `programs.git.delta.*` settings. The new module sets delta as
+  the diff pager via its own activation; double-check nothing
+  else is trying to set `core.pager` separately.
+
+- **`writeShellApplication` + `set -euo pipefail`** — anything
+  intended to be best-effort needs `|| true` / `|| rc=1`. The
+  bootstrap-repos `gclb-sync` script uses this for its
+  per-repo loop so a single repo failure doesn't abort the rest.
+
+- **Section renumbering rots silently.** When tools are deleted
+  mid-tutorial, neither markdown linters nor `nix flake check`
+  catch the dangling `(§N)` cross-references. Treat any
+  sub-module addition/removal as a tutorial audit trigger.
+
+### Open WIP gaps — status this session
+
+From the running list at the top of this doc:
+
+- ✅ **`mkNeusisDarwinOS` broken / `darwin` input missing** —
+  closed previous session; verified end-to-end this session
+  by evaluating `darwinConfigurations.rogue.config`.
+- ❌ **`initialHashedPassword` default** — still references
+  `../secrets/common/hashedInitialPassword.age`. Untouched.
+- ❌ **Duplicate `cslab` registry entries** — untouched.
+- ❌ **`mkSystem "nixos"|"darwin"` unification** — deferred again.
+- ❌ **`roleSpecs` → typed `flake.neusis.roles` option** —
+  deferred; notes still in `docs/future-considerations.md`.
+- ❌ **`mkAdmin`/`mkRegular`/`mkGuest`/`mkLocked` aliases vs
+  `mkUser`-only API** — alias layer kept; no consumer audit done
+  to confirm callers.
+
+### Still open after this session
+
+- **Legacy `homes/common/dev/{git,gclb,editors,terminals}.nix`
+  and `homes/ank/configs/{terminal/{tmux,zsh}.nix,
+  keyboard/kanata_system.nix, agent_harness/}`** still on disk
+  despite their content being ported. Verify on a real
+  `home-manager switch` before deleting.
+- **`inputs.llm-agents.homeManagerModules`** not explicitly
+  imported by the agent-harness umbrella — relying on upstream
+  auto-injection into the HM context. If "option doesn't exist"
+  errors fire on switch, add an explicit `imports = [
+  inputs.llm-agents.homeManagerModules.default ]` somewhere
+  upstream.
+- **Agent-harness MCP**: the option block + config branch are
+  gone, but `tools.pi.settings.packages` still lists
+  `pi-mcp-adapter`. Override at the bundle if you want pi to
+  skip loading it.
+
+### Process notes
+
+- `nix run .#write-flake` after every new `flake-file.inputs.<x>`
+  entry. This session added `jail-nix`; running the regenerator
+  was needed before `nix eval` would resolve it.
+- Verification command for parse-only sanity on a new module:
+  `nix eval .#homeModules.<name> --apply "x: builtins.typeOf x"`.
+  Returns `"set"` if the module body itself parses; doesn't
+  fully evaluate the config, but catches the obvious nix-syntax
+  / option-typo class of errors before the slower
+  `home-manager.users.<u>.imports = […]` round-trip.
+- The MCP-removal pass touched four files (the module, the
+  agent-harness tutorial, and two sister-umbrella overlap
+  tables). When ripping a feature out, grep for the feature
+  name across `docs/` and across all umbrella tutorials — the
+  overlap tables are the easiest to miss.
+
+---
+
+## 2026-06-17 — kalam family + nvim-debug skill + rogue feature parity
+
+The session-of-many-sessions. Three threads landed: the kalam
+nixvim distribution got a proper library layer plus a clean
+`base` flavor written from scratch, an `nvim-debug` skill encodes
+the diagnostic patterns we developed while debugging dap, and
+rogue's home-manager bundle list reached feature parity with the
+legacy `homes/ank/machines/rogue.nix` (stylix, brave, atuin,
+tmux, mpd, rmpc — all now declarative through `flake.neusis`).
+
+### kalam: library + variant builder + flavor scaffold
+
+- **`flake.neusis.lib.kalam`** (`new_modules/lib/kalam.nix`) —
+  new lib namespace. `mkKalamVariants { pkgs; inputs; outputs;
+  root }` enumerates subdirs under `root`; subdir name `base` →
+  package `kalam`, anything else → `kalam-<name>`. `mkKalam`
+  builds a single flavor from a directory containing `config/`
+  and (optional) `lib/`. Per-flavor `lib/` is honoured if
+  present; helpers `icons`, `mkPlugin`, `whichkeySpec`,
+  `mkKeymap` live in the shared namespace and propagate via
+  `extraSpecialArgs` as `kalamLib`. Legacy aliases (`icons`,
+  `mkPkgs`, `specObj`) are preserved at the top level of
+  `extraSpecialArgs` so unported flavor modules keep working.
+
+- **Flavors relocated** to `new_modules/packages/kalam/_flavors/{base,py,v2}/`.
+  The `_flavors/` prefix keeps `import-tree` from interpreting
+  the ~208 nixvim config modules as flake-parts modules — same
+  trick as `_kalam/` for the shared icons data, hammerspoon's
+  `Spoons/`, and the agent-harness `skills/skill-creator/`
+  subtree.
+
+- **Per-flavor `default.nix` derivation files deleted.** The
+  shared `mkKalam` does the build. Per-flavor `lib/` directories
+  also deleted (they were identical across flavors and the
+  shared lib now provides the helpers).
+
+- **Removed per-package nixpkgs rebuild.** Legacy
+  `pkgs/kalam{,py,v2}/default.nix` each did
+  `import inputs.nixpkgs { cudaSupport = true; overlays = [ … ]; }`
+  inside the derivation — forcing a full nixpkgs rebuild per
+  flavor and baking CUDA in. New `mkKalam` uses the perSystem
+  `pkgs` verbatim; the perSystem driver `pkgs.extend self.outputs.overlays.git-worktree`
+  for the one overlay the configs actually need
+  (`pkgs.git-worktree-custom`). CUDA dropped.
+
+- **New flake input** `nixvim = "github:nix-community/nixvim/nixos-25.11"`
+  declared in `new_modules/packages/kalam/kalam.nix` via
+  `flake-file.inputs`.
+
+- **Old `pkgs/` tree no longer wired in.** `flakeModules/packages.nix`
+  (the legacy flake-parts module that imported `../pkgs`) was
+  deleted. `outputs.packages.<system>` now exposes
+  `kalam`, `kalam-py`, `kalam-v2`, `gclb` — no more `kalamv2`,
+  `specstory`, `xrt`, `kexec_tailscale`. (Source files at `pkgs/`
+  still on disk; deletion deferred until non-kalam consumers
+  are confirmed unused.)
+
+### kalam-base: clean implementation from scratch
+
+Built on three toolkits per a deliberate philosophy choice:
+
+- **blink.cmp** — single completion engine (LSP + path + snippets
+  + buffer sources). Uses `lspkind`'s symbol_map for richer kind
+  icons.
+- **mini.nvim** — pairs, comment, surround, move, bracketed,
+  splitjoin, hipatterns, bufremove, sessions, icons. **`mini.ai`
+  removed** — raced with treesitter-textobjects on `af`/`ac`/`aa`,
+  winner depended on typing speed. treesitter-textobjects + vim
+  defaults cover the same surface area.
+- **snacks.nvim** — bigfile, quickfile, dashboard (custom
+  giraffe ASCII art), indent + scope, input, notifier, picker
+  (replaces telescope), rename, scratch, statuscolumn, terminal
+  (replaces toggleterm), toggle, words, zen, image. Most of the
+  `<leader>` map dispatches to snacks features.
+
+Plus catppuccin (theme, with `integrations.dap` for dap highlight
+groups), treesitter + treesitter-context + treesitter-textobjects,
+nixd + pyright (LSP), conform.nvim (format-on-save with
+`vim.g.disable_autoformat` toggle), gitsigns, lualine (now with
+filesize component), bufferline, oil + yazi (replaces
+snacks.explorer), leap (bidirectional `s`, cross-window `S`),
+trouble, undotree, colorizer, dap + dap-view + dap-python +
+dap-virtual-text.
+
+`mini.surround` was rebound from `s*` to `gs*` so leap could own
+single-key `s`. Parallel mnemonic with `gc` (comment) and `gS`
+(splitjoin).
+
+`<leader>` map labelled groups: `b` (buffer), `c` (code), `d`
+(debug), `dP` (python-debug), `f` (find/file), `g` (git), `gh`
+(hunks), `q` (quit/session), `s` (search), `t` (terminal/tab),
+`u` (toggles), `w` (window proxy → `<c-w>`), `x` (trouble), `z`
+(zen), plus non-leader `gs` (surround).
+
+### nvim-debug: lessons codified into a skill
+
+Six different bugs across the kalam debug session each demanded
+the same diagnostic pattern — write a Lua script that probes
+state and writes results to `/tmp/diag.log`, run nvim
+`--headless -c 'lua dofile(...)' -c 'qa!' <test-file>`, read the
+log from the shell. Encoded as `~/.claude/skills/nvim-debug/`:
+
+- The `--headless -c 'lua dofile(...)'` pattern (NOT `nvim -l`,
+  which skips startup).
+- Probe cookbook: module load state, LSP clients/settings/
+  capabilities, keymaps via `maparg`, signs (with the group
+  scope gotcha — `sign_getplaced { group = "*" }` doesn't always
+  match), autocmds via `nvim_get_autocmds`.
+- Locating the generated init.lua in nixvim:
+  `grep -oE '/nix/store/[a-z0-9]+-init\.lua' $PKG/bin/nvim`.
+- `xxd` on string options to verify multi-byte glyphs survived
+  the source → emission pipeline (see "burned hours" below).
+
+Packaged via `package_skill.py` into `~/Downloads/nvim-debug.skill`
+for portable install.
+
+Ran description optimization via `run_loop.py` (5 iterations).
+**No improvement found** — all iterations scored 50% with
+recall=0%. Root cause is a structural limit of the optimization
+loop (Claude's headless skill-consultation heuristic doesn't
+respond to description tweaks on debugging-style queries; it
+decides "I'd just inspect files directly"). Best = original
+description by tiebreak. Documented as a known limitation.
+
+### Burned hours rediscovered (six bugs, each illuminating)
+
+These each cost time and each taught something worth remembering:
+
+1. **Nerd-font PUA glyphs got stripped to empty strings** in the
+   nix source itself. The bytes between `text = "..."` quotes
+   were `22 22` (just the quotes). Diagnosed via `xxd` after the
+   sign_define output showed no `text` field. Fix: replace with
+   BMP characters (`●`, `◆`, `◌`, `→`) which have well-defined
+   UTF-8 encodings and survive every copy/paste/serialize chain.
+2. **nvim's native `'exrc'` option doesn't fire on a kalam
+   launch** despite `opts.exrc = true` + matching trust hash.
+   Suspect: nixvim's `-u <init.lua>` wrapper interaction. Worked
+   around with a `VimEnter` autocmd in `autocmds.nix` that
+   manually does `vim.secure.read` + `loadstring` + invoke.
+   Native exrc remains an unsolved mystery; the manual loader
+   is the working substitute.
+3. **dap.adapters.python showing `<function1>`** — dap-python's
+   setup runs after our manual table-form adapter registration
+   and replaces it with a function-form adapter that misbehaves
+   on nix store paths. Reordered: pcall dap-python.setup FIRST,
+   then our `dap.adapters.python = { type = "executable"; … }`
+   wins. Followed by a final pass that moved everything to
+   nixvim's native `plugins.dap-view.settings.auto_toggle` /
+   `plugins.dap.signs` so the extraConfigLua block could be
+   dropped entirely.
+4. **`claude-remote.nix` in `homeModules/` had no
+   `flake.homeModules.<name>` wrapper.** `import-tree` picked it
+   up as a top-level flake-parts module; its body's
+   `launchd.user.agents.X = ...` got applied at the wrong
+   evaluation context, where `pkgs` wasn't a module arg. This
+   broke darwin options tree evaluation entirely, which silently
+   blanked nixd's hover/gd against `services.X`. Rewrote as a
+   proper `flake.homeModules.claude-remote` with
+   `neusis.claude-remote.enable`, `profile`, `projectDir`,
+   `claudeBin`, `logDir` options. Also switched from nix-darwin's
+   `launchd.user.agents` namespace to home-manager's
+   `launchd.agents` since the module lives under `homeModules/`.
+5. **lspconfig deprecation warning** every launch — fixed by
+   mutating `lspconfig.configs.nixd.default_config.settings`
+   directly in the `.nvim.lua` exrc rather than calling
+   `lspconfig.nixd.setup({...})`. Same effect, no warning. Uses
+   lspconfig internals so brittle, but works until nixvim
+   migrates to `vim.lsp.config`.
+6. **nixd needs manual submodule descent** for flake-parts
+   options. `evaluated.options.flake` is a typed option, not a
+   walkable attrset. The `.nvim.lua` exrc descends via
+   `evaluated.options.flake.type.getSubOptions []` and wraps as
+   `{ flake = <subopts>; }` so user-typed paths like
+   `flake.neusis.users.X.hmBundles.Y` walk through the tree.
+   Also declared `flake.homeModules` and `flake.darwinModules`
+   as typed options in `neusis-options.nix` — flake-parts itself
+   only declares `nixosModules`, so without these `nixd` couldn't
+   complete `flake.homeModules.<TAB>`.
+
+### Other ports landed today
+
+- **mpd + rmpc** as `homeModules` (`new_modules/homeModules/{mpd,rmpc}.nix`).
+  mpd module is platform-aware: default log file at
+  `~/Library/Logs/mpd/log.txt` on Darwin, `~/.local/state/mpd/log`
+  on Linux. Activation script creates log dir + touches log file
+  + creates playlist dir. rmpc takes structured options
+  (`address`, `volumeStep`, `maxFps`) that get substituted into
+  a default RON config; full `config` string also overridable.
+
+- **kanata** as `agnosticModules/kanata/kanata.nix`. Mirrors
+  nixpkgs `services.kanata` option surface; Linux forwards to
+  `services.kanata`, Darwin sets up Karabiner-VirtualHIDDevice
+  via `system.activationScripts.preActivation` + launchd daemons.
+
+- **stylix** as `users/ank/theming.nix` hmBundle. Iosevka Term
+  Nerd Font Mono, evenok-dark base16 scheme, terminal opacity
+  0.8, wallpaper at `users/ank/_assets/wallpaper.jpg` (copied
+  from `homes/common/gui/wallpapers/gruvbox_astro.jpg`). New
+  `flake-file.inputs.stylix = "github:danth/stylix/release-25.11"`.
+
+- **brave** as `homeModules/brave.nix`. Wraps `programs.chromium`
+  with `pkgs.brave` + ublock origin / dark reader / kagi search /
+  theme extensions. `useHomebrew` opt lets Darwin users prefer
+  the cask (module then only writes preferences/extensions, cask
+  owns the binary). Bundle wiring in `users/ank/ank.nix` as
+  `hmBundles.browsers`.
+
+- **zsh polish**: `users/ank/zsh.nix` gained `history.path =
+  "${config.xdg.dataHome}/zsh/history"`, `history.size = 10000`,
+  and the `update <host>` / `darwin <host>` shell helper
+  functions for `nixos-rebuild` / `darwin-rebuild` invocations.
+
+### rogue feature parity
+
+After porting the missing pieces, `darwinConfigurations.rogue`'s
+home-manager bundle list now reads:
+
+```
+machineToBundlesMap.rogue = [
+  features.agnostic.nix-pkgs
+  hmBundles.kalam-ide       # → kalam base (was kalamv2)
+  hmBundles.terminal-life   # supercharged-git/shell/terminal-velocity + zsh
+  hmBundles.agent-harness   # claude/opencode/gemini/pi/hermes + msgvault + qmd
+  hmBundles.darwin-tools    # hammerspoon + mpd + rmpc
+  hmBundles.theming         # stylix + iosevka + wallpaper
+  hmBundles.browsers        # brave
+  ./_packages.nix           # ank's home.packages list
+]
+```
+
+The legacy `homes/ank/machines/rogue.nix` import chain has been
+fully migrated. Items intentionally dropped: `programs.starship`
+(was already `enable = false`), `programs.mcp` (user decided to
+"only use skills" earlier; `pi-mcp-adapter` left in pi's
+settings.packages as pi's own client-side package). gh-dash
+extension on gh kept disabled by user.
+
+### Patterns confirmed / new
+
+- **`_flavors/` and `_assets/` prefix for non-module data.**
+  Same as `_kalam/` for shared icons. import-tree skips any path
+  containing `/_`. Use for: nixvim flavor configs (208 .nix
+  files under `_flavors/`), wallpaper image, kanata custom.kbd,
+  agent-harness skill-creator bundle (18 files).
+
+- **nixpkgs.expr in nixd settings is project-agnostic; option
+  trees are project-specific.** Base `lsp.nix` ships only
+  `nixd.nixpkgs.expr = "import <nixpkgs> { }"` and
+  `nixd.formatting.command = [ "nixfmt" ]`. Per-flake
+  `options.<key>.expr` belongs in `.nvim.lua` exrc at the
+  project root — neusis ships its own at the repo root.
+
+- **`flake.homeModules.<name>` registration is mandatory** for
+  any `homeModules/X.nix` file. Without it, `import-tree`
+  applies the file's body as a top-level flake-parts module,
+  silently breaking either the file's intent or downstream
+  evaluation. The pattern is: `{ ... }: { flake.homeModules.X =
+  { config, lib, pkgs, ... }: { options.neusis.X = …; config =
+  lib.mkIf cfg.enable { … }; }; }`.
+
+- **Catppuccin's `integrations.dap = true`** auto-defines the
+  `DapBreakpoint*` highlight groups — no need for manual
+  `vim.api.nvim_set_hl` calls when catppuccin is the
+  colorscheme.
+
+- **`nvim --headless -c 'lua dofile(...)' -c 'qa!'`** is the
+  canonical pattern for inspecting plugin state from outside.
+  `-l <script>` is a different mode that skips startup; useless
+  for debugging user config.
+
+### Still open
+
+- **Legacy `pkgs/` tree** still on disk (kalam/kalampy/kalamv2
+  + non-nvim packages: xilinx, intel-fpgas, nvidia_vgpu,
+  specstory, sst, typedb, kexec_tailscale). Nothing in the
+  active layout references it after the `flakeModules/packages.nix`
+  deletion. Sweep candidate.
+- **`flakeModules/`** directory (legacy flake-parts modules) is
+  no longer loaded by the root flake (`flake.nix` only imports
+  `./new_modules`). Deletion safe; deferred for archaeology.
+- **`homes/`** likewise — all per-host content has been ported.
+  Deletion needs verification that nothing references
+  `homes/common/...` paths.
+- **nixd native exrc** still doesn't load on a kalam launch
+  (only via `--cmd 'set exrc'`). Workaround autocmd in
+  `autocmds.nix` makes it work; root cause unidentified.
+- **MCP server config** is gone from agent-harness. The
+  `pi-mcp-adapter` entry in pi's `settings.packages` still
+  ships — pi's own client-side adapter, not a server config.
+  Override `tools.pi.settings.packages` to drop if you also
+  want pi to skip the adapter.
+
+---
+
+## 2026-06-17 (cont.) — git workflow, theme tuning, commit split, build fixes
+
+Second half of 2026-06-17. Kalam-base's git surface got rebuilt
+top-to-bottom, the diff theme tuned through several feedback
+rounds, the whole staged tree split into atomic commits, and two
+regressions caught (one mine, one upstream-rename).
+
+### Kalam-base: full git workflow rewrite
+
+Replaced the single `<leader>gg` lazygit shortcut with four
+purpose-built tools, each owning a clean slice of the surface
+(see [`docs/kalam/git-workflow.md`](./kalam/git-workflow.md) for
+the worked-example walkthrough):
+
+| Plugin       | Owns                                                     | Prefix       |
+| ------------ | -------------------------------------------------------- | ------------ |
+| `gitsigns`   | gutter signs + hunk ops + inline rich view               | `<leader>gh` |
+| `neogit`     | magit-style status/commit/merge/push/rebase popups       | `<leader>g…` (top-level) |
+| `diffview`   | side-by-side diffs + file-history walking                | `<leader>gd` |
+| `octo`       | GitHub issues/PRs/reviews/comments — shells out to `gh`  | `<leader>go` |
+| `worktrees`  | create/delete/switch worktrees (afonsofrancof's, not the more-common ThePrimeagen) | `<leader>gw` |
+
+Specifics worth remembering:
+
+- **neogit** uses `kind = "tab"` (full-tab status), `integrations.diffview = true` so `d` inside the status buffer opens diffview, and `integrations.snacks = true` for native input/select prompts.
+- **diffview** has no built-in toggle — wrote `_G.kalam_diffview_toggle` that introspects `diffview.lib.get_current_view()` for close-if-open / open-otherwise on `<leader>gdd`. The big-value binding turned out to be `<leader>gdf` = `DiffviewFileHistory %` — the canonical "when did this function break?" walk.
+- **octo** with `picker = "snacks"` reuses the same picker UX as `<leader>ff`, so PR/issue lists feel native. `gh` bundled via `extraPackages`; user authenticates once with `gh auth login`.
+- **worktrees.nvim isn't in nixpkgs** — inlined `pkgs.vimUtils.buildVimPlugin` directly in the plugin module (no overlay) with a pinned rev. `lib.fakeHash` first build → capture real hash from FOD mismatch → paste. The flake-prefetch hash and the FOD hash match exactly (`nix flake prefetch` uses the same NAR computation as `fetchFromGitHub`).
+- **catppuccin integrations** extended: `diffview`, `neogit`, `octo` added so plugin-specific highlight groups get sensible bases from the theme.
+
+Catppuccin's `gh auth status` requirement bites on first use only;
+the bindings are wired regardless.
+
+### Kalam-base: gitsigns rich view + UI toggles
+
+Added three gitsigns settings (all default OFF) behind a snacks
+toggle bundle:
+
+- `linehl` — tints the whole changed line so it pops in context
+- `word_diff` — highlights bytes that actually changed
+- `toggle_deleted` (runtime) — renders deleted lines as virt-text in place; the answer to "I added 5 lines but what did I delete?"
+
+Two snacks toggles wired inside a `VimEnter` autocmd (so both
+snacks + gitsigns are loaded):
+
+| Key            | What                                                                  |
+| -------------- | --------------------------------------------------------------------- |
+| `<leader>ug`   | git inline diff — flips linehl + word_diff + toggle_deleted bundle    |
+| `<leader>ub`   | git inline blame — flips `current_line_blame`                         |
+
+Initial bindings used `uG` / `uB` (inherited from a stale comment
+in the previous gitsigns config); renamed lowercase to match the
+rest of the `<leader>u*` cluster (only uppercase when the lowercase
+letter is already taken: `uD` dim because `d` = diagnostics).
+
+### Kalam-base: terminal `<Esc>` fix for zsh-vi-mode
+
+User's zsh-vi-mode plugin consumes `<Esc>` inside `:te` terminals,
+so the standard "press Esc to go to nvim normal mode" didn't work.
+Snacks's toggle-terminal solves this with a buffer-local
+`<Esc><Esc>` → `<C-\><C-n>`; mirrored at `mode = "t"` globally in
+`keymaps.nix` (with `nowait = true` for responsiveness). Single
+Esc still passes to the shell, double-tap returns to nvim normal.
+
+### Kalam-base: diff theme — high-contrast iteration
+
+Multi-round tuning driven by user feedback. The final palette
+lives in `theme.nix` under `highlightOverride`:
+
+| Group                          | Final value                            | Why                                                       |
+| ------------------------------ | -------------------------------------- | --------------------------------------------------------- |
+| `DiffAdd`                      | `bg=#1f3826`                          | dark forest green; less saturated than initial `#2e4d2f`  |
+| `DiffChange`                   | `bg=#2c3e5b`                          | muted blue, distinct from DiffAdd                         |
+| `DiffDelete`                   | `bg=#552e2e fg=#8a4a4a`               | solid red, dim fg                                          |
+| `DiffText`                     | `bg=#4d7a2c fg=#f0f0f0 bold`          | clear step-up from DiffAdd; bold + light fg for byte legibility |
+| `DiffviewDiffDelete`           | matches `DiffDelete`                   | initial fg-only override stripped the red bg — fixed       |
+| `GitSignsDeleteVirtLn`         | `bg=#552e2e fg=#c87878`               | catppuccin sets fg-only; explicit bg restores deleted-row visibility |
+| `GitSignsDeleteVirtLnInLine`   | `bg=#7a3a3a fg=#f0c8c8`               | brighter red for word-diff within virt deleted lines       |
+| `GitSignsAddInline`            | `bg=#3a6020 fg=#f0f0f0 bold`          | the bytes that actually changed *within* an added line     |
+| `GitSignsChangeInline`         | `bg=#3e5a8a fg=#f0f0f0 bold`          | likewise for changed lines — the "ur" in "ankur" pops      |
+| `GitSignsDeleteInline`         | `bg=#7a3a3a fg=#f0c8c8 bold`          | inline highlight on deleted virt-line bytes                |
+| `DiffviewFilePanelInsertions`  | `fg=#6fa84f bold`                     | toned-down green for sidebar `+N`                          |
+| `DiffviewFilePanelDeletions`   | `fg=#e07070 bold`                     | balanced red for sidebar `-N`                              |
+| `DiffviewDim1`                 | `fg=#6a6f80`                          | nudged up from default; unchanged context stays legible    |
+
+### Diff highlight learnings
+
+- **Catppuccin's gitsigns integration sets `GitSignsAddInline` / `GitSignsChangeInline` / `GitSignsDeleteInline` fg-only.** Without an explicit `bg`, the word-diff overlay vanishes into the surrounding `DiffAdd`/`DiffChange` tint. Override via `highlightOverride` so it re-fires on `ColorScheme` events.
+- **`DiffText` overlays `DiffAdd`** — its `bg` must be a clear step-up from `DiffAdd.bg`, or the changed bytes look identical to the surrounding line.
+- **Override `bg` AND `fg` together**, never just one. `DiffviewDiffDelete = { fg = "#5a5a5a" }` (fg-only) silently strips the red bg because no explicit `bg` means "inherit transparent" in this context.
+- **`bold` is the subtle-but-visible win** for focal-point groups (`DiffText`, `GitSignsChangeInline`, etc.) — a dim bg + bold light fg lifts the bytes off without the neon look saturated bg gives.
+- **Diagnosing**: `:hi <Group>` in a real diff buffer tells you exactly which palette is in effect post-catppuccin-integration. The first guess is rarely the active group; for `<leader>uG` rich view, it's the `GitSigns*Inline` groups, NOT `DiffText`.
+
+### Commit hygiene — 22 commits, one logical change each
+
+The full session's staged work was sliced into atomic commits
+keyed to a single subsystem:
+
+```
+1. feat(kalam): port kalam family with new base flavor and lib
+2. feat(hm-agent-harness): add agent-harness home-manager module with skills
+3. feat(hm-brave): add brave browser home-manager module with curated extensions
+4. feat(hm-claude-remote): add claude-remote launchd/systemd agent module
+5. feat(hm-hammerspoon): add hammerspoon module with PaperWM + ActiveSpace spoons
+6. feat(hm-mpd): add mpd home-manager module with platform-aware log paths
+7. feat(hm-rmpc): add rmpc home-manager module with structured config knobs
+8. refactor(hm-msgvault-sync): switch to options-based opt-in
+9. refactor(hm-qmd-reindex): switch to options-based opt-in with subcommand list
+10. refactor(hm-supercharged-git): drop graphite, extend bootstrap + delta
+11. feat(hm-supercharged-shell): add shell utilities umbrella module
+12. feat(hm-terminal-velocity): add terminal + multiplexer umbrella module
+13. chore: ignore __pycache__ and *.pyc
+14. fix(gclb): pass-through arbitrary git-clone args via parse_known_args
+15. feat(lib): declare flake.homeModules and flake.darwinModules options   (later reverted)
+16. chore: regenerate flake with nixvim, stylix, jail-nix inputs
+17. feat(users-ank): wire kalam, theming, terminal-life on rogue
+18. feat: add project-local nvim exrc for nixd against this flake
+19. docs(agents): point agents at docs/ during refactor
+20. docs(porting): append 2026-06-17 checkpoint
+21. fix(lib): drop duplicate flake.homeModules and flake.darwinModules   (reverts #15)
+22. fix(hm-supercharged-git): migrate aliases to programs.git.settings.alias
+```
+
+Pattern for "commit only X" with many staged paths and mixed
+intent-to-add markers:
+
+```bash
+git add <X paths>                  # ensures content (not just names) is staged
+git commit -m "..." -- <X paths>   # commits ONLY matching paths from index
+```
+
+Files that show ` A` in `git status --short` (space then A) are
+intent-to-add — names registered, contents not actually staged.
+A plain `git diff --staged` won't show them; you must `git add`
+again (without `-N`) to register their contents.
+
+### Regression caught: flake.homeModules duplicate declaration
+
+Commit 15 above (`8d8f000`) added typed `flake.homeModules` and
+`flake.darwinModules` options to `new_modules/lib/neusis-options.nix`
+because nixd wasn't completing those paths in the kalam project
+exrc. That declaration collides with home-manager's own flake-parts
+module (and nix-darwin's) which ALREADY declare them when those
+inputs are loaded.
+
+`nix build .#kalam` evaluated fine (no home-manager pulled in)
+but `darwinConfigurations.rogue.system` failed:
+
+```
+error: The option `flake.homeModules' in `…/neusis-options.nix' is
+already declared in `…/home-manager/flake-module.nix'.
+```
+
+Fix (`6082d68`): remove the local declarations. nixd completion is
+unaffected because `.nvim.lua` targets
+`darwinConfigurations.rogue.options`, which transitively pulls in
+both flake-modules. **Comment left in the file** documenting the
+constraint so we don't re-add.
+
+Takeaway pattern: **before declaring a flake-parts option locally,
+grep the inputs**. flake-parts has multiple owners for the same
+attribute name when nix-darwin + home-manager + nixos are all in
+play.
+
+### Regression caught: programs.git.aliases rename warning
+
+Single trace warning during darwin build:
+
+```
+trace: warning: ank profile: The option `programs.git.aliases' …
+has been renamed to `programs.git.settings.alias'.
+```
+
+home-manager moved the path. Migrated in `commitizen.nix`
+(`05f0b7e`). Old name still works but emits the trace on every
+`darwin-rebuild switch`.
+
+To surface trace warnings reliably:
+
+```bash
+nix build .#darwinConfigurations.rogue.system --no-link --option eval-cache false 2>&1 | grep -iE "warning|deprecat"
+```
+
+The eval-cache reuses results across runs and silences traces on
+the second invocation. `--option eval-cache false` forces re-eval.
+
+### Other small wins
+
+- **`docs/kalam/git-workflow.md`** (~370 lines) — worked-example
+  walkthrough of the whole git surface: daily commit, selective
+  hunk staging, history walking, merge conflict resolution, PR
+  review, PR creation, issue triage, full bindings cheat sheet,
+  five-pain-point troubleshooting.
+- **`.gitignore`** now excludes `__pycache__/` and `*.pyc` — the
+  `scripts/` agent-harness tree's incidental python caches no
+  longer show in `git status`.
+- **`gclb`** (the bare-clone helper) now passes unrecognised flags
+  through to `git clone` via `parse_known_args`, so `gclb url
+  --depth 1 --filter=blob:none` works without us mirroring every
+  git-clone option.
+
+### Patterns confirmed (new this session)
+
+- **Snacks.toggle.new + VimEnter autocmd** is the cleanest way to
+  register a custom toggle that integrates with which-key — defer
+  the `Snacks.toggle.new({...}):map("<leader>X")` call until
+  VimEnter so snacks + the underlying plugin (gitsigns here) are
+  both ready. `pcall(require, "gitsigns")` inside the setter
+  gives a clean no-op if it isn't.
+- **`extraConfigLua` for plugin-bridging helpers** is preferable
+  to scattering small Lua snippets across keymaps. The smart
+  diffview toggle + gitsigns toggle bundles live together in
+  `git.nix`'s extraConfigLua, surfaced via keymaps that call
+  `_G.kalam_*` or via the `:map(key)` chain.
+- **Inline `buildVimPlugin` is fine for one-flavor unpackaged
+  plugins** — overlay only when multiple flavors share it (as
+  `git-worktree-custom` does across py + v2).
+- **`git commit -- <pathspecs>`** commits only matching index
+  changes — even when other paths are staged. Use it to slice a
+  busy staging area into clean atomic commits without `git reset
+  HEAD` gymnastics.
+
+### Still open after this session
+
+- Native nvim exrc still doesn't fire on kalam launch (workaround
+  via `kalam_exrc` autocmd in `autocmds.nix`).
+- Legacy `pkgs/`, `flakeModules/`, `homes/` directories still on
+  disk pending verification before deletion.
+- The 22-commit branch hasn't been merged to `main` yet — pending
+  user review of the splits.
+
+---
+
+## 2026-07-24 — kalam-full: base + LaTeX writing (ejmastnak-modeled)
+
+New flavor `_flavors/full/` → package `kalam-full`. It is **base + a
+LaTeX layer**, nothing more. `full/config/default.nix` is a two-line
+`imports = [ ../../base/config ./latex ]`, so the flavor tracks base
+automatically — zero duplicated config. This confirms the "layer on
+base" extension path documented in `base/README.md` works exactly as
+advertised (the flavor builder just `import`s `config/`, and nix
+imports compose).
+
+### The LaTeX layer (`full/config/latex/`)
+
+Modeled on ejmastnak's *Vim + LaTeX* series. Six files, one concern
+each (mirrors base's `plugins/` split):
+
+- **`vimtex.nix`** — VimTeX + TeX Live + PDF viewer + which-key group.
+  `texlivePackage = texlive.combined.scheme-medium` (user chose medium
+  over full). `view_method` picked at *build* time by
+  `pkgs.stdenv.hostPlatform.isDarwin`: **skim** on Darwin (+
+  `view_skim_sync`/`view_skim_activate`), **zathura** on Linux (+
+  `xdotool` in extraPackages for forward search). Out-of-source build
+  (`compiler_latexmk.{aux_dir,out_dir} = ".build"`, `-synctex=1`),
+  `quickfix_mode = 0`, full `syntax_conceal.*`. Same `texlive` package
+  put on PATH so `latexmk`/`latexindent` reach conform + `:terminal`.
+- **`opts.nix`** — `FileType tex` autocmd (new autogroup
+  `kalam_tex`): `conceallevel=2` + `concealcursor=""`, soft-wrap
+  `j`/`k`→`gj`/`gk`, spell on. The ftplugin-equivalent.
+- **`lsp.nix`** — layers `texlab` + `ltex` onto base's
+  `plugins.lsp.servers`. texlab `build.onSave=false` (VimTeX owns the
+  build — two latexmk drivers race on the `.build` lock). ltex
+  `checkFrequency="save"`. User chose texlab **+** ltex.
+- **`luasnip.nix`** — base already enables LuaSnip as blink's snippet
+  backend; here just flip `enable_autosnippets=true` +
+  `store_selection_keys="<Tab>"` and add `fromLua.paths=[./snippets]`.
+  Autosnippets coexist with blink (luasnip's own autocmd drives
+  autoexpand; blink drives the menu). **No UltiSnips** — LuaSnip is
+  already wired and needs no python.
+- **`formatting.nix`** — one line:
+  `conform.settings.formatters_by_ft.tex = ["latexindent"]`.
+  latexindent ships inside scheme-medium (already on PATH), so no
+  extra extraPackages entry.
+- **`snippets/tex/*.lua`** — the library. `math.lua` (inline/display
+  entry + fractions/powers/relations, math-zone-gated), `greek.lua`
+  (`;`-prefix, table-driven), `environments.lua` (`:`-prefix
+  scaffolds, `line_begin`), `delimiters.lua` (`lr(`-style auto
+  `\left\right`), `fonts.lua` (text faces via menu, math faces auto).
+
+### Snippet design decisions worth remembering
+
+- **Context gating is the whole game.** Short triggers (`//`, `sr`,
+  `;a`) are gated to `vimtex#syntax#in_mathzone()==1` so they never
+  fire in prose. Entry snippets (`mk`, `dm`) are gated to `in_text`.
+- **Autosnippet vs menu snippet, chosen by prose-danger.** Math + `:`
+  / `;` / `lr`-prefixed triggers autosnippet (safe). Text faces
+  (`bf`/`ita`/`emp`) are *regular* snippets surfaced through blink's
+  menu — their triggers are too word-like to auto-fire safely.
+- **`:` prefix for environments avoids the prefix-collision trap.**
+  Autosnippets fire the instant the trigger matches, so `:eq` can't
+  coexist with `:eqs` (the former fires first). Triggers are chosen
+  non-prefixing (`:eq`, `:enum`, `:ali`, …). `:beg` + `rep(1)` is the
+  generic escape hatch (env name mirrors to `\end`).
+- **`get_visual` visual-wrap** (`<Tab>` stashes selection →
+  `LS_SELECT_RAW`) inlined per file rather than shared via a module —
+  bulletproof against load-order/rtp issues in a nix-packaged build.
+
+### Lua-in-nix gotchas hit
+
+- **Long-bracket `]` collision.** `[[ \right]]]` parses as ` \right`
+  + stray `]` — Lua closes the long string at the first `]]`. Use
+  quoted `"\\right]"` strings for anything ending in `]`. (delimiters.lua)
+- **`fmta` leaves `{`/`}` literal** (its placeholders are `<>`), so
+  `\textbf{<>}` needs no brace-escaping — unlike `fmt` (`{}`).
+- **Snippet `.lua` files are NOT linted at build** (unlike
+  `writePython3Bin`'s flake8). nixvim copies `fromLua` dirs verbatim;
+  a parse error only surfaces when a tex buffer opens. Validate with
+  `lua -e "loadfile('f.lua')"` (compiles without executing, so the
+  top-of-file `require("luasnip")` doesn't run) before trusting them.
+
+### Verification ladder (all green)
+
+1. `nix eval .#packages.aarch64-darwin.kalam-full.drvPath` — module
+   tree valid (vimtex/texlab/ltex/luasnip/conform options; which-key
+   `spec` list merges across base + vimtex.nix via freeform-attrs
+   list-concat — no "defined multiple times").
+2. `lua -e loadfile` on all 5 snippet files — parse OK.
+3. `nix build .#…kalam-full` — texlive-combined-medium + vimtex +
+   neovim-0.11.7 built; nixvim `print-init` step passed.
+4. Headless probe on a `.tex` buffer against the built binary:
+   `ft=tex`, `conceallevel=2`, `spell=true`, LuaSnip loaded (~98
+   snippets / 93 autosnippets), `vimtex#syntax#in_mathzone` callable.
+   The runtime probe is the one that catches lazy-loaded snippet-file
+   errors the build can't.
+
+### localleader `\` → `,` (base-wide)
+
+Changed `maplocalleader` in **base/opts.nix** from `\` (nvim's default,
+set explicitly with no kalam-specific reason) to `,` — the conventional
+VimTeX prefix, so compile/view are `,ll` / `,lv`. It was a base change,
+not a full-only override, because (a) the user asked about the base
+setting directly and (b) `,` is inert in buffers without `<localleader>`
+maps, so base/py get no behavior change. Note **py and v2 already set
+`maplocalleader = ","`** in their own `tex.nix` — base/full were the
+odd ones out; this aligns the family. Verified in the rebuilt binary:
+`vim.g.maplocalleader == ","`. Docs (`full.md`, `latex-tutorial.md`)
+updated in lockstep — careful sed on backtick-wrapped mappings only
+(`` `\ll` `` → `` `,ll` ``) so LaTeX commands `\left`/`\leq`/`\ldots`
+were untouched.
+
+### Docs
+
+- `_flavors/full/README.md` — file map + snippet cheat-sheet (base
+  README format).
+- `docs/kalam/full.md` — feature reference (LaTeX layer only; defers
+  to `base.md` for base features).
+- `docs/kalam/latex-tutorial.md` — hands-on worked-example walkthrough
+  (first doc → fast math → environments → inverse-search wiring →
+  grammar → cheat sheet → troubleshooting).
+- `docs/kalam/latex-playground.tex` — a compilable sample document with
+  inline `TRY:` exercises for every feature. **Verified it builds** with
+  scheme-medium (`latexmk -pdf`, exit 0, multi-page PDF). Referenced
+  from both docs as the "just start poking" entry point.
+
+### Not wired into any machine yet
+
+`kalam-full` is built + published as a perSystem package but **not**
+added to any user's `machineToBundlesMap`. rogue still uses
+`hmBundles.kalam-ide` → base `kalam`. Swapping rogue (or a new
+`kalam-latex` bundle) to `kalam-full` is a follow-up when the user
+wants LaTeX on that host.
+
+### Still open (carried over)
+
+- Native nvim exrc workaround still in place.
+- Legacy `pkgs/`, `flakeModules/`, `homes/` still on disk.
+- Branch not merged to `main`.
+
+### Follow-up (same day) — three bugs from first real use, all fixed
+
+User drove the tutorial and hit three issues. Root causes were more
+entangled than they looked:
+
+1. **Math autosnippets (`//`, `sr`, `;a`, …) never auto-fired; showed
+   in the blink menu but couldn't be activated; occasionally worked
+   after moving around.** Root cause was **bug 3**, not a snippet bug.
+   `vimtex#syntax#in_mathzone()` reads Vim's `synstack()`. With
+   nvim-treesitter's `latex` highlighter active, Vim's syntax engine
+   never loads (`b:current_syntax == nil`), so `synstack()` is empty and
+   `in_mathzone()` returns 0 *everywhere* → every math-zone-gated
+   autosnippet's condition fails silently. `mk`/`dm` (gated on
+   `in_text` = `not in_mathzone`, so always true) kept working — which
+   is exactly why the user only reported `//`/`sr`. The "occasionally
+   after moving" was syntax briefly re-syncing in a region. **Fix:**
+   `latex/treesitter.nix` → `plugins.treesitter.settings.highlight.disable
+   = [ "latex" ]`. Vim syntax then loads, `synstack` populates,
+   `in_mathzone` returns 1 in math. Verified by feedkeys: `//`→`\frac{}{}`
+   and `;a`→`\alpha` in math, `//` stays literal in prose. This also
+   fixed conceal (same dependency on Vim syntax) — which had silently
+   never worked either.
+
+2. **"formatter latexindent timeout" on nearly every save.** latexindent
+   is Perl; cold start overruns conform's 500 ms `format_on_save`
+   budget. **Fix:** `opts.nix` sets `vim.b.disable_autoformat = true`
+   for tex (base's `format_on_save` honours it — no base edit needed).
+   latexindent stays on `<leader>cf` (async, untimed). Documented as the
+   intended behavior.
+
+3. **VimTeX warned that highlighting is controlled by Treesitter.** Same
+   root as #1; fixed by the same `treesitter.nix` disable.
+
+**Lesson for the next flavor that layers a syntax-heavy filetype onto
+base:** base enables treesitter highlight globally. Any plugin that
+relies on Vim's *syntax* engine (VimTeX's mathzone/conceal/motions;
+possibly others) needs `highlight.disable = [ <lang> ]` or it will be
+silently starved of `synstack`. The failure is invisible — no error,
+features just don't fire. Diagnose with `:echo
+vimtex#syntax#in_mathzone()` (or `synstack(line('.'), col('.'))`) inside
+the relevant zone.
+
+New file: `latex/treesitter.nix`. `mkKalam` builder unchanged; verified
+by rebuild + headless feedkeys expansion test on the built binary.
+
+### Follow-up 2 — postfix snippets needed `wordTrig = false`
+
+`sr`/`cb`/`td`/`__`/`//` used LuaSnip's default `wordTrig = true`, so
+the trigger only fired at a word boundary. `xsr` (no space) didn't
+expand at all; the only way to trigger was `x sr`, which then left a
+literal space (`x ^2`). Postfix/fraction snippets must attach to the
+preceding token, so they need `wordTrig = false` (new `AW` marker in
+`math.lua`). `xsr` → `x^2`, `a__i` → `a_{i}`, `x//` → `x\frac{}{}` now.
+**Relations/operators (`<=`, `xx`, `->`) intentionally keep the default**
+— you type them *with* surrounding spaces (`a <= b` → `a \leq b`), and
+`a<=b` would give the broken `a\leqb`. Tutorial §2 table + §8 worked
+example were showing `x sr` with a misleading space; fixed to `xsr` and
+a note added distinguishing postfix (no space) from infix (spaces).
+
+### Follow-up 3 — accent triggers renamed + math snippets in Markdown
+
+Two user requests.
+
+**1. `bar`/`hat`/`vec` → `barr`/`hatt`/`vecc`.** The postfix accents
+(`([%a])bar` etc.) tripped on common word endings; doubling the last
+letter (`xbarr` → `\bar{x}`) makes them deliberate. Trivial trigger
+rename in `math.lua`.
+
+**2. Math snippets in Markdown.** Markdown supports `$…$`/`$$…$$`, so
+`luasnip.nix` now `filetype_extend("markdown", { "tex" })`. The hard
+part was context detection: `vimtex#syntax#in_mathzone()` only works in
+tex. Centralised the detector as `_G.kalam_in_mathzone` (+ `_in_text`,
+`_is_tex`) in `luasnip.nix`'s `extraConfigLua`, filetype-switched:
+- tex/plaintex → VimTeX syntax engine.
+- markdown → **treesitter**: walk ancestors for `inline_formula`
+  (`$…$`) or `displayed_equation` (`$$…$$`). The four snippet files now
+  delegate their `in_mathzone`/`in_text` to these globals (globals so
+  the from_lua files, which aren't on package.path, can reach them; and
+  because conditions run at expand time, definition order is moot).
+
+Gotchas hit:
+- **`get_node()` reads a possibly-stale tree** — it does NOT force a
+  parse. Inline `$…$` happened to resolve, but `$$…$$` (block-level
+  `displayed_equation`) came back stale and math snippets didn't fire.
+  Fix: `parser:parse(true)` inside the markdown branch before
+  `get_node`. Cheap (incremental) and now both inline + display work.
+- **`dm` made filetype-aware**: emits `$$ $$` in markdown, `\[ \]` in
+  tex — markdown's treesitter only treats `$$` (not `\[…\]`) as a math
+  zone, so `\[ \]` in markdown wouldn't have detected as math for the
+  inner snippets. Done with `f()` nodes switching on `vim.bo.filetype`.
+- **Text faces gated tex-only** (`fonts.lua`): `\textbf` etc. are wrong
+  in markdown (`**bold**`), so they self-gate via `_G.kalam_is_tex`.
+  Environment scaffolds left available in both (line-start triggers,
+  negligible leak, and `:ali`/`:mat` are useful for embedded LaTeX).
+
+Requires `markdown` + `markdown_inline` treesitter parsers (base
+bundles them; the `latex` injection is present too). Verified by
+headless feedkeys across tex + markdown inline/display/prose. Reusable
+note: **to detect "in math" in markdown, force a treesitter parse then
+match `inline_formula`/`displayed_equation` ancestors — `get_node`
+alone is stale during autosnippet expansion.**
+
+### Follow-up 4 — Gilles Castel's snippets (`castel.lua`)
+
+Ported the math snippets we lacked from
+[gillescastel/latex-snippets](https://github.com/gillescastel/latex-snippets)
++ [the blog](https://castel.dev/post/lecture-notes-1/) into a new
+`snippets/tex/castel.lua`, all math-gated via `_G.kalam_in_mathzone`
+(so they work in markdown too). Only the *missing* ones — skipped
+everything already in math/greek/delimiters/environments/fonts.
+
+Added: **auto-subscript** (`x1`→`x_1`, `x12`→`x_{12}`),
+**function auto-backslash** (`sin`→`\sin`, …), **number systems**
+(`RR`→`\mathbb{R}`, …), set ops (`inn`/`notin`/`cap`/`cup`/`sub`/`OO`),
+`nabl`, postfix `invs`→`^{-1}`, wrapping delimiters
+(`norm`/`abs`/`ceil`/`floor`/`set`/`conj`), and `part` (partial deriv).
+
+Lua-pattern limitations vs UltiSnips (Castel's format) worth recording:
+- **No alternation / lookbehind in Lua patterns.** Castel's function
+  auto-backslash is one regex `(?<!\\)(sin|cos|…)`. Lua patterns can't
+  do `|` or `(?<!…)`. Solution: one snippet per function with trigger
+  `([^%a\\])<fn>` (regTrig), re-emitting the captured leading char.
+  The `[^%a\\]` class = "not a letter, not a backslash", which
+  simultaneously (a) stops `arcsin` tripping `sin` (letter before → no
+  match) and (b) stops a hand-typed `\sin` doubling (`\` before → no
+  match). Cost: won't fire at absolute start-of-line (needs a leading
+  char); acceptable.
+- **Autosnippet prefix collision** (again): `sub`→`\subset` fires
+  before you can reach `sube`→`\subseteq`. Dropped `sube`.
+- **`wordTrig` rule reused**: postfix (`invs`) + concatenating regex
+  (subscripts, functions) → `wordTrig=false`/regex-guarded; word-like
+  operators (`cap`,`cup`,`sub`,`part`,`nabl`) → default true.
+
+Verified by headless feedkeys in tex + markdown (inline & display) and
+prose-safety (no expansion outside math). Playground gained a
+"Blackboard-speed shortcuts" section; re-compiled clean with
+scheme-medium. Docs (full.md table, README, tutorial §2 + cheat sheet)
+updated.
+
+## 2026-08-12 — fresh-apps GUI packages, distributed builds, agenix-rekey on darwin
+
+A darwin-focused session: pulled two GUI apps off Homebrew onto a flake
+input, made the linux-builder host-specific, then built the whole nix
+**distributed-builds** stack — reusable modules + a curated builder
+registry + agenix-rekey secret distribution — and in the process
+excavated a pile of latent bugs in the (previously never-enabled) secrets
+modules. Landed in two commits, `04eb352` (modules) + `27351ce` (secrets
++ wiring), on top of three smaller commits earlier in the session.
+
+### fresh-apps.nix — Signal + WhatsApp off Homebrew
+
+Added `github:leoank/fresh-apps.nix` as a flake input (its `nixpkgs`
+`follows` our `nixpkgs-unstable`, the branch it targets) — a flake of
+darwin GUI apps rebuilt daily against upstream, faster than nixpkgs.
+`signal-desktop` and `whatsapp` now come from
+`inputs.fresh-apps.packages.${system}.*` in `users/ank/_packages.nix`
+(darwin block), replacing the Homebrew casks. Removed `signal`/`whatsapp`
+from **both** cask sources (`features/darwin/homebrew-default.nix` and the
+`_homebrew.nix` brew-nix-fallback list) so they come *only* from
+fresh-apps — the built config had confirmed signal was double-installed.
+`aarch64-darwin` only (fresh-apps dropped x86_64-darwin with
+nixpkgs-unstable 26.11+). WhatsApp needed a lock bump (`nix flake update
+fresh-apps`) to appear, and I **built it first** before pulling the
+Homebrew fallback — whatsapp lived there precisely because brew-nix's 7z
+couldn't unpack its nested frameworks, so fresh-apps' build had to be
+proven before removing the safety net. Both mirror to `kumarank` for free
+(shared `_packages.nix`).
+
+**Gotcha — flake.nix is generated, and generation ignores untracked
+files.** `flake.nix` is written by `nix run .#write-flake` from
+`flake-file.inputs` declared across `new_modules/*.nix`. A *new*
+input-declaring module (`features/flake/fresh-apps.nix`) must be
+`git add`ed before write-flake sees it — flakes (and thus write-flake's
+own eval) ignore untracked files. First run silently produced a flake.nix
+without the input.
+
+### Standalone `homeConfigurations` made buildable
+
+`home-manager switch --flake .#<user>@<host>` failed:
+`home.stateVersion` (then `username`, then `homeDirectory`) "accessed but
+has no value". Root cause: **two divergent build paths.** The
+system-integrated path (`darwin-rebuild`) pulls in `hm-system-init` +
+home-manager's darwin module, which supply that identity; the standalone
+path (`mkNeusisFlake.hmPairsFor`) called `homeManagerConfiguration` with
+*only* the user's bundle modules and inherited none of it. Fix: seed
+`home.{username,homeDirectory,stateVersion}` (`mkDefault`) in
+`hmPairsFor`, mirroring the system path — `/Users/<name>` on darwin,
+`/home/<name>` elsewhere; stateVersion tracks
+`hm-system-init.defaultStateVersion`. The standalone home build is the one
+verification that catches this class of gap — the system path hides it.
+
+### linux-builder → rogue only; one dynamic trusted-users source
+
+`features/darwin/virtualization.nix` (the `nix.linux-builder`) was in the
+shared `darwin.defaults` bundle → ran on every darwin host. Moved it out
+of defaults, imported explicitly in `rogue.nix` only. Also deleted the
+hardcoded `nix.settings.trusted-users = ["@admin" "ank"]` from that
+file — `agnostic.nix-settings` (a default feature) **already** sets
+`trusted-users = ["@admin" config.system.primaryUser]` dynamically, so
+the hardcoded copy was both redundant (duplicated `ank` on rogue) and
+wrong for `darwin001` (primary user `kumarank`). Verified: rogue
+`linux-builder.enable=true` + `[root @admin ank]`, darwin001 `false` +
+`[root @admin kumarank]`.
+
+### Distributed builds — the reusable stack
+
+Modeled on nix.dev's distributed-builds tutorial, but split into
+**option-driven agnostic modules** so they're reusable on their own:
+
+- **`build-server`** (`neusis.services.build-server`) — a dedicated,
+  nix-trusted build user. Cross-platform: NixOS gets `isSystemUser` + a
+  group; nix-darwin needs `uid` + the user in `users.knownUsers` (there's
+  no `isSystemUser` on darwin). Authorized key(s) via option.
+- **`build-client`** (`neusis.services.build-client`) — takes a
+  *passed-in* `builders` list (not a hardcoded registry), turns each into
+  a `nix.buildMachines` entry, drops the local host
+  (`excludeLocalhost`), enables `distributedBuilds` +
+  `builders-use-substitutes`, and pins each builder's host key via
+  `programs.ssh.knownHosts`.
+- **`registry.builders`** — a new typed option in `neusis-options.nix`
+  (the `flake.neusis.registry` submodule is strict — a bare `builders`
+  attr errored until declared). A curated per-lab list with per-builder
+  `maxJobs`/`speedFactor`/feature sets; host identity pulled from the
+  machine defs (single source).
+
+**Host-key pinning via `programs.ssh.knownHosts` sidesteps base64.**
+`nix.buildMachines.*.publicHostKey` wants a base64-encoded key and Nix has
+no base64 builtin; setting `knownHosts.<host>.publicKey = <hostPubkey>`
+(the raw `ssh-ed25519 …` line) lets ssh verify instead — no encoding
+dance. Confirmed nix-darwin has `nix.buildMachines`, `distributedBuilds`,
+`programs.ssh.knownHosts`, `users.knownUsers`. `sshKey` is just a path
+*string*, so the modules evaluate whether or not the key file exists —
+remote builds fall back to local until it's deployed.
+
+### agenix-rekey on darwin + home — and the latent-bug excavation
+
+The build key (and ank's tokens) are distributed with **agenix-rekey**,
+which was declared in the repo but wired for NixOS only and enabled
+nowhere. Getting it live on darwin surfaced a chain of bugs, each visible
+only once the module was actually evaluated:
+
+- **import-tree loads every `.nix` under `new_modules/` as a flake
+  module.** Copying `secrets/` in wholesale broke the flake: the agenix
+  *rules* file `secrets.nix` (a plain `{ "x.age".publicKeys = …; }`
+  attrset) got loaded as a flake-parts module → `option "common/…age"
+  does not exist`. Fix — the copy under `new_modules/secrets/` holds only
+  `.age`/`.pub`; agenix-rekey needs no rules file (recipients come from
+  `age.rekey`). Kept only the generated build key + root-pw hash; original
+  repo-root `secrets/` left untouched.
+- **Platform agenix import can't live in an agnostic module.** Reading
+  `pkgs.stdenv.isDarwin` inside `imports` is infinite recursion (same note
+  as `hm-system-init`). So `inputs.agenix.darwinModules.default` +
+  `agenix-rekey.darwinModules.default` are imported by the **machine**,
+  exactly like home-manager — which is *why* the wiring feature is
+  agnostic, not darwin-scoped.
+- **`age.identityPaths` already defaults to
+  `/etc/ssh/ssh_host_ed25519_key`** on darwin — no override needed, which
+  is exactly the host key the rekeyFile is encrypted to.
+- **`localStorageDir` must exist.** Its path literal is force-copied; a
+  full build fails `path .../secrets/rekeyed/<host> does not exist` until
+  `agenix rekey` populates it (keep a `.gitkeep`).
+- **The decrypt failure.** `agenix rekey` "fails to decrypt" when
+  `masterIdentities` is a `.pub` (public) file and the private key isn't
+  in ssh-agent — there's nothing to decrypt *with*. The rekeyFile itself
+  was fine (`age -d -i ~/.ssh/id_ed25519` decrypted it). Fix — the
+  `{ identity = "/Users/ank/.ssh/id_ed25519"; pubkey = "…"; }` form:
+  `identity` a **string** path so it's read at rekey time and never copied
+  into the store; `pubkey` tells agenix-rekey the recipient without the
+  private half.
+- Per the user's steer, `masterIdentities` is now a **required option
+  with no default** (the consumer states it), and secrets are configured
+  **directly in each machine** (`enable`, per-host `hostPubkey`, explicit
+  `masterIdentities`) — pulled out of the shared feature, which now only
+  wires the build modules and reads `config.age.secrets.remoteBuildKey.path`.
+
+### `secrets` hmBundle + ank tokens (more latent bugs)
+
+Added `ank.hmBundles.secrets` (imports `homeModules.secrets`) with
+placeholder `ghauthToken` + `atuinToken` rekeyFiles. The home-manager
+secrets module had never been enabled, so it hid its own bugs:
+`age.rekey.userPubkey` **is not an option** (it's `hostPubkey` in every
+context — one shared agenix-rekey module handles both), and
+`localStorageDir = …${config.networking.hostName}…` — **home configs have
+no `networking.hostName`** (keyed it off `config.home.username` instead).
+Same `.pub`-masterIdentity decrypt bug, same fix. `agenix rekey` picks up
+HM secrets from *both* the darwin-integrated config
+(`host-darwin:rogue-user-ank`) and the standalone `ank@rogue`.
+
+### Patterns confirmed / new
+
+- **Agnostic module + machine-side platform import** is the repo's answer
+  to "reusable across NixOS/darwin but needs a platform-specific input
+  module": the agnostic module consumes the options (`age.*`, `nix.*`),
+  the machine supplies the platform module. Same shape home-manager
+  already uses via the system builders.
+- **Options make a module reusable; the data is passed in.** `build-client`
+  takes `builders` as a list rather than reaching into
+  `self.neusis.registry`, so it's usable outside anklab.
+- **`{ identity = "<string path>"; pubkey; }`** is the correct
+  agenix-rekey master form for a private key that lives outside the repo
+  (read at rekey time, never stored). A `.pub`-only master needs the key
+  in ssh-agent.
+- **Machine `hostPubkey`/`system` are the single source** feeding the
+  builder registry, `knownHosts`, and `age.rekey.hostPubkey`.
+
+### Verification ladder (all green)
+
+1. `nix eval` of config attrs per machine: `nix.buildMachines`,
+   `age.secrets.remoteBuildKey.path`, `age.rekey.masterIdentities`,
+   `nix.settings.trusted-users`, the HM `age.secrets` names.
+2. `nix build …#fresh-apps…{signal-desktop,whatsapp}` — `Signal.app` /
+   `WhatsApp.app` present in the output.
+3. `agenix rekey` — `Rekeying darwin:{rogue,darwin001}:remoteBuildKey`
+   and `ank@rogue:{ghauthToken,atuinToken}` all succeed; rekeyed `.age`
+   committed under `new_modules/secrets/rekeyed/`.
+4. Full `--dry-run` of `darwinConfigurations.{rogue,darwin001}.system`
+   **and** `homeConfigurations."ank@rogue".activationPackage` — all clean.
+   The standalone home path is the one that catches the missing-identity
+   and HM-secret bugs the system path hides.
+
+### Still open
+
+- **No cross-host name resolution** (no Tailscale/DNS) — remote builds
+  fall back to local until `rogue`/`darwin001` can SSH each other by
+  hostname (the addressing choice was `hostname` directly).
+- Master identity is **ank's SSH key**, not a yubikey
+  (`yubikey-identity.pub` is absent) — swap by dropping the file in and
+  re-running `agenix rekey`.
+- Placeholder tokens need real values
+  (`agenix edit new_modules/secrets/ank/<name>.age`).
+- Nothing deployed yet (`darwin-rebuild switch`); branch still not merged
+  to `main`; legacy `pkgs/`/`flakeModules/`/`homes/` still on disk.
+
+## 2026-08-16 — tailscale mesh: agnostic multi-profile module, ank/cslab split, tailmux spec
+
+Ported the old NixOS-only `neusis.tailscale` (`modules/nixos/tailscale.nix`)
+into a **single agnostic system module**, `flake.agnosticModules.tailscale`
+(re-exported to `nixosModules.tailscale` / `darwinModules.tailscale`). It runs
+**one** system-wide tailnet at a time but lets you declare several **profiles**
+and switch the active one at runtime, with a **default profile** brought up at
+boot. The opinionated wiring is split into two config-only features,
+`features.agnostic.ank_mesh` (personal `leoank` tailnet, the default) and
+`features.agnostic.cslab_mesh` (the `shntnu.github` lab mesh). Concurrent
+tailnets were deliberately deferred to a future tsnet application-proxy — spec
+written in `docs/tailmux-proxy-spec.md` + a hand-off prompt in
+`docs/tailmux-proxy-agent-prompt.md`.
+
+### What shipped
+
+- **`new_modules/agnosticModules/tailscale/`** — `tailscale.nix` +
+  `force-claim.sh` + `disable-key-expiry.sh` (the two OAuth scripts copied
+  verbatim from the old module). Option surface `neusis.services.tailscale`:
+  `enable`, `package`, `defaultProfile`, `autoConnect`, `openFirewall`
+  (NixOS), `useRoutingFeatures` (NixOS), `overrideLocalDns` (Darwin), and
+  `profiles.<name>` = `{ authKeyFile, hostName, extraUpFlags, ephemeral,
+  forceHostName, tailnetOrg, clientIdFile, clientSecretFile, disableKeyExpiry }`.
+- **All old features ported**: persistent/ephemeral auth keys, custom
+  `--hostname`, OAuth **force-claim hostname** (renames conflicts to
+  `<name>-old-<ts>`, never deletes), OAuth **disable-key-expiry**, `tailnetOrg`,
+  OAuth client id/secret. The dead `isUserSpace` flag (declared but never
+  wired in the old module) was dropped.
+- **Per-profile `neusis-ts-<name>` command** on PATH (a `writeShellApplication`)
+  that makes `<name>` the active profile; the default profile's script is
+  reused as the boot autoconnect.
+- **`features.agnostic.{ank_mesh,cslab_mesh}`** — config + agenix secrets only.
+- **Secrets** copied into `new_modules/secrets/common/`
+  (`persistent_tsauthkey`, `persistent_cslab_mesh`, `tsclient`, `tssecret`) and
+  rekeyed; originals under repo-root `secrets/` left untouched.
+- `darwin001` imports `self.darwinModules.tailscale` + both mesh features.
+  `rogue` imports the module only — both mesh features are commented out
+  there for now (see 2026-10-06 entry).
+
+### Design decisions (with rationale)
+
+- **Abandoned running multiple tailnets simultaneously.** The reference gist
+  (multiple `tailscaled` via a systemd template + per-instance tun +
+  `netfilterMode=off`) is **Linux+root only**, doesn't port to macOS (the
+  current hosts) or to home-manager (non-root), and breaks exit-nodes / MSS
+  clamping. Instead: **one system tailnet, switchable profiles** (Tailscale's
+  built-in fast user switching), and defer true concurrency to an app-level
+  **tsnet** proxy (see tailmux spec). This was an explicit scope change mid-task.
+- **No home-manager tailscale module** (per instruction) — the HM/concurrent
+  slot is the tsnet proxy's job.
+- **Profiles, not daemons.** Each profile is a distinct login stored in one
+  `tailscaled`; only one is active at a time. `defaultProfile` is required and
+  auto-connected; others are reached with `neusis-ts-<name>` / `tailscale
+  switch <name>`.
+- **Two mesh features, composable.** Splitting `mesh` → `ank_mesh` +
+  `cslab_mesh` keeps each tailnet's profile + secrets self-contained.
+  `ank_mesh` sets `defaultProfile = "leoank"` at **normal** priority;
+  `cslab_mesh` sets `defaultProfile = lib.mkDefault "cslab"`. So: both imported
+  → `leoank` wins; cslab alone → cslab; and a machine can `mkForce` its own.
+  Both set `enable = true` (bool `mergeEqualOption` tolerates identical defs).
+- **Module is imported by the machine; features are config-only.** The features
+  fill in `neusis.services.tailscale.profiles.*` + `age.secrets.*`; the machine
+  imports `self.<plat>Modules.tailscale` (which declares the options + wires the
+  daemon). Mirrors how `distributed-builds` leaves the platform agenix imports
+  to the machine.
+- **Secrets: copy + rekey, not placeholders.** The real `.age` files list
+  `ank`'s key (= the agenix-rekey master identity) as a recipient — verified
+  from `secrets/secrets.nix` **without decrypting** — so they work directly as
+  `rekeyFile`s. Splitting the mesh feature did **not** require re-keying: the
+  secret *names* (`tsAuthKeyLeoank`, `tsClientId`, `tsClientSecret`,
+  `tsAuthKeyCslab`) are unchanged, only which file declares them moved.
+
+### The agnostic-module platform-key problem (the reusable lesson)
+
+The hard part: the autoconnect needs `launchd.daemons` on Darwin and
+`systemd.services` on NixOS — **top-level option keys that don't exist on the
+other platform** — inside one module. Three approaches, only the last works:
+
+1. `lib.mkIf pkgs.stdenv.isLinux { systemd.services… }` — **fails.** `mkIf`
+   pushes its condition down onto each leaf, which registers the option *path*
+   before the condition is evaluated, so it errors *"option does not exist"* on
+   the other platform even when the branch is inactive. (Verified with a
+   minimal `darwinSystem` eval: `mkIf false { services.tailscale.openFirewall =
+   true; }` throws.)
+2. `lib.optionalAttrs pkgs.stdenv.isLinux { … }` at the **top level** — **fails
+   with infinite recursion.** Deciding whether a top-level config key is
+   present forces `pkgs` → the nixpkgs instantiation → which needs the config →
+   cycle.
+3. **Dispatch on the OPTIONS set** — **works.**
+   ```nix
+   isDarwin = options ? launchd;   # nix-darwin declares `launchd`
+   isLinux  = options ? systemd;   # NixOS declares `systemd`
+   config = lib.mkMerge [
+     (lib.mkIf cfg.enable { …core…; services.tailscale = { enable = true; }
+        // lib.optionalAttrs isLinux  { openFirewall = …; useRoutingFeatures = …; }
+        // lib.optionalAttrs isDarwin { overrideLocalDns = …; }; })
+     (lib.optionalAttrs isLinux  { systemd.services.neusis-tailscale-autoconnect = …; })
+     (lib.optionalAttrs isDarwin { launchd.daemons.neusis-tailscale-autoconnect = …; })
+   ];
+   ```
+   `options ? launchd` reads the merged option **declarations** (available
+   without forcing `pkgs`), so `optionalAttrs` omits the foreign top-level key
+   with no recursion. For a `services.X` **sub-option** that exists on only one
+   platform, gate it *deep* at the value level (`services.tailscale = {…} //
+   optionalAttrs isLinux {openFirewall=…}`) — safe because the `services` key
+   is present on both. Proven both directions: the same module yields
+   `systemd.services…Type = "oneshot"` + `openFirewall` on a NixOS eval (no
+   `launchd`), and `launchd.daemons` on Darwin (no `systemd`).
+
+   This is why an earlier interim design (splitting into
+   `features.{nixos,darwin}.tailscale`) was **reverted** — the `options ?`
+   dispatch makes a single `agnosticModules.tailscale` viable, which is the
+   right home (reusable, re-exported to both). Note also: you **cannot** add a
+   second definition to `flake.{nixos,darwin}Modules.<name>` directly — those
+   are undeclared flake outputs that `re-export-all.nix` already defines once
+   (`= config.flake.agnosticModules`), so a 2nd definition fails "defined
+   multiple times". Put reusable modules in `agnosticModules`; put things that
+   genuinely need to differ per platform-namespace under `features.{nixos,darwin}`.
+
+### Tailscale profiles: the runtime model
+
+- `tailscale switch <name>` / `tailscale switch --list` — switch/list profiles;
+  only one active at a time (Tailscale "fast user switching").
+- `tailscale login --auth-key file:<path>` is the **add-account** verb — with a
+  *different* tailnet's key it creates a fresh profile; `tailscale up` operates
+  on the current one. So `neusis-ts-<name>` does: `switch` fast-path → else
+  `login --auth-key` + `set --nickname <name>` → `up <flags>` → force-claim /
+  disable-expiry. Profiles are **runtime state** (persisted in
+  `tailscaled.state`), so they can't be pre-seeded declaratively; the scripts
+  establish them on first use and switch instantly thereafter.
+
+### nix-darwin's `services.tailscale` is auth-less
+
+nix-darwin's module is minimal: `enable` + `package` + `overrideLocalDns`, and
+a `launchd.daemons.tailscaled` that runs `tailscaled` but **never `up`s** (no
+`authKeyFile` like NixOS). So the Darwin branch adds its own launchd bring-up
+daemon (`KeepAlive.SuccessfulExit = false` → retry until it connects, then
+stop). NixOS's `services.tailscale` gives the daemon + firewall; we still run
+our own systemd oneshot rather than nixpkgs' `authKeyFile` autoconnect, so the
+nickname / force-claim sequencing is identical on both platforms.
+
+### Deferred: concurrent tailnets via tsnet (tailmux)
+
+`docs/tailmux-proxy-spec.md` specifies an app-level proxy that embeds one
+`tsnet.Server` **per profile** (own `Dir`, identity, MagicDNS), routes each
+connection to the owning tailnet **by hostname** through a loopback
+CONNECT/SOCKS5 router + PAC, and needs no root — the true "multiple tailnets at
+once" path, complementing (not replacing) this single-tailnet system module.
+`docs/tailmux-proxy-agent-prompt.md` is a self-contained build prompt.
+
+### Incidental fix
+
+`rogue.nix` still imported `self.neusis.features.darwin.homebrew-defaults`,
+which commit `fba069f` had deleted — so `rogue` failed to evaluate **at HEAD**,
+before any of this work. Removed the one orphaned import to unblock eval +
+`agenix rekey` (which iterates every darwin config). Flagged separately; if
+homebrew-defaults is wanted it needs re-adding.
+
+### Verification ladder (all green)
+
+1. `nix eval` of `neusis.services.tailscale.*` + `services.tailscale.*` +
+   `launchd.daemons.neusis-tailscale-autoconnect` on `darwin001`/`rogue`
+   (default profile `leoank`, both profiles' orgs, hostnames, runtime authkey
+   paths).
+2. **Agnostic proof**: an inline `nixosSystem` importing
+   `self.nixosModules.tailscale` yields `systemd.services…Type = "oneshot"` +
+   `openFirewall` and `options ? launchd == false`; the Darwin side has no
+   `systemd`.
+3. Built the generated `neusis-ts-leoank` derivation directly — `shellcheck`
+   (which `writeShellApplication` runs) passes; body is exactly the
+   switch→login→up→force-claim→disable-expiry sequence.
+4. `agenix rekey` — the four tailscale secrets rekeyed for both hosts
+   (master key read without a passphrase); rekeyed `.age` committed under
+   `new_modules/secrets/rekeyed/`.
+5. Full `nix build .#darwinConfigurations.{darwin001,rogue}.system` — both
+   build end-to-end (incl. `org.neusis.tailscale-autoconnect.plist` + agenix
+   activation).
+
+### Still open
+
+- **Not deployed** (`darwin-rebuild switch`). First switch will force-claim the
+  `leoank` hostname on that tailnet (renaming any conflicting device to
+  `<name>-old-<ts>`).
+- **cslab has no OAuth creds** in this copy → its `forceHostName` /
+  `disableKeyExpiry` stay off until cslab OAuth secrets are added.
+- Cross-host SSH name resolution still absent (shared with distributed-builds).
+- ~~Nothing committed/pushed on this ephemeral `refactor` branch yet.~~
+  Committed + pushed 2026-10-06 (see next entry).
+
+## 2026-10-06 — rogue build fixes, commits landed, `cli` branch merged
+
+Housekeeping session: the 2026-08-16 tailscale work plus a round of
+hand-made fixes to get `rogue` building were split into focused commits
+on `refactor`, the `cli` branch was merged in, and its worktree removed.
+
+### Changes made to get `rogue` building
+
+- **flake-file / import-tree moved to `github:denful/*` forks** (from
+  `github:vic/*`). `flake.nix` regenerated via `nix run .#write-flake`;
+  `flake.lock` updated with all inputs bumped.
+- **msgvault-sync parked.** `homeModules/msgvault-sync.nix` →
+  `_msgvault-sync.nix` so import-tree skips it; its `flake-file.inputs`
+  block, the `inputs.msgvault` package in ank's package list, and the
+  import/enable in `users/ank/ank.nix` are commented out. Module body kept
+  intact for re-enabling; the `msgvault` input is gone from `flake.nix`.
+- **agent-harness:** `agent-deck` commented out of the umbrella bundle;
+  `hermes.enable = false` for ank. Both from `llm-agents`, both blocked the
+  build.
+- **homebrew taps:** the old list stripped the `homebrew-` prefix from
+  `nix-homebrew.taps` keys, producing names brew rejects. Now
+  `builtins.attrNames (lib.filterAttrs (n: _: !lib.hasPrefix "homebrew/" n)
+  config.nix-homebrew.taps)`. `onActivation.cleanup` → `"none"` so a
+  rebuild stops uninstalling hand-installed formulae.
+- **`features.hm.mac-app-util`** — new feature that declares the
+  `hraban/mac-app-util` input and imports its HM module (Spotlight/Dock
+  trampolines for nix-installed `.app`s). Added to ank's `rogue` bundle
+  list. Two typos in the first draft (`setup-terminals` attr name,
+  `import` for `imports`) fixed.
+- `android-tools` added to ank's packages.
+- **rogue's mesh features are commented out** (`ank_mesh`, `cslab_mesh`);
+  rogue still imports `self.darwinModules.tailscale`. `darwin001` keeps
+  both. Re-enable on rogue when ready to force-claim its hostname.
+
+### Commits (on `refactor`, pushed)
+
+Eight commits from this work: `feat(tailscale)`, `docs(porting)`,
+`chore(msgvault)`, `feat(hm): mac-app-util`, `fix(homebrew)`,
+`chore(agent-harness)`, `feat(ank): android-tools`, `chore(flake)`. The
+flake commit is last because `flake.nix` is generated and reflects the
+earlier commits' input declarations.
+
+### `cli` branch merged, worktree removed
+
+- 14 commits from `cli` (the Go `neusis` CLI under `cli/`, its
+  `flake.packages.<system>.neusis` wrapper, `flakeModules.default`
+  exposing hm-system-init + secrets, parameterised `secrets.nix`, explicit
+  `initialHashedPassword`, `lib/neusis-options.nix`). Design notes live in
+  `cli/docs/INSIDER.md`. No file overlap with the refactor changes; clean
+  merge.
+- The `neusis/cli` worktree and local `cli` branch are gone. Only ignored
+  artifacts were left behind (goreleaser `dist/`, nix `result`, a
+  CLI-generated `scratch/neutest` test scaffold).
+- **Gotcha:** `git pull --rebase` before the push flattened the merge
+  commit — the cli commits were replayed linearly with new hashes on top of
+  the refactor commits. Tree is identical, nothing lost, but there is no
+  merge commit and the hashes no longer match `origin/cli`. Use
+  `git pull --rebase=merges` (or plain `git pull`) when the branch carries a
+  merge.
+
+### Still open
+
+- `origin/cli` still exists on the remote — delete once `refactor` is
+  confirmed good.
+- Nothing deployed yet (`darwin-rebuild switch` on rogue/darwin001).
+- msgvault-sync, agent-deck and hermes are parked, not fixed.
+- Earlier open items unchanged: cslab OAuth creds, cross-host SSH name
+  resolution, `refactor` not merged to `main`, legacy dirs still on disk.
+
+## 2026-10-06 — migrate to nixpkgs 26.05 / nix-darwin 26.05 / home-manager 26.05
+
+Moved every release-branch pin one release forward and fixed the fallout.
+Both darwin systems build end-to-end; both standalone home configs and
+all flake packages (except the pre-broken `kalam-py`) evaluate clean with
+no deprecation warnings.
+
+### Pins moved (declared in modules; `flake.nix` regenerated)
+
+| input | from | to | declared in |
+|---|---|---|---|
+| `nixpkgs` | `nixos-25.11` | `nixos-26.05` | `system-pkgs.nix` |
+| `darwin` | `nix-darwin-25.11` | `nix-darwin-26.05` | `system-pkgs.nix` |
+| `home-manager` | `release-25.11` | `release-26.05` | `homeModules/home-manager.nix`, `features/flake/agenix-rekey.nix` |
+| `nixvim` | `nixos-25.11` | `nixos-26.05` | `packages/kalam/kalam.nix` |
+| `stylix` | `release-25.11` | `release-26.05` | `users/ank/theming.nix` |
+
+`nix flake update nixpkgs darwin home-manager stylix nixvim` for the lock.
+There is no 26.11 branch yet for any of these.
+
+### Breakages fixed
+
+- **`gh-copilot` removed from nixpkgs** (archived upstream). Dropped from
+  `supercharged-git-gh`'s default `extensions`; now `[ gh-dash ]`. The
+  suggested replacement `github-copilot-cli` is a standalone CLI, not a
+  `gh` extension, so it was not substituted — add it to `home.packages` if
+  wanted.
+- **`pkgs.nodePackages` removed.** `nodePackages.prettier` → `pkgs.prettier`
+  in kalam py/v2 `lang/{css,html}.nix` (kalam-v2 failed to eval).
+
+### Deprecation warnings fixed
+
+- `programs.claude-code.skillsDir` → `programs.claude-code.skills` (now
+  `either attrsOf … path`; a plain path still works) in `agent-harness`.
+- `programs.gemini-cli` → `programs.antigravity-cli` (HM renamed the module;
+  the package is still gemini-cli). Set `useLegacyGeminiConfig = true`
+  explicitly so the `~/.gemini/` layout we also write `agents/commands/skills`
+  into is kept — the auto-detect keys on `getName pkg == "gemini-cli"`, which
+  the jailed Linux wrapper doesn't match.
+- `programs.yazi.shellWrapperName` default flipped `yy` → `y` for
+  `stateVersion >= 26.05`; pinned to `"yy"` explicitly (no behaviour change).
+- `nixfmt-rfc-style` is now an alias of `nixfmt` → `pkgs.nixfmt` in kalam
+  (`formatting.nix`, py/v2 `lang/nix.nix`).
+- nixvim: `plugins.treesitter.settings.highlight.disable` → native
+  `plugins.treesitter.highlight.disable` (kalam-full latex/VimTeX hand-off).
+
+### Deliberately NOT bumped
+
+- **`home.stateVersion` stays `25.11`** (`hm-system-init.defaultStateVersion`
+  and the `neusisOS` standalone default). stateVersion records the release a
+  home was *created* under; bumping it on existing homes silently changes
+  defaults (e.g. the yazi wrapper above). New users inherit it too — bump
+  per-user only when intended.
+- **`system.stateVersion = 5`** on both darwin hosts. nix-darwin 26.05's
+  max is **7**. What ≥6 changes: `environment.darwinConfig` default moves to
+  `/etc/nix-darwin/configuration.nix` (irrelevant for flakes), tmux
+  `enableSensible` default, and `system.requiresPrimaryUser` is dropped for
+  `environment.darwinConfig`. Low-risk to bump but not done here — do it
+  as its own change after reading the 26.05 release notes.
+
+### CLI defaults (new consumer repos)
+
+`cli/internal/wizard/wizard.go` `Default{Nixpkgs,HM,Darwin}Ref` → 26.05,
+`DefaultStateVersion` → `"26.05"`; darwin `machine.nix.tmpl`
+`system.stateVersion` 6 → 7 (fresh machines should start at max). Go deps
+are current (`go list -m -u all` shows no updates); `go test ./...` green.
+
+### Verification
+
+1. `nix eval` of `darwinConfigurations.{rogue,darwin001}.system.drvPath`,
+   `homeConfigurations."ank@rogue"` / `"kumarank@darwin001"`, and
+   `packages.aarch64-darwin.{kalam,kalam-full,kalam-v2,neusis,gclb}` — all
+   clean, zero warnings.
+2. `nix build .#darwinConfigurations.{rogue,darwin001}.system` — both built.
+   **Gotcha:** building with `--builders ''` fails with 38
+   "required system aarch64-linux" errors — rogue's `linux-builder` VM
+   config is part of its closure and needs the `linux-builder` entry in
+   `/etc/nix/machines`. Don't disable builders when testing rogue.
+3. `kalam-py` fails to eval on **both** 25.11 and 26.05 (`wayland` not
+   available on aarch64-darwin) — pre-existing, not a regression.
+
+### Other upgrade candidates (not done)
+
+- `llm-agents` and `fresh-apps` are behind upstream HEAD (both unpinned;
+  `nix flake update llm-agents fresh-apps`). Everything else unpinned is at
+  HEAD as of today.
+- `system.stateVersion` 5 → 7 (see above).
+- `agent-deck`, `hermes`, `msgvault-sync` still parked from the rogue fix-up.
+
+### Follow-up: Antigravity CLI added (`tools.antigravity`)
+
+The HM rename made it look like gemini had become "antigravity", but
+`llm-agents` ships both: `gemini-cli` (binary `gemini`) and
+`antigravity-cli` (binary `agy`, Google's Antigravity agentic platform).
+After the migration only gemini was installed, so `agy` was missing.
+
+- New `neusis.agent-harness.tools.antigravity` (`enable`, `extraPkgs`,
+  `settings`) in `agent-harness.nix`; enabled for ank.
+- Installed as a **plain package**, not via `programs.antigravity-cli`: HM
+  has one module for both products and it is already bound to gemini
+  (`useLegacyGeminiConfig = true`). The native layout is written by hand,
+  mirroring what the HM module does for a non-gemini package:
+  `~/.gemini/antigravity-cli/settings.json` + `~/.gemini/config/skills` →
+  `skillsDir`. Context `~/.gemini/GEMINI.md` is shared with gemini and only
+  written by the antigravity block when gemini is disabled.
+- Linux: jailed like the others (`mkJailed "agy" … [ "~/.gemini" ]`).
+- Verified: `ank@rogue` home has both `antigravity-cli-1.2.16` and
+  `gemini-cli-0.62.0`; both darwin systems eval + rogue builds.
+
+### Still open
+
+- Not deployed (`darwin-rebuild switch`) on either host.
+
+## 2026-10-06 — merge prep: v1 archived, old tree → `old_modules/`, `new_modules/` → `modules/`
+
+Preparing `refactor` to land on `main` without deleting anything.
+
+- **`v1` branch + annotated `v1` tag** created from `main` and pushed. Before
+  tagging, the main worktree's *uncommitted* legacy edits were committed to
+  `main` verbatim (rogue linux-builder tweaks, kalamv2 obsidian → unstable,
+  lock bump, `docs/ank/shortcuts.md`) so the archive is complete. Two
+  *untracked* WIP items (`inputs.nix`, `pkgs/rekalam/`) were found afterwards
+  and committed as a second `main` commit; `v1` points at the first capture
+  commit, so `v1` lacks those two but `main`/`old_modules/` have them. Move
+  the tag (`git tag -f v1 main` + force-push the tag) if you want `v1` to
+  include them.
+- **Old tree → `old_modules/`** via `git mv` (585 renames; history follows).
+  Files `refactor` had deleted (`lib/`, `shell.nix`, `flakeModules/packages.nix`)
+  and `main`'s `flake.nix`/`flake.lock` were restored under `old_modules/` so
+  it is a self-contained flake (`nix build path:./old_modules#…`). The
+  astroank submodule moved with it (`.gitmodules` path updated). `main` was
+  then merged into `refactor` with `merge.directoryRenames=true`; conflicts:
+  root `flake.lock` (kept ours; main's bump went to `old_modules/flake.lock`)
+  and `old_modules/machines/rogue/default.nix` (took main's). Proof: every
+  blob in `main`'s tree (minus root metadata) is byte-identical under
+  `old_modules/`.
+- **`new_modules/` → `modules/`**: `git mv` + 17 files' references updated
+  (dendritic.nix, flake.nix regenerated, `.nvim.lua`, cli schema extractor +
+  README/INSIDER, docs). `old_modules/modules/` is the *old* `modules/`.
+- `AGENTS.md` / `README.md` rewritten for the merged layout; the old
+  "refactor in progress" note is gone.
+- The obsidian → `pkgs.unstable` change from main was **not** ported into
+  kalam-v2 (archive only, per decision).
+- Verified after each step: both darwin systems + both home configs + all
+  packages eval; full `nix build` of both systems; `go test` green.

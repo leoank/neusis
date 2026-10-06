@@ -1,0 +1,15 @@
+# agenix-rekey master identities for this fleet.
+#
+# The PRIVATE half of an identity listed here decrypts every rekeyFile
+# and re-encrypts it per host on `agenix rekey`. Keep `identity` as a
+# STRING path to your private key so it is read at rekey time on your
+# machine and never copied into the nix store.
+#
+# Machines import this list via
+#   masterIdentities = import ../../secrets/master-identities.nix;
+[
+  {
+    identity = {{ .IdentityPath | nixStr }};
+    pubkey = {{ .Pubkey | nixStr }};
+  }
+]

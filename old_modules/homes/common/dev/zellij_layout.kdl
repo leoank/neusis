@@ -1,0 +1,52 @@
+layout {
+    default_tab_template {
+        pane size=1 borderless=true {
+            plugin location="https://github.com/dj95/zjstatus/releases/latest/download/zjstatus.wasm" {
+                format_right "{mode} #[fg=#89B4FA,bold]{session}"
+                format_left "{tabs}"
+                format_space  ""
+                format_precedence "crl"
+
+                border_enabled  "false"
+                border_char     "─"
+                border_format   "#[fg=#6C7086]{char}"
+                border_position "top"
+                hide_frame_except_for_search "true"
+
+                mode_normal  "#[bg=blue] {name} "
+                mode_tmux    "#[bg=#ffc387] {name} "
+
+                // formatting for inactive tabs
+                tab_normal              "#[fg=#6C7086] {name} "
+                tab_normal_fullscreen   "#[fg=#6C7086] {name} [] "
+                tab_normal_sync         "#[fg=#6C7086] {name} <> "
+
+                // formatting for the current active tab
+                tab_active              "#[fg=#89B4FA,bold,italic] {name} {floating_indicator}"
+                tab_active_fullscreen   "#[fg=#89B4FA,bold,italic] {name} {fullscreen_indicator}"
+                tab_active_sync         "#[fg=#89B4FA,bold,italic] {name} {sync_indicator}"
+
+                // separator between the tabs
+                // tab_separator           "#[fg=#6C7086,bg=#181825] | "
+
+                // format when renaming a tab
+                tab_rename              "#[fg=#eba0ac,bg=#181825] {index} {name} {floating_indicator} "
+
+                // indicators
+                tab_sync_indicator       "<> "
+                tab_fullscreen_indicator "[] "
+                tab_floating_indicator   "⬚ "
+
+                // limit tab display count
+                tab_display_count         "3"  // limit to showing 3 tabs
+                tab_truncate_start_format "#[fg=red,bg=#181825] < +{count} ..."
+                tab_truncate_end_format   "#[fg=red,bg=#181825] ... +{count} >"
+
+                tab_sync_indicator       "<> "
+                tab_fullscreen_indicator "[] "
+                tab_floating_indicator   "⬚ "
+            }
+        }
+        children
+    }
+}

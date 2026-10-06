@@ -1,0 +1,88 @@
+{{- /* One host. Defines the machine and joins it to its lab. */ -}}
+{ self, ... }:
+{
+  flake.neusis.machines.{{ .Name }} = {
+    system = {{ .System | nixStr }};
+    hostname = {{ .Hostname | nixStr }};
+{{- if .ComputerName }}
+    computerName = {{ .ComputerName | nixStr }};
+{{- end }}
+{{- if .PrimaryUser }}
+    primaryUser = {{ .PrimaryUser | nixStr }};
+{{- end }}
+    # SSH host public key — used by agenix-rekey to encrypt per-host
+    # secrets. Replace the placeholder with this host's real key
+    # (`cat /etc/ssh/ssh_host_ed25519_key.pub`).
+    hostPubkey = {{ .HostPubkey | nixStr }};
+
+    # User registries installed on this host. Users in these labs get
+    # system accounts and home-manager wiring here.
+    userRegistries = [ self.neusis.registry.users.{{ .Lab }} ];
+{{- if and (not .IsDarwin) .Secrets }}
+
+    # Initial hashed password seeded for every non-locked account on
+    # this host. Create it with:
+    #   agenix edit secrets/common/hashedInitialPassword.age
+    initialHashedPassword = ../../secrets/common/hashedInitialPassword.age;
+{{- end }}
+
+    module =
+      { inputs, ... }:
+      {
+        imports = [
+{{- if .IsDarwin }}
+{{- if .Secrets }}
+          inputs.agenix.darwinModules.default
+          inputs.agenix-rekey.darwinModules.default
+          self.darwinModules.secrets
+{{- end }}
+{{- else }}
+          # Provides `age.secrets` — neusis seeds each account's initial
+          # password through an agenix secret.
+          inputs.agenix.nixosModules.default
+{{- if .Secrets }}
+          inputs.agenix-rekey.nixosModules.default
+          self.nixosModules.secrets
+{{- end }}
+{{- end }}
+        ];
+{{ if .IsDarwin }}
+        # nix-darwin configuration for {{ .Hostname }}. Add homebrew,
+        # `system.defaults`, and other host options here.
+        system.stateVersion = 7;
+{{- else }}
+        # NixOS configuration for {{ .Hostname }}. Replace the
+        # placeholders below with this host's real hardware settings
+        # (typically the output of `nixos-generate-config`).
+        nixpkgs.hostPlatform = {{ .System | nixStr }};
+
+        boot.loader.systemd-boot.enable = true;
+        fileSystems."/" = {
+          device = "/dev/disk/by-label/nixos";
+          fsType = "ext4";
+        };
+
+        services.openssh.enable = true;
+        system.stateVersion = {{ .StateVersion | nixStr }};
+{{- end }}
+{{- if .Secrets }}
+
+        # agenix-rekey secrets for this host. Populate secrets with
+        # `agenix edit`/`agenix rekey`; see `neusis add secrets`.
+        neusis.services.secrets = {
+          enable = true;
+          hostPubkey = {{ .HostPubkey | nixStr }};
+          masterIdentities = import ../../secrets/master-identities.nix;
+          storageBaseDir = ../../secrets/rekeyed;
+          # This fleet doesn't use neusis's shared distributed-build key.
+          remoteBuildKeyFile = null;
+        };
+{{- end }}
+      };
+  };
+
+  # Join this host to its lab.
+  flake.neusis.registry.machines.{{ .Lab }}.{{ if .IsDarwin }}darwin{{ else }}nixos{{ end }} = [
+    self.neusis.machines.{{ .Name }}
+  ];
+}

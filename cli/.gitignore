@@ -1,0 +1,7 @@
+# Build output
+/neusis
+/dist/
+
+# Go
+*.test
+*.out
