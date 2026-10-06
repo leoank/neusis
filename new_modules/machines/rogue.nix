@@ -20,7 +20,6 @@
           # linux-builder lives here (not in darwin.defaults) so it runs
           # on rogue only, not darwin001.
           self.neusis.features.darwin.virtualization
-          self.neusis.features.darwin.homebrew-defaults
           self.neusis.features.darwin.setup-keyboard
           # agenix + neusis secrets (provides the remoteBuildKey the
           # distributed-builds feature consumes).
@@ -28,6 +27,12 @@
           inputs.agenix-rekey.darwinModules.default
           self.darwinModules.secrets
           self.neusis.features.agnostic.distributed-builds
+          # tailscale mesh: the agnostic tailscale module (daemon +
+          # autoconnect) + the two mesh config features (ank = leoank default,
+          # cslab switchable).
+          self.darwinModules.tailscale
+          # self.neusis.features.agnostic.ank_mesh
+          # self.neusis.features.agnostic.cslab_mesh
           ./_homebrew.nix
         ];
         programs.zsh.enable = true;

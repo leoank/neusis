@@ -29,6 +29,12 @@
           inputs.agenix-rekey.darwinModules.default
           self.darwinModules.secrets
           self.neusis.features.agnostic.distributed-builds
+          # tailscale mesh: the agnostic tailscale module (daemon +
+          # autoconnect) + the two mesh config features (ank = leoank default,
+          # cslab switchable).
+          self.darwinModules.tailscale
+          self.neusis.features.agnostic.ank_mesh
+          self.neusis.features.agnostic.cslab_mesh
           ./_homebrew.nix
         ];
         programs.zsh.enable = true;
