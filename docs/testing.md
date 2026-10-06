@@ -74,7 +74,7 @@ Patterns worth copying:
 | Tier | Command | Runs in | Covers |
 |---|---|---|---|
 | **T0 eval unit** | `nix run .#neusis-test` (= `nix-unit --flake .#tests.<system>`) | ~65 s per test set (220 tests) | lib, options, every module and feature at eval level, machine invariants |
-| **T1 eval flake** | `nix flake check --no-build --all-systems` | ~40 s | every `checks.*` derivation instantiates (= today's `drvPath` ladder, automated) |
+| **T1 eval flake** | `nix flake check --no-build --all-systems` (warm store); on a cold store realise `.#darwinConfigurations.rogue.pkgs.base16-schemes` first, or instantiate `checks.<system>` with `nix eval` — see §7.5 | ~40 s | every `checks.*` derivation instantiates (= today's `drvPath` ladder, automated) |
 | **T2 build** | `nix flake check` or `nix build .#checks.<sys>.<name>` | minutes–hours | systems, homes, packages really build |
 | **T3 VM** | `nix build .#checks.<linux-system>.vm-<name>` | 2–10 min each | NixOS VMs: full fixture machine, services under systemd, a two-node build cluster, home bundles, packages |
 
@@ -373,4 +373,27 @@ wiring.
   assert non-empty, then grep the file.
 - home-manager 26.05 wires delta through `interactive.diffFilter` and
   per-command `[pager]` entries, not `core.pager`.
+
+### 7.5 Cold stores and import-from-derivation
+
+stylix evaluates its colour scheme through import-from-derivation of
+`pkgs.base16-schemes`, an aarch64-darwin derivation for the Darwin hosts.
+Two consequences, both only visible on a store that has never built it
+(CI runners; a fresh machine):
+
+- `nix flake check --no-build` validates `darwinConfigurations.<host>.system`
+  on every runner and refuses to build the IFD input, so it fails with
+  "path … base16-schemes … is not valid". On macOS, realise that one
+  derivation first (`nix build --no-link
+  .#darwinConfigurations.rogue.pkgs.base16-schemes`); on Linux it cannot
+  pass at all, so CI instantiates the Linux checks with `nix eval` instead.
+- `builtins.readFile` of a derivation output inside a test is also IFD;
+  prefer attributes that carry the content (`writeText`'s `.text`).
+
+CI layout that follows from this: the ubuntu jobs run T0 for both test
+sets (pure evaluation), `nix eval` of the Linux checks, the Linux package
+builds and the six VM tests under KVM; the `macos-latest` job runs T0
+natively, the full `nix flake check --no-build`, the Darwin checks'
+instantiation and the Darwin package builds. Darwin *system* builds stay
+on the hosts.
 

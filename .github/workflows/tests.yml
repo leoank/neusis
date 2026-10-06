@@ -52,13 +52,12 @@ jobs:
         with:
           extra-conf: |
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
-      # The Darwin checks cannot be instantiated here at all: stylix needs
-      # import-from-derivation of an aarch64-darwin derivation
-      # (base16-schemes), which only a Darwin builder can realise — the
-      # `darwin` job below covers them natively. Linux: flake check for the
-      # runner's own system, then instantiate both Linux systems' checks
-      # with `nix eval` (builds nothing but IFD inputs).
-      - run: nix flake check --no-build
+      # `nix flake check` validates `darwinConfigurations.<host>.system` on
+      # every runner, and that needs import-from-derivation of an
+      # aarch64-darwin derivation (stylix's base16-schemes) that only a
+      # Darwin store can realise — so it cannot pass on a Linux runner. The
+      # `darwin` job runs the full flake check natively; here we instantiate
+      # both Linux systems' checks with `nix eval` (builds nothing).
       - name: instantiate checks for the Linux systems
         run: |
           for sys in x86_64-linux aarch64-linux; do
@@ -68,7 +67,7 @@ jobs:
           done
 
   darwin:
-    name: Darwin runner — T0 + T1 + T2 packages
+    name: Darwin runner — T0, T1 flake check, T2 packages
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -78,6 +77,13 @@ jobs:
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
       - name: T0 nix-unit (aarch64-darwin, natively)
         run: nix run .#neusis-test
+      - name: T1 nix flake check --no-build
+        run: |
+          # realise the one import-from-derivation input (stylix's base16
+          # schemes) so the no-build check can evaluate the Darwin hosts on
+          # a cold store
+          nix build --no-link .#darwinConfigurations.rogue.pkgs.base16-schemes
+          nix flake check --no-build
       - name: T1 instantiate the Darwin checks
         run: |
           nix eval --raw .#checks.aarch64-darwin --apply \
