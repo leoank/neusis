@@ -11,7 +11,7 @@ Every `flake-parts` module gets a perconfigured `pkgs` based on the configuratio
 
 # Modules inside the modules folder
 
-Directories and names of the files are inconsequential. The only thing that matters is the flake module declarations inside each file. We have standard flake outputs and some non-standard flake outputs. For each non-standard flake output we define a <non-standard-ouput>-options.nix file. This helps to have that output scattered across multiple files, and still be mergeable by flake-parts.
+Directories and names of the files are inconsequential. The only thing that matters is the flake module declarations inside each file. We have standard flake outputs and some non-standard flake outputs. For each non-standard flake output we define a `<non-standard-output>-options.nix` file. This helps to have that output scattered across multiple files, and still be mergeable by flake-parts.
 
 - standard outputs: nixosModules, packages, shells, nixosConfigurations
 - non-standard: users, registry, lib

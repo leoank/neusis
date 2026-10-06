@@ -42,11 +42,9 @@
     # `self.{nixos,darwin}Modules.*` (hm-system-init, secrets). This is
     # the usual import for downstream flake-parts consumers.
     #
-    # NOTE: hm-system-init.nix / secrets.nix declare `flake-file.inputs`,
-    # so this bundle expects the consumer to run the dendritic
-    # (flake-file) pattern. A non-dendritic consumer should import
-    # `flakeModules.lib` instead and wire the integration modules by
-    # hand.
+    # None of these files declare `flake-file.inputs`, so this bundle
+    # works in plain flake-parts flakes as well as dendritic
+    # (flake-file) ones.
     default = {
       imports = [
         ./lib/neusis-options.nix
