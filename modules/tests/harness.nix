@@ -1,0 +1,125 @@
+# Test harness for neusis (see docs/testing.md).
+#
+# Provides three things:
+#
+#   * `perSystem.tests` — an attrset of nix-unit test cases, transposed
+#     to `flake.tests.<system>` so `nix-unit --flake .#tests.<system>`
+#     finds it. Test files under modules/tests/ write into it.
+#   * `flake.neusis.lib.tests` — eval helpers (`evalHm`, `evalDarwin`,
+#     `evalNixos`, …) and the shared fixtures under ./_fixtures.
+#   * `packages.neusis-test` — `nix run .#neusis-test [args]` runs
+#     nix-unit against the current system's tests.
+#
+# Tests receive `testPkgs`: the perSystem `pkgs` with neusis's overlays
+# applied once per system, so `pkgs.unstable` / `pkgs.inputs.*` resolve
+# the way they do on real hosts.
+{
+  self,
+  inputs,
+  lib,
+  flake-parts-lib,
+  ...
+}:
+let
+  specialArgs = {
+    inherit inputs;
+    outputs = self;
+  };
+
+  fixtures = import ./_fixtures { inherit self lib inputs; };
+in
+{
+  options.perSystem = flake-parts-lib.mkPerSystemOption {
+    options.tests = lib.mkOption {
+      type = lib.types.lazyAttrsOf (lib.types.lazyAttrsOf lib.types.raw);
+      default = { };
+      description = ''
+        nix-unit test cases for this system, grouped one attrset per test
+        file: `tests.<group>.test-<what> = { expr; expected; }` or
+        `{ expr; expectedError = { type; msg; }; }`. nix-unit only runs
+        attributes whose name starts with `test` and silently ignores the
+        rest, so a misnamed test throws here instead of vanishing.
+        Published as `flake.tests.<system>`.
+      '';
+      apply = lib.mapAttrs (
+        group:
+        lib.mapAttrs (
+          name: test:
+          if lib.hasPrefix "test" name then
+            test
+          else
+            throw "tests.${group}.${name}: nix-unit test names must start with `test`"
+        )
+      );
+    };
+  };
+
+  config = {
+    transposition.tests = { };
+
+    flake.neusis.lib.tests = {
+      inherit specialArgs fixtures;
+
+      # home-manager config for the `alice` fixture with the given
+      # modules. `pkgs` should be `testPkgs`.
+      evalHm =
+        { pkgs, modules }:
+        (inputs.home-manager.lib.homeManagerConfiguration {
+          inherit pkgs;
+          modules = [ fixtures.hmBase ] ++ modules;
+          extraSpecialArgs = specialArgs;
+        }).config;
+
+      # nix-darwin config with the minimal fixture base.
+      evalDarwin =
+        {
+          modules,
+          system ? "aarch64-darwin",
+        }:
+        (inputs.darwin.lib.darwinSystem {
+          inherit system specialArgs;
+          modules = [ fixtures.darwinBase ] ++ modules;
+        }).config;
+
+      # NixOS config with the minimal fixture base. Pure eval, so this
+      # works from a Darwin host too.
+      evalNixos =
+        {
+          modules,
+          system ? "x86_64-linux",
+        }:
+        (inputs.nixpkgs.lib.nixosSystem {
+          inherit specialArgs;
+          modules = [
+            fixtures.nixosBase
+            { nixpkgs.hostPlatform = system; }
+          ]
+          ++ modules;
+        }).config;
+
+      # Messages of every failing `assertions` entry; `[ ]` when all hold.
+      failedAssertions = cfg: map (a: a.message) (lib.filter (a: !a.assertion) cfg.assertions);
+
+      # Sorted unique package names of a package list.
+      pkgNames = pkgs: lib.sort lib.lessThan (lib.unique (map lib.getName pkgs));
+
+      hasPkg = name: pkgs: lib.any (p: lib.getName p == name) pkgs;
+    };
+
+    perSystem =
+      { pkgs, system, ... }:
+      {
+        _module.args.testPkgs = pkgs.appendOverlays (builtins.attrValues self.overlays);
+
+        packages.neusis-test = pkgs.writeShellApplication {
+          name = "neusis-test";
+          runtimeInputs = [ pkgs.nix-unit ];
+          text = ''
+            # Run neusis's nix-unit suite for this system. Extra args go
+            # to nix-unit (e.g. a test-name filter).
+            exec nix-unit --flake ".#tests.${system}" "$@"
+          '';
+        };
+      };
+  };
+}
