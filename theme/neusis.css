@@ -355,6 +355,12 @@ html {
   display: none;
 }
 
+/* mdBook's collapse rule only hides child <ol>s; the "on this page" list
+   is a <div>, so a folded section would keep showing it. */
+.chapter li.chapter-item:not(.expanded) > .on-this-page {
+  display: none;
+}
+
 .on-this-page {
   margin-left: 14px;
   border-inline-start: 1px solid var(--border, var(--sidebar-header-border-color));
