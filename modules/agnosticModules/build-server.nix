@@ -18,12 +18,18 @@
   flake.agnosticModules.build-server =
     {
       config,
+      options,
       lib,
-      pkgs,
       ...
     }:
     let
       cfg = config.neusis.services.build-server;
+
+      # Platform discriminators from the OPTIONS set (see tailscale.nix):
+      # `users.knownUsers` exists only on nix-darwin, `isSystemUser` only on
+      # NixOS, and `optionalAttrs` must omit the foreign keys entirely.
+      isDarwin = options ? launchd;
+      isLinux = options ? systemd;
     in
     {
       options.neusis.services.build-server = {
@@ -65,33 +71,33 @@
         };
       };
 
-      config = lib.mkIf cfg.enable (lib.mkMerge [
-        {
+      config = lib.mkMerge [
+        (lib.mkIf cfg.enable {
           nix.settings.trusted-users = lib.mkIf cfg.trust [ cfg.user ];
           users.users.${cfg.user}.openssh.authorizedKeys = {
             keyFiles = cfg.authorizedKeyFiles;
             keys = cfg.authorizedKeys;
           };
-        }
+        })
 
-        (lib.mkIf pkgs.stdenv.isLinux {
-          users.users.${cfg.user} = {
+        (lib.optionalAttrs isLinux {
+          users.users.${cfg.user} = lib.mkIf cfg.enable {
             isSystemUser = true;
             group = cfg.user;
             useDefaultShell = true;
           };
-          users.groups.${cfg.user} = { };
+          users.groups.${cfg.user} = lib.mkIf cfg.enable { };
         })
 
-        (lib.mkIf pkgs.stdenv.isDarwin {
-          users.users.${cfg.user} = {
+        (lib.optionalAttrs isDarwin {
+          users.users.${cfg.user} = lib.mkIf cfg.enable {
             uid = cfg.uid;
             home = "/Users/${cfg.user}";
             shell = "/bin/zsh";
           };
           # nix-darwin only manages users it's explicitly told to know about.
-          users.knownUsers = [ cfg.user ];
+          users.knownUsers = lib.mkIf cfg.enable [ cfg.user ];
         })
-      ]);
+      ];
     };
 }

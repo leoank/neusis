@@ -1,6 +1,5 @@
 # Tests for flake.agnosticModules.build-server: a dedicated, nix-trusted
-# build user with the shared build public key. Darwin is covered; the
-# NixOS path is pinned as a known evaluation failure (see below).
+# build user with the shared build public key, on NixOS and nix-darwin.
 { self, ... }:
 {
   perSystem =
@@ -41,17 +40,20 @@
     in
     {
       tests.agnostic-build-server = {
-        # KNOWN BUG, pinned: the module does not evaluate on NixOS, even
-        # when disabled. `users.knownUsers` is Darwin-only and is gated with
-        # `lib.mkIf pkgs.stdenv.isDarwin`, which still registers the option
-        # path on Linux. Fix: dispatch on `options ? launchd` like
-        # tailscale.nix does, then replace this with the real expectations
-        # (isSystemUser, group, useDefaultShell, users.groups.nixremote).
-        test-nixos-does-not-evaluate-yet = {
-          expr = common nixos "nixremote";
-          expectedError = {
-            type = "ThrownError";
-            msg = "users.knownUsers' does not exist";
+        test-nixos-creates-system-build-user = {
+          expr = common nixos "nixremote" // {
+            inherit (nixos.users.users.nixremote) isSystemUser group useDefaultShell;
+            hasGroup = nixos.users.groups ? nixremote;
+          };
+          expected = {
+            trusted = true;
+            keys = [ f.hostPubkey ];
+            keyFiles = [ "placeholder.age" ];
+            failed = [ ];
+            isSystemUser = true;
+            group = "nixremote";
+            useDefaultShell = true;
+            hasGroup = true;
           };
         };
 
@@ -97,14 +99,21 @@
         test-disabled-creates-no-user = {
           expr =
             let
-              cfg = t.evalDarwin { modules = [ self.darwinModules.build-server ]; };
+              darwinOff = t.evalDarwin { modules = [ self.darwinModules.build-server ]; };
+              nixosOff = t.evalNixos { modules = [ self.nixosModules.build-server ]; };
             in
             {
-              user = cfg.users.users ? nixremote;
-              trusted = builtins.elem "nixremote" cfg.nix.settings.trusted-users;
+              darwinUser = darwinOff.users.users ? nixremote;
+              darwinKnown = builtins.elem "nixremote" darwinOff.users.knownUsers;
+              nixosUser = nixosOff.users.users ? nixremote;
+              nixosGroup = nixosOff.users.groups ? nixremote;
+              trusted = builtins.elem "nixremote" nixosOff.nix.settings.trusted-users;
             };
           expected = {
-            user = false;
+            darwinUser = false;
+            darwinKnown = false;
+            nixosUser = false;
+            nixosGroup = false;
             trusted = false;
           };
         };
