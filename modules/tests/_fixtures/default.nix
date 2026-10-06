@@ -80,6 +80,16 @@ rec {
     locked = [ ];
   };
 
+  # Minimal enabled supercharged-git umbrella (home-manager). Tool tests
+  # add `neusis.supercharged-git.tools.<x>.enable = true` on top.
+  gitIdentity = {
+    neusis.supercharged-git = {
+      enable = true;
+      userName = "Alice Fixture";
+      userEmail = "alice@example.com";
+    };
+  };
+
   # Fake host key, used for `hostPubkey` fields.
   hostPubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA fixture";
 
