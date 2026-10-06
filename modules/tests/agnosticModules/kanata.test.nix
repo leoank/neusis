@@ -100,16 +100,22 @@
         };
 
         test-darwin-synthesized-config-contains-defcfg-and-body = {
+          # The config is a writeText derivation; its `text` attribute is the
+          # content, available without building (readFile would build an
+          # aarch64-darwin derivation, impossible on a Linux CI runner).
           expr =
             let
-              file = lib.last (daemonArgs twoBoards "kanata-laptop");
-              text = builtins.readFile file;
+              cfgPath = lib.last (daemonArgs twoBoards "kanata-laptop");
+              text = twoBoards.neusis.services.kanata.keyboards.laptop.config;
+              defcfg = twoBoards.neusis.services.kanata.keyboards.laptop.extraDefCfg;
             in
             {
-              hasDefcfg = lib.hasInfix "danger-enable-cmd yes" text;
+              name = lib.hasSuffix "kanata-laptop-config.kdb" cfgPath;
+              hasDefcfg = lib.hasInfix "danger-enable-cmd yes" defcfg;
               hasBody = lib.hasInfix "(defsrc caps)" text;
             };
           expected = {
+            name = true;
             hasDefcfg = true;
             hasBody = true;
           };

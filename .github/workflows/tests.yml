@@ -2,16 +2,18 @@
 #
 #   T0  nix-unit eval tests, for the Linux and the Darwin test sets
 #       (pure evaluation — the Darwin set evaluates fine on a Linux runner)
-#   T1  nix flake check --no-build --all-systems: every machine, home and
-#       package check instantiates
+#   T1  every machine, home and package check instantiates (flake check
+#       for the runner's system + `nix eval` of every system's checks,
+#       which tolerates the import-from-derivation stylix needs)
 #   T2  build the cheap package checks (the Go CLI runs `go test` in its
 #       check phase)
 #
 #   T3  NixOS VM tests (checks.x86_64-linux.vm-*) under KVM, on pushes to
 #       main only — they are the slow tier
 #
-# Darwin system builds (T2 for the machines) are left to the hosts; a
-# macOS runner can run `nix build .#checks.aarch64-darwin.darwin-rogue`.
+# The macOS runner covers the Darwin side natively (T0, T1, package checks).
+# Darwin *system* builds (T2 for the machines) are left to the hosts:
+# `nix build .#checks.aarch64-darwin.darwin-rogue`.
 name: tests
 
 on:
@@ -42,7 +44,7 @@ jobs:
         run: nix run .#neusis-test
 
   flake-check:
-    name: T1 nix flake check --no-build
+    name: T1 eval all checks (linux runner)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -50,7 +52,37 @@ jobs:
         with:
           extra-conf: |
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
-      - run: nix flake check --no-build --all-systems
+      # `nix flake check --no-build` cannot evaluate the Darwin checks on a
+      # cold store: stylix needs import-from-derivation (a fetch, buildable
+      # anywhere) and --no-build forbids even that. So: flake check for the
+      # runner's own system, then instantiate every system's checks with
+      # `nix eval`, which may build IFD inputs but builds no check.
+      - run: nix flake check --no-build
+      - name: instantiate checks for every system
+        run: |
+          for sys in x86_64-linux aarch64-linux aarch64-darwin; do
+            echo "== $sys"
+            nix eval --raw ".#checks.$sys" --apply \
+              'cs: builtins.concatStringsSep "\n" (map (n: "${n}  ${cs.${n}.drvPath}") (builtins.attrNames cs)) + "\n"'
+          done
+
+  darwin:
+    name: Darwin runner — T0 + T1 + T2 packages
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@v16
+        with:
+          extra-conf: |
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+      - name: T0 nix-unit (aarch64-darwin, natively)
+        run: nix run .#neusis-test
+      - name: T1 instantiate the Darwin checks
+        run: |
+          nix eval --raw .#checks.aarch64-darwin --apply \
+            'cs: builtins.concatStringsSep "\n" (map (n: "${n}  ${cs.${n}.drvPath}") (builtins.attrNames cs)) + "\n"'
+      - name: T2 package checks
+        run: nix build --no-link .#checks.aarch64-darwin.pkg-neusis .#checks.aarch64-darwin.pkg-gclb
 
   build-packages:
     name: T2 package checks

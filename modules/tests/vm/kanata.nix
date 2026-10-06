@@ -33,7 +33,13 @@
 
           testScript = ''
             machine.wait_for_unit("multi-user.target")
-            machine.wait_for_unit("kanata-vm.service")
+            try:
+                machine.wait_for_unit("kanata-vm.service")
+            except Exception:
+                # surface why kanata died (device/uinput access etc.)
+                print(machine.execute("journalctl -b -u kanata-vm.service --no-pager")[1])
+                print(machine.execute("ls -l /dev/uinput /dev/input; lsmod | grep -i uinput")[1])
+                raise
 
             with subtest("kanata stays running without a keyboard"):
                 machine.sleep(5)
