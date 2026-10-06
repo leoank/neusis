@@ -1,0 +1,61 @@
+# neusis test tiers (see docs/testing.md).
+#
+#   T0  nix-unit eval tests, for the Linux and the Darwin test sets
+#       (pure evaluation — the Darwin set evaluates fine on a Linux runner)
+#   T1  nix flake check --no-build --all-systems: every machine, home and
+#       package check instantiates
+#   T2  build the cheap package checks (the Go CLI runs `go test` in its
+#       check phase)
+#
+# Darwin system builds (T2 for the machines) are left to the hosts; a
+# macOS runner can run `nix build .#checks.aarch64-darwin.darwin-rogue`.
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  eval-tests:
+    name: T0 nix-unit (${{ matrix.tests }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        tests: [x86_64-linux, aarch64-darwin]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@v16
+        with:
+          extra-conf: |
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+      - name: nix-unit
+        env:
+          NEUSIS_TEST_SYSTEM: ${{ matrix.tests }}
+        run: nix run .#neusis-test
+
+  flake-check:
+    name: T1 nix flake check --no-build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@v16
+        with:
+          extra-conf: |
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+      - run: nix flake check --no-build --all-systems
+
+  build-packages:
+    name: T2 package checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@v16
+        with:
+          extra-conf: |
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+      - run: nix build --no-link .#checks.x86_64-linux.pkg-neusis .#checks.x86_64-linux.pkg-gclb
