@@ -176,6 +176,7 @@
     machineToBundlesMap = {
       rogue = [
         self.neusis.features.agnostic.nix-pkgs
+        self.neusis.features.hm.mac-app-util
         self.neusis.users.ank.hmBundles.kalam-ide
         self.neusis.users.ank.hmBundles.terminal-life
         self.neusis.users.ank.hmBundles.agent-harness
