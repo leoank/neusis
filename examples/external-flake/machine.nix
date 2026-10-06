@@ -28,5 +28,8 @@
 
   services.openssh.enable = true;
 
+  # alice's login shell is zsh; NixOS requires the program to be enabled.
+  programs.zsh.enable = true;
+
   system.stateVersion = "25.11";
 }

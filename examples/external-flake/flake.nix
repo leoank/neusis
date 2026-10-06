@@ -1,15 +1,15 @@
 {
   description = "Example consumer flake using neusis for system & user management.";
 
-  # This example uses a plain (non-flake-parts) consumer. The user config
-  # is an untyped attrset — no schema validation, no per-attribute merging.
-  # If you want the typed `flake.users.<u>.neusisOS` / `flake.registry`
-  # schema and per-attribute merging across files, see the sibling
-  # `examples/flake-parts-consumer/` which imports
-  # `inputs.neusis.flakeModules.default`.
+  # This example uses a plain (non-flake-parts) consumer. The user and
+  # registry values are untyped attrsets in the shape neusis expects — no
+  # schema validation, no per-attribute merging. If you want the typed
+  # `flake.neusis.users.<u>.neusisOS` / `flake.neusis.registry` schema and
+  # merging across files, see the sibling `examples/flake-parts-consumer/`
+  # which imports `inputs.neusis.flakeModules.default`.
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-26.05";
 
     # Pin neusis. In a real consumer this would be:
     #   neusis.url = "github:leoank/neusis";
@@ -20,7 +20,7 @@
     # neusis already pulls home-manager and flake-parts, but it's
     # idiomatic to follow them so versions stay consistent.
     home-manager = {
-      url = "github:nix-community/home-manager/release-25.11";
+      url = "github:nix-community/home-manager/release-26.05";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -36,22 +36,25 @@
     let
       inherit (neusis.neusis.lib.neusisOS) mkNeusisOS;
 
-      # Per-lab user config — same shape as `flake.registry.users.<lab>`
-      # from neusis. Each user matches the `userConfigType` schema:
-      # `username`, `fullName`, `shell`, `sshKeys`, `homeModules.<host>`.
-      myLab = {
-        admins = [
-          {
-            username = "alice";
-            fullName = "Alice Example";
-            shell = "zsh";
-            sshKeys = [
-              # Replace with a real public key path before building.
-              ./keys/alice.pub
-            ];
-            homeModules.myhost = [ ./homes/alice/myhost.nix ];
-          }
+      # A user, in the shape of `flake.neusis.users.<name>.neusisOS`:
+      # `username`, `fullName`, `shell`, `sshKeys`, and the
+      # `machineToBundlesMap` that picks this user's home-manager modules
+      # per host.
+      alice = {
+        username = "alice";
+        fullName = "Alice Example";
+        shell = "zsh";
+        sshKeys = [
+          # Replace with a real public key before building.
+          ./keys/alice.pub
         ];
+        machineToBundlesMap.myhost = [ ./homes/alice/myhost.nix ];
+      };
+
+      # A per-lab user registry — same shape as
+      # `flake.neusis.registry.users.<lab>`: users grouped by role.
+      myLab = {
+        admins = [ alice ];
         regulars = [ ];
         locked = [ ];
         guests = [ ];
@@ -67,18 +70,25 @@
 
         # The machine module: hardware-configuration, platform, boot,
         # networking, etc. Anything you'd normally pass to nixosSystem.
-        userModule = ./machine.nix;
+        # neusis seeds every login account's password from an agenix
+        # secret, so the host needs the agenix module.
+        userModule = {
+          imports = [
+            ./machine.nix
+            neusis.inputs.agenix.nixosModules.default
+          ];
+        };
 
-        # Passed through to home-manager's `extraSpecialArgs`, and also
-        # available to the machine module if it wants `inputs` etc.
+        # Passed through to the machine modules and to home-manager's
+        # `extraSpecialArgs` (on top of `inputs` / `outputs`).
         specialArgs = { inherit self nixpkgs home-manager; };
 
-        userConfig = myLab;
-        homeManager = true;
+        # Creates the system accounts for every user in these registries
+        # and wires up home-manager for them automatically.
+        userRegistries = [ myLab ];
 
-        # The lib's default points at a path inside the neusis repo
-        # that a consumer can't decrypt. Always override with your own
-        # agenix secret.
+        # Required whenever a host has login (non-locked) users. Point it
+        # at your own agenix secret — neusis deliberately has no default.
         initialHashedPassword = ./secrets/hashedInitialPassword.age;
       };
     };
