@@ -63,6 +63,12 @@ marker.
 
 ## Deploying
 
-`.github/workflows/pages.yml` on this branch updates the `neusis` input to
-the tip of `main`, builds `.#site`, and publishes it with GitHub Pages. It
-runs on every push to `gh-pages` and can be started by hand.
+Two workflows publish the site to GitHub Pages, and they build it the same way:
+
+- `.github/workflows/pages.yml` on `gh-pages` runs on every push to this
+  branch. It updates the `neusis` input to the tip of `main`, then builds.
+- `.github/workflows/docs.yml` on `main` runs when something the site
+  documents changes (`modules/`, `cli/`, `docs/`, `templates/`, the flake).
+  It checks out this branch and builds against the commit just pushed.
+
+Both can also be started by hand from the Actions tab.
