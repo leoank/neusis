@@ -100,7 +100,7 @@
             # Ship `gclb` (git-clone-bare-with-worktree) on every user
             # whose home-manager bundle imports this umbrella. The
             # package itself is defined as a flake-parts perSystem
-            # output under `new_modules/packages/gclb/`.
+            # output under `modules/packages/gclb/`.
             home.packages = [ outputs.packages.${pkgs.stdenv.hostPlatform.system}.gclb ];
 
             programs.git = {

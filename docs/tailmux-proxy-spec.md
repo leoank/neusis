@@ -7,7 +7,7 @@ end of this file).
 
 ## 1. Why this exists
 
-The neusis `tailscale` system module (`new_modules/features/tailscale/`,
+The neusis `tailscale` system module (`modules/features/tailscale/`,
 `neusis.services.tailscale`) runs **one** system-wide tailnet at a time. You
 can declare several *profiles* and switch the active one at runtime
 (`tailscale switch`), but only one is live — a single `tailscaled` owns the
@@ -192,7 +192,7 @@ tsmux diag path <url> [--netcheck]
 fits the "extra HM tailnets" slot from the original design.
 
 - **Packaging.** A Go flake package (`buildGoModule`) — add as a flake input
-  or vendor under `new_modules/packages/tsmux/`. Declare the input in a
+  or vendor under `modules/packages/tsmux/`. Declare the input in a
   `features/flake/*.nix` module (remember: `git add` new input-declaring files
   before `nix run .#write-flake`).
 - **HM module** `homeModules.tsmux` (mirror the existing home modules):

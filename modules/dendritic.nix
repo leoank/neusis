@@ -16,7 +16,7 @@
   # generate the flake output string
   # This way you can use custom modules directory
   flake-file.outputs = ''
-    inputs: inputs.flake-parts.lib.mkFlake { inherit inputs; } (inputs.import-tree ./new_modules)
+    inputs: inputs.flake-parts.lib.mkFlake { inherit inputs; } (inputs.import-tree ./modules)
   '';
 
 }

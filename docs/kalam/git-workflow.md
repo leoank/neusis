@@ -339,12 +339,12 @@ plugin-native, not configured by kalam.
 
 ## 11. Where the configuration lives
 
-- [`plugins/git.nix`](../../new_modules/packages/kalam/_flavors/base/config/plugins/git.nix) —
+- [`plugins/git.nix`](../../modules/packages/kalam/_flavors/base/config/plugins/git.nix) —
   gitsigns + neogit + diffview + octo setup and all leader-bindings.
-- [`plugins/whichkey.nix`](../../new_modules/packages/kalam/_flavors/base/config/plugins/whichkey.nix) —
+- [`plugins/whichkey.nix`](../../modules/packages/kalam/_flavors/base/config/plugins/whichkey.nix) —
   declares the `<leader>g{d,h,o}` subgroup labels so the popup is
   navigable.
-- [`plugins/snacks.nix`](../../new_modules/packages/kalam/_flavors/base/config/plugins/snacks.nix) —
+- [`plugins/snacks.nix`](../../modules/packages/kalam/_flavors/base/config/plugins/snacks.nix) —
   owns `<leader>gb` (blame popup) and `<leader>gW` (gitbrowse).
 
 `gh` is added via `extraPackages` in `git.nix`, so the binary is

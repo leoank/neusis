@@ -2130,3 +2130,36 @@ After the migration only gemini was installed, so `agy` was missing.
 ### Still open
 
 - Not deployed (`darwin-rebuild switch`) on either host.
+
+## 2026-10-06 — merge prep: v1 archived, old tree → `old_modules/`, `new_modules/` → `modules/`
+
+Preparing `refactor` to land on `main` without deleting anything.
+
+- **`v1` branch + annotated `v1` tag** created from `main` and pushed. Before
+  tagging, the main worktree's *uncommitted* legacy edits were committed to
+  `main` verbatim (rogue linux-builder tweaks, kalamv2 obsidian → unstable,
+  lock bump, `docs/ank/shortcuts.md`) so the archive is complete. Two
+  *untracked* WIP items (`inputs.nix`, `pkgs/rekalam/`) were found afterwards
+  and committed as a second `main` commit; `v1` points at the first capture
+  commit, so `v1` lacks those two but `main`/`old_modules/` have them. Move
+  the tag (`git tag -f v1 main` + force-push the tag) if you want `v1` to
+  include them.
+- **Old tree → `old_modules/`** via `git mv` (585 renames; history follows).
+  Files `refactor` had deleted (`lib/`, `shell.nix`, `flakeModules/packages.nix`)
+  and `main`'s `flake.nix`/`flake.lock` were restored under `old_modules/` so
+  it is a self-contained flake (`nix build path:./old_modules#…`). The
+  astroank submodule moved with it (`.gitmodules` path updated). `main` was
+  then merged into `refactor` with `merge.directoryRenames=true`; conflicts:
+  root `flake.lock` (kept ours; main's bump went to `old_modules/flake.lock`)
+  and `old_modules/machines/rogue/default.nix` (took main's). Proof: every
+  blob in `main`'s tree (minus root metadata) is byte-identical under
+  `old_modules/`.
+- **`new_modules/` → `modules/`**: `git mv` + 17 files' references updated
+  (dendritic.nix, flake.nix regenerated, `.nvim.lua`, cli schema extractor +
+  README/INSIDER, docs). `old_modules/modules/` is the *old* `modules/`.
+- `AGENTS.md` / `README.md` rewritten for the merged layout; the old
+  "refactor in progress" note is gone.
+- The obsidian → `pkgs.unstable` change from main was **not** ported into
+  kalam-v2 (archive only, per decision).
+- Verified after each step: both darwin systems + both home configs + all
+  packages eval; full `nix build` of both systems; `go test` green.

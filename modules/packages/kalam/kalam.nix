@@ -6,7 +6,7 @@
 # flavor config modules reference `pkgs.git-worktree-custom` (see
 # `_flavors/*/config/plugins/git/git-worktree.nix`). All other build
 # inputs come from the perSystem `pkgs` configured in
-# `new_modules/system-pkgs.nix` — no per-package nixpkgs rebuild.
+# `modules/system-pkgs.nix` — no per-package nixpkgs rebuild.
 { self, ... }:
 {
   flake-file.inputs.nixvim = {

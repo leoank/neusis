@@ -42,7 +42,7 @@ local nixd_settings = {
 
       -- Flake-parts options — completion for THIS flake's own
       -- schema (`flake.neusis.*` declared in
-      -- `new_modules/lib/neusis-options.nix`).
+      -- `modules/lib/neusis-options.nix`).
       --
       -- flake-parts puts everything under a single `flake`
       -- submodule option. nixd needs a plain attrset rooted at

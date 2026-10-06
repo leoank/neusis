@@ -148,7 +148,7 @@ Because `home.file."<...>".source = ./.` symlinks into the Nix
 store, you **can't edit `~/.hammerspoon/init.lua` directly** — it's
 read-only. The supported flow is:
 
-1. Edit the source: `new_modules/homeModules/hammerspoon/init.lua`.
+1. Edit the source: `modules/homeModules/hammerspoon/init.lua`.
 2. `git add` the change.
 3. `home-manager switch --flake .#<user>@<host>`.
 4. Hammerspoon menubar → *Reload Config* (or `hs.reload()`).

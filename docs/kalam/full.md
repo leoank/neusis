@@ -283,7 +283,7 @@ by base).
 
 The snippet files are baked into the nix store (read-only). To iterate
 on them, edit the files under
-`new_modules/packages/kalam/_flavors/full/config/latex/snippets/tex/`
+`modules/packages/kalam/_flavors/full/config/latex/snippets/tex/`
 and rebuild the flavor. There's no live-reload in the packaged build —
 that's the trade-off for a fully declarative, reproducible editor.
 

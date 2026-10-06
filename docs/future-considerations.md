@@ -10,7 +10,7 @@ Status: deferred — fine as-is for the current set of four roles
 
 ### What's there today
 
-`new_modules/lib/neusisOS.nix` carries a private `roleSpecs` attrset:
+`modules/lib/neusisOS.nix` carries a private `roleSpecs` attrset:
 
 ```nix
 roleSpecs = {
@@ -31,7 +31,7 @@ new role today means editing the lib file.
 Promote the catalogue to a typed flake option so consumers can extend
 it from their own modules without forking the lib.
 
-In `new_modules/lib/neusis-options.nix`:
+In `modules/lib/neusis-options.nix`:
 
 ```nix
 roleSpecType = types.submodule {
@@ -61,7 +61,7 @@ roles = mkOption {
 };
 ```
 
-A separate file (`new_modules/lib/builtin-roles.nix` or similar)
+A separate file (`modules/lib/builtin-roles.nix` or similar)
 contributes the four built-in roles via `flake.neusis.roles.<name> =
 { extraGroups = …; };`.
 

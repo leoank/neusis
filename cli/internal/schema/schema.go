@@ -1,5 +1,5 @@
 // Package schema exposes an embedded snapshot of neusis's option
-// descriptions (from new_modules/lib/neusis-options.nix), used as the
+// descriptions (from modules/lib/neusis-options.nix), used as the
 // source of truth for wizard help text. Regenerate files/schema.json
 // with extract.nix — see that file's header.
 package schema

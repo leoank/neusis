@@ -402,5 +402,5 @@ Select → `<Tab>` → wrapping trigger (`mk`, `//`, `lr(`, `bf`, …).
 - [ejmastnak's guide](https://www.ejmastnak.com/tutorials/vim-latex/) —
   the source material; deeper on snippet-writing technique.
 - The snippet files themselves:
-  `new_modules/packages/kalam/_flavors/full/config/latex/snippets/tex/`
+  `modules/packages/kalam/_flavors/full/config/latex/snippets/tex/`
   — copy a snippet, tweak the trigger, rebuild to make it yours.

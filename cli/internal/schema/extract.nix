@@ -10,7 +10,7 @@ let
   lib = flake.inputs.nixpkgs.lib;
   fpLib = flake.inputs.flake-parts.lib;
 
-  optMod = import (root + "/new_modules/lib/neusis-options.nix") {
+  optMod = import (root + "/modules/lib/neusis-options.nix") {
     inherit lib;
     flake-parts-lib = fpLib;
   };

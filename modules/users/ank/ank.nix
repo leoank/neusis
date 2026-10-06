@@ -157,7 +157,7 @@
       };
 
       # Placeholder tokens — fill real values with
-      # `agenix edit new_modules/secrets/ank/<name>.age`.
+      # `agenix edit modules/secrets/ank/<name>.age`.
       age.secrets.ghauthToken.rekeyFile = ../../secrets/ank/ghauthToken.age;
       age.secrets.atuinToken.rekeyFile = ../../secrets/ank/atuinToken.age;
     };

@@ -81,7 +81,7 @@ All of these were explicit choices, most made with the user in the loop.
 
 5. **Help text auto-derived from the schema.** Wizard field help comes
    from an embedded JSON snapshot of the `mkOption` descriptions in
-   `new_modules/lib/neusis-options.nix` (extracted via `evalModules` +
+   `modules/lib/neusis-options.nix` (extracted via `evalModules` +
    `getSubOptions`), with concise built-in fallbacks. No hand-copied
    drift.
 
@@ -273,7 +273,7 @@ neusis-core fixes landed.
   rekey), once the agenix-rekey flow is settled.
 
 **Regenerating the schema snapshot** (after editing
-`new_modules/lib/neusis-options.nix`):
+`modules/lib/neusis-options.nix`):
 
 ```bash
 cd cli/internal/schema

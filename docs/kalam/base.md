@@ -5,7 +5,7 @@ and plugin does for you compared to a stock `nvim` install. Read
 top-to-bottom on day one, or skim the table-of-contents and jump.
 
 The full plugin list and file layout lives in
-[`base/README.md`](../../new_modules/packages/kalam/_flavors/base/README.md).
+[`base/README.md`](../../modules/packages/kalam/_flavors/base/README.md).
 
 ---
 
@@ -1025,10 +1025,10 @@ common — "I'm done with this *view*, keep the file open".
 
 ## 15. Where to go next
 
-- [`base/README.md`](../../new_modules/packages/kalam/_flavors/base/README.md)
+- [`base/README.md`](../../modules/packages/kalam/_flavors/base/README.md)
   — file layout and module index.
 - Extending base by layering language modules on top — see the
   "Extending" section of the README.
-- [`flake.neusis.lib.kalam`](../../new_modules/lib/kalam.nix) —
+- [`flake.neusis.lib.kalam`](../../modules/lib/kalam.nix) —
   the helper namespace. `kalamLib.mkKeymap` and friends are
   available in every flavor config module via `extraSpecialArgs`.

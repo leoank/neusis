@@ -42,7 +42,7 @@ go test ./...            # test
 ```
 
 Wizard help text is derived from neusis's option schema. Regenerate the
-snapshot after changing `new_modules/lib/neusis-options.nix`:
+snapshot after changing `modules/lib/neusis-options.nix`:
 
 ```bash
 cd internal/schema
