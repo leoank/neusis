@@ -127,6 +127,9 @@
             forwarded = nixos.services.kanata.enable;
             keyboards = builtins.attrNames nixos.services.kanata.keyboards;
             cfgFile = toString nixos.services.kanata.keyboards.default.configFile;
+            # retries until /dev/uinput carries the uinput group
+            restart = nixos.systemd.services.kanata-default.serviceConfig.Restart;
+            restartSec = nixos.systemd.services.kanata-default.serviceConfig.RestartSec;
             noLaunchd = !(nixos ? launchd);
             failed = t.failedAssertions nixos;
           };
@@ -135,6 +138,8 @@
             forwarded = true;
             keyboards = [ "default" ];
             cfgFile = toString ../../agnosticModules/kanata/custom.kbd;
+            restart = "on-failure";
+            restartSec = 2;
             noLaunchd = true;
             failed = [ ];
           };

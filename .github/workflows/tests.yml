@@ -44,7 +44,7 @@ jobs:
         run: nix run .#neusis-test
 
   flake-check:
-    name: T1 eval all checks (linux runner)
+    name: T1 eval Linux checks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -52,15 +52,16 @@ jobs:
         with:
           extra-conf: |
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
-      # `nix flake check --no-build` cannot evaluate the Darwin checks on a
-      # cold store: stylix needs import-from-derivation (a fetch, buildable
-      # anywhere) and --no-build forbids even that. So: flake check for the
-      # runner's own system, then instantiate every system's checks with
-      # `nix eval`, which may build IFD inputs but builds no check.
+      # The Darwin checks cannot be instantiated here at all: stylix needs
+      # import-from-derivation of an aarch64-darwin derivation
+      # (base16-schemes), which only a Darwin builder can realise — the
+      # `darwin` job below covers them natively. Linux: flake check for the
+      # runner's own system, then instantiate both Linux systems' checks
+      # with `nix eval` (builds nothing but IFD inputs).
       - run: nix flake check --no-build
-      - name: instantiate checks for every system
+      - name: instantiate checks for the Linux systems
         run: |
-          for sys in x86_64-linux aarch64-linux aarch64-darwin; do
+          for sys in x86_64-linux aarch64-linux; do
             echo "== $sys"
             nix eval --raw ".#checks.$sys" --apply \
               'cs: builtins.concatStringsSep "\n" (map (n: "${n}  ${cs.${n}.drvPath}") (builtins.attrNames cs)) + "\n"'

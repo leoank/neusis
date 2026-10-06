@@ -185,6 +185,23 @@
         # keyboard`) takes over. `optionalAttrs isLinux` omits the
         # `services.kanata` key entirely on Darwin.
         (lib.optionalAttrs isLinux {
+          # nixpkgs's units have no restart policy, and at boot kanata can
+          # start before udev has applied the `uinput` group to /dev/uinput
+          # ("Failed to open the output uinput device", seen on fast KVM
+          # hosts). Retry instead of staying failed.
+          systemd.services = lib.mkIf cfg.enable (
+            lib.mapAttrs' (
+              name: _:
+              lib.nameValuePair (mkName name) {
+                serviceConfig = {
+                  Restart = lib.mkDefault "on-failure";
+                  RestartSec = lib.mkDefault 2;
+                };
+                unitConfig.StartLimitIntervalSec = lib.mkDefault 0;
+              }
+            ) cfg.keyboards
+          );
+
           services.kanata = lib.mkIf cfg.enable {
             enable = true;
             package = cfg.package;
