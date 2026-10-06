@@ -1,6 +1,7 @@
 # supercharged-git: gh (GitHub CLI) module.
-# Enables `programs.gh` with gh-dash and gh-copilot extensions
-# pre-installed. Override `extensions` to swap or extend.
+# Enables `programs.gh` with the gh-dash extension pre-installed.
+# Override `extensions` to swap or extend. (gh-copilot was dropped:
+# archived upstream, removed from nixpkgs 26.05.)
 { ... }:
 {
   flake.homeModules.supercharged-git-gh =
@@ -21,9 +22,8 @@
           type = lib.types.listOf lib.types.package;
           default = with pkgs; [
             gh-dash
-            gh-copilot
           ];
-          defaultText = lib.literalExpression "with pkgs; [ gh-dash gh-copilot ]";
+          defaultText = lib.literalExpression "with pkgs; [ gh-dash ]";
           description = "gh extensions to install alongside the CLI.";
         };
       };

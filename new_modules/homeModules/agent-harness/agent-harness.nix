@@ -312,7 +312,7 @@
           programs.claude-code = {
             enable = true;
             package = claudePkg;
-            skillsDir = cfg.skillsDir;
+            skills = cfg.skillsDir;
             commandsDir = cfg.commandsDir;
             agentsDir = cfg.agentsDir;
             inherit (cfg.tools.claude) settings;
@@ -339,11 +339,15 @@
           };
         })
 
-        # gemini-cli.
+        # gemini-cli. HM 26.05 renamed the module to `antigravity-cli`;
+        # the package is still gemini-cli, so keep writing the legacy
+        # `~/.gemini/` layout (the jailed wrapper's name differs from
+        # "gemini-cli", so the auto-detection isn't relied on).
         (lib.mkIf cfg.tools.gemini.enable {
-          programs.gemini-cli = {
+          programs.antigravity-cli = {
             enable = true;
             package = geminiPkg;
+            useLegacyGeminiConfig = true;
             context.GEMINI = cfg.agentsMd;
             inherit (cfg.tools.gemini) settings;
           };

@@ -12,5 +12,5 @@
 # Disabling *highlight* for `latex` hands tex rendering back to VimTeX.
 # The treesitter parser still attaches, so folds/indent keep working.
 {
-  plugins.treesitter.settings.highlight.disable = [ "latex" ];
+  plugins.treesitter.highlight.disable = [ "latex" ];
 }

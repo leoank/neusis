@@ -35,7 +35,7 @@
   # plugins.lsp.servers wiring; formatters don't, so they get
   # added explicitly.
   extraPackages = with pkgs; [
-    nixfmt-rfc-style
+    nixfmt
     ruff
   ];
 

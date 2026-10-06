@@ -32,6 +32,8 @@
           package = cfg.package;
           enableZshIntegration = true;
           enableBashIntegration = true;
+          # HM 26.05 changed the default to "y"; keep the existing alias.
+          shellWrapperName = "yy";
           keymap = {
             mgr.prepend_keymap = [
               {

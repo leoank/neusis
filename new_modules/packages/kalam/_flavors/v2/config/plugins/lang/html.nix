@@ -9,7 +9,7 @@
 
       formatters = {
         prettierd.command = "${pkgs.prettierd}/bin/prettierd";
-        prettier.command = "${pkgs.nodePackages.prettier}/bin/prettier";
+        prettier.command = "${pkgs.prettier}/bin/prettier";
       };
     };
 
