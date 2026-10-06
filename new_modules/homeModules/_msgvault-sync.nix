@@ -4,12 +4,12 @@
 # timer on Linux. Configure via `neusis.services.msgvault-sync.*`.
 { ... }:
 {
-  flake-file.inputs = {
-    msgvault = {
-      url = "github:wesm/msgvault";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-  };
+  # flake-file.inputs = {
+  #   msgvault = {
+  #     url = "github:wesm/msgvault";
+  #     inputs.nixpkgs.follows = "nixpkgs";
+  #   };
+  # };
 
   flake.homeModules.msgvault-sync =
     {
@@ -87,40 +87,42 @@
         };
       };
 
-      config = lib.mkIf cfg.enable (lib.mkMerge [
-        # Darwin: user launchd agent.
-        (lib.mkIf pkgs.stdenv.isDarwin {
-          launchd.agents.msgvault-sync = {
-            enable = true;
-            config = {
-              ProgramArguments = [ (lib.getExe cfg.package) ] ++ cfg.extraArgs;
-              StartCalendarInterval = cfg.launchdSchedule;
-              StandardErrorPath = "${cfg.logDir}/msgvault-sync.err.log";
-              StandardOutPath = "${cfg.logDir}/msgvault-sync.out.log";
+      config = lib.mkIf cfg.enable (
+        lib.mkMerge [
+          # Darwin: user launchd agent.
+          (lib.mkIf pkgs.stdenv.isDarwin {
+            launchd.agents.msgvault-sync = {
+              enable = true;
+              config = {
+                ProgramArguments = [ (lib.getExe cfg.package) ] ++ cfg.extraArgs;
+                StartCalendarInterval = cfg.launchdSchedule;
+                StandardErrorPath = "${cfg.logDir}/msgvault-sync.err.log";
+                StandardOutPath = "${cfg.logDir}/msgvault-sync.out.log";
+              };
             };
-          };
-        })
+          })
 
-        # Linux: systemd user service + timer.
-        (lib.mkIf pkgs.stdenv.isLinux {
-          systemd.user.services.msgvault-sync = {
-            Unit.Description = "Incremental Gmail sync via msgvault";
-            Service = {
-              Type = "oneshot";
-              ExecStart = lib.escapeShellArgs ([ (lib.getExe cfg.package) ] ++ cfg.extraArgs);
+          # Linux: systemd user service + timer.
+          (lib.mkIf pkgs.stdenv.isLinux {
+            systemd.user.services.msgvault-sync = {
+              Unit.Description = "Incremental Gmail sync via msgvault";
+              Service = {
+                Type = "oneshot";
+                ExecStart = lib.escapeShellArgs ([ (lib.getExe cfg.package) ] ++ cfg.extraArgs);
+              };
             };
-          };
-          systemd.user.timers.msgvault-sync = {
-            Unit.Description = "Run msgvault-sync on a schedule";
-            Timer = {
-              OnCalendar = cfg.systemdOnCalendar;
-              # Run missed invocations on wake/boot — robustness over
-              # strict launchd-style "skip if asleep".
-              Persistent = true;
+            systemd.user.timers.msgvault-sync = {
+              Unit.Description = "Run msgvault-sync on a schedule";
+              Timer = {
+                OnCalendar = cfg.systemdOnCalendar;
+                # Run missed invocations on wake/boot — robustness over
+                # strict launchd-style "skip if asleep".
+                Persistent = true;
+              };
+              Install.WantedBy = [ "timers.target" ];
             };
-            Install.WantedBy = [ "timers.target" ];
-          };
-        })
-      ]);
+          })
+        ]
+      );
     };
 }

@@ -13,12 +13,12 @@
     { ... }:
     {
       imports = [
-        self.homeModules.msgvault-sync
+        #self.homeModules.msgvault-sync
         self.homeModules.qmd-reindex
         self.homeModules.agent-harness
       ];
 
-      neusis.services.msgvault-sync.enable = true;
+      #neusis.services.msgvault-sync.enable = true;
       neusis.services.qmd-reindex.enable = true;
       neusis.agent-harness = {
         enable = true;

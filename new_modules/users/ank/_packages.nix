@@ -30,7 +30,7 @@
       gping
       procs
       bandwhich
-      inputs.msgvault.packages.${pkgs.stdenv.hostPlatform.system}.default
+      #inputs.msgvault.packages.${pkgs.stdenv.hostPlatform.system}.default
       bitwarden-desktop
       pnpm
       mosh
