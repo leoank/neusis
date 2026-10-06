@@ -2181,6 +2181,20 @@ Follow-up: copies of `scripts/` and `templates/` were put back under
 `old_modules/` as well, so the archive is complete and its nested flake's
 `templates` output evaluates again. Root copies are the live ones.
 
+## 2026-10-06 — devShell ported to modules/features/flake/shell.nix
+
+Added a minimal devShell under `modules/features/flake/shell.nix` mimicking the
+agenix feature module structure. Provides `agenix` (via `config.agenix-rekey.package`
+with `AGENIX_REKEY_ADD_TO_GIT = true`) and `neusis` (via `config.packages.neusis`).
+The redundant inline `devShells.default` block in `agenix-rekey.nix` was removed.
+
+## 2026-10-06 — integrate scripts/anywhere.py into neusis CLI
+
+Ported `scripts/anywhere.py` functionality into the Go `neusis` CLI:
+- Core package at `cli/internal/anywhere`: age file decryption, directory structure reconstruction, SSH host key permission normalization (600 private / 644 public), and `nixos-anywhere` command execution.
+- CLI command `neusis anywhere` with `deploy` and `decrypt` subcommands (and backward-compatible shorthand `neusis anywhere <extra_files_folder>`).
+
+
 ## 2026-10-06 — test suite: nix-unit harness, mirrored tests, checks, CI
 
 Design and work scope in `docs/testing.md`. Layout: `modules/tests/` mirrors
