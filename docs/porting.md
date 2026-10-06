@@ -2163,3 +2163,16 @@ Preparing `refactor` to land on `main` without deleting anything.
   kalam-v2 (archive only, per decision).
 - Verified after each step: both darwin systems + both home configs + all
   packages eval; full `nix build` of both systems; `go test` green.
+
+## 2026-10-06 — scripts/ and templates/ promoted from old_modules/ to the root
+
+`old_modules/{scripts,templates}` → `scripts/`, `templates/` (git mv; 73
+files). `templates/` is wired back as a flake output by the new
+`modules/templates.nix` (`flake.templates = import ../templates;`), so
+`nix flake init -t github:leoank/neusis#<name>` works again with the same
+eleven templates (flake, flakevirt, fhsflake, fhspythonml, python,
+pythonml, python-nix, python-uv, python-pixi, python-pixi-multienv, rust).
+`scripts/anywhere.py` (nixos-anywhere bootstrap with age secrets) is not
+referenced by any module; it is a standalone `uv run` script. Note
+`old_modules/flake.nix` still says `templates = import ./templates;`, so
+that one output of the archived flake no longer evaluates.

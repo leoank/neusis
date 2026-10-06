@@ -26,6 +26,8 @@ modules/           the live flake (dendritic; one flake-parts module per file)
   packages/          kalam (nixvim flavours), gclb, neusis-cli
   lib/ shells/ overlays.nix deploy.nix
 cli/               Go `neusis` CLI that scaffolds consumer repos (flake.packages.<sys>.neusis)
+templates/         `nix flake init -t .#<name>` project templates (exposed by modules/templates.nix)
+scripts/           standalone helper scripts (anywhere.py: nixos-anywhere + age secrets bootstrap)
 examples/          consumer-repo examples (external-flake, flake-parts-consumer)
 docs/              overview, per-module tutorials, porting log, specs
 old_modules/       the complete pre-refactor (v1) tree, archived verbatim — see its README
