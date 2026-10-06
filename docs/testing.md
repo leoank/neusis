@@ -75,11 +75,11 @@ Patterns worth copying:
 | **T0 eval unit** | `nix run .#neusis-test` (= `nix-unit --flake .#tests.<system>`) | ~65 s per test set (220 tests) | lib, options, every module and feature at eval level, machine invariants |
 | **T1 eval flake** | `nix flake check --no-build --all-systems` | ~40 s | every `checks.*` derivation instantiates (= today's `drvPath` ladder, automated) |
 | **T2 build** | `nix flake check` or `nix build .#checks.<sys>.<name>` | minutes–hours | systems, homes, packages really build |
-| **T3 VM** (optional) | `nix build .#checks.<linux-sys>.vm-<name>` | minutes each | NixOS services under systemd; needs the linux-builder |
+| **T3 VM** | `nix build .#checks.<linux-system>.vm-<name>` | 2–10 min each | NixOS VMs: full fixture machine, services under systemd, a two-node build cluster, home bundles, packages |
 
 T0 is the default developer loop and the bulk of the new code. T1/T2 are
-mostly glue: wrap what already exists as `checks`. T3 is proposed but
-scoped out of the first pass (see open questions).
+mostly glue: wrap what already exists as `checks`. T3 is described in
+section 7.
 
 ### 3.2 Where tests live ✅ mirror tree `modules/tests/**/<name>.test.nix`
 
@@ -245,10 +245,18 @@ command green before the next starts. Commit per item
 | **Phase 6 — docs and automation** | | |
 | 6.1 | `AGENTS.md` verification ladder → the four tiers; `docs/porting.md` entry | — |
 | 6.2 | GitHub Actions `tests.yml`: T0 for `x86_64-linux` + T1 on ubuntu; T2 darwin builds optional on a macOS runner | workflow green |
-| **Phase 7 — deferred** | | |
-| 7.1 | VM tests: tailscale autoconnect, kanata, build-server on the linux-builder (explicitly skipped for now) | `nix build .#checks.aarch64-linux.vm-tailscale` |
-| 7.2 | `nix-unit` flake input so T0 joins `nix flake check` | — |
-| 7.3 | namaka snapshots for generated config files | — |
+| **Phase 7 — VM tests (section 7)** | | |
+| 7.0 | `mkVmTest` in the harness, `_fixtures/vm/` (test-only age identity, encrypted password, SSH keys), `mkNeusisOSModules` in the lib | `nix flake check --no-build --all-systems` |
+| 7.1 | `vm-neusis-os`: the fixture machine through `mkNeusisOSModules` — accounts, groups, agenix-seeded password, home-manager activation | `nix build .#checks.aarch64-linux.vm-neusis-os` |
+| 7.2 | `vm-tailscale`: daemon, autoconnect unit, profile scripts | T3 |
+| 7.3 | `vm-kanata`: service running without a keyboard | T3 |
+| 7.4 | `vm-build-cluster`: build-server + build-client nodes, `nix store info` over ssh-ng, a remote build | T3 |
+| 7.5 | `vm-home-bundle`: supercharged-git/-shell/terminal-velocity tools rendered and runnable for a user | T3 |
+| 7.6 | `vm-packages`: neusis CLI, gclb, kalam run inside a VM | T3 |
+| 7.7 | CI: VM tests on the x86_64 runner (KVM) | workflow green |
+| **Phase 8 — deferred** | | |
+| 8.1 | `nix-unit` flake input so T0 joins `nix flake check` | — |
+| 8.2 | namaka snapshots for generated config files | — |
 
 Size as implemented: 70 test files (220 tests), `harness.nix`, two checks
 glue files, one fixtures directory, one CI workflow.
@@ -261,7 +269,8 @@ glue files, one fixtures directory, one CI workflow.
    .#neusis-test` wrapper.
 3. **Depth for homeModules** — eval-only; the two real machines plus the
    auto-generated `checks` are the build tests.
-4. **VM tests** — skipped for now (Phase 7).
+4. **VM tests** — first skipped, then added as Phase 7 (section 7) once
+   the suite had found and fixed the NixOS-side bugs.
 5. **CI** — yes, in this effort (Phase 6.2).
 
 ## 6. Findings (2026-10-06)
@@ -281,3 +290,52 @@ pinned them with `expectedError` now assert the fixed behaviour.
 | `packages/kalam` | `kalam-py` could not evaluate on Darwin (Wayland `badPlatforms`), breaking `nix flake check`. | `py` and `v2` flavours removed; `kalam` and `kalam-full` remain. |
 | `homeModules/supercharged-git/multi-account.nix` | home-manager 26.05 deprecation warnings: `programs.ssh.matchBlocks` → `settings`, legacy `Host *` defaults. | Ported to `programs.ssh.settings`; `enableDefaultConfig = mkDefault false`. The suite now runs warning-free. |
 | `examples/{external-flake,flake-parts-consumer}` | Used the pre-refactor API (`userConfig`, `homeManager`, `neusisOS.homeModules`, `self.flake.neusis`), referenced files that did not exist, and the flake-parts one imported `flakeModules.lib` which lacks the integration modules `mkNeusisOS` needs. | Rewritten against `userRegistries` / `machineToBundlesMap` / `flakeModules.default` with placeholder key and secret; both evaluate (`nix eval .#nixosConfigurations.myhost…` in each directory). |
+
+## 7. VM tests (T3)
+
+### 7.1 What they are for
+
+T0 proves a module *evaluates* to the right configuration. T3 proves the
+configuration *works*: systemd units start, agenix decrypts, home-manager
+activates, a client can really reach a build server over SSH, a binary
+runs. They are NixOS-only (`pkgs.testers.runNixOSTest`); nix-darwin has no
+VM story, so the Darwin hosts are covered by T2 builds and by exercising
+the same agnostic modules on their NixOS side here.
+
+### 7.2 Where they run
+
+- **Locally from a Mac**: `nix build .#checks.aarch64-linux.vm-<name>` is
+  dispatched to rogue's `linux-builder` (which advertises `kvm` and
+  `nixos-test`). There is no nested virtualisation inside that VM, so QEMU
+  falls back to software emulation: the smoke test (boot, `uname`) takes
+  about 2 minutes wall-clock; service tests a few minutes; the packages
+  test longer because kalam's closure must be fetched for aarch64-linux.
+- **CI**: GitHub's ubuntu runners have KVM, so `checks.x86_64-linux.vm-*`
+  run at native speed there (Phase 7.7).
+- `nix flake check --no-build --all-systems` evaluates every VM test
+  derivation (cheap) without running it.
+
+### 7.3 Layout and helpers
+
+```
+modules/tests/vm/<name>.nix        perSystem.checks."vm-<name>" (Linux only)
+modules/tests/_fixtures/vm/        TEST-ONLY age identity, encrypted password, SSH keys (README inside)
+```
+
+`flake.neusis.lib.tests.mkVmTest pkgs { name; nodes; testScript; … }`
+wraps `runNixOSTest`, prefixes the name with `neusis-`, and passes the
+same `specialArgs` (`inputs`, `outputs`) as the real builders so machine
+and home modules work unchanged. `fixtures.vmNode` is the base for login
+hosts (agenix + openssh + zsh + the test age identity), and
+`fixtures.machines.vm` is the fixture machine with the real encrypted
+password. `mkNeusisOSModules` (lib) gives a VM node exactly the module
+list `mkNeusisOS` builds, so `vm-neusis-os` boots the full machine
+configuration rather than an approximation.
+
+Conventions: the test script asserts observable state (`systemctl`,
+files, command output), never Nix values; nodes avoid
+`features.agnostic.nix-pkgs` (the test framework pins `nixpkgs.pkgs`, and
+overlays would conflict); heavy closures (texlive, browsers, the
+agent CLIs) stay out of VM nodes — the eval tests already cover their
+wiring.
+

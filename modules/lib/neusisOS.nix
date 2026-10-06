@@ -203,7 +203,10 @@ in
         machineName,
         userModule,
         userRegistries ? [ ],
-        system ? "x86_64-linux",
+        # Sets `nixpkgs.hostPlatform` (mkDefault). `null` leaves it to the
+        # caller — a NixOS VM test node, for instance, gets its platform
+        # from the test framework and must not define it twice.
+        system ? null,
         # Path to an agenix secret holding the hashed password seeded for
         # every non-locked account on this host. Deliberately has NO
         # default — a hidden default would silently point a consumer's
@@ -230,11 +233,9 @@ in
         you cannot decrypt.'';
       [
         userModule
-        {
-          nixpkgs.hostPlatform = lib.mkDefault system;
-          networking.hostName = lib.mkDefault machineName;
-        }
+        { networking.hostName = lib.mkDefault machineName; }
       ]
+      ++ lib.optional (system != null) { nixpkgs.hostPlatform = lib.mkDefault system; }
       ++ lib.optional (initialHashedPassword != null) {
         age.secrets.commonInitialHashedPassword.file = initialHashedPassword;
       }

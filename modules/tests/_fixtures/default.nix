@@ -36,13 +36,28 @@ rec {
   # What a real NixOS host with login users carries: agenix (for the
   # initial-password secret), openssh (agenix's identity paths) and the
   # zsh program (users with a zsh login shell).
+  loginServices = {
+    imports = [ inputs.agenix.nixosModules.default ];
+    services.openssh.enable = true;
+    programs.zsh.enable = true;
+  };
+
   nixosLogin = {
     imports = [
       nixosBase
-      inputs.agenix.nixosModules.default
+      loginServices
     ];
-    services.openssh.enable = true;
-    programs.zsh.enable = true;
+  };
+
+  # Base for a NixOS VM test node (no disk/bootloader bits — the test
+  # framework provides those): login services plus the TEST-ONLY age
+  # identity from ./vm, so agenix can really decrypt the VM secrets.
+  vmNode = {
+    imports = [ loginServices ];
+    # Interpolated so the key becomes its own store path (with context)
+    # inside the VM's closure; a bare `./vm/age_key` would render as a
+    # subpath of the flake source, which the VM never has.
+    age.identityPaths = [ "${./vm/age_key}" ];
   };
 
   # ---- A fake user and registry in the shape of flake.neusis.users.* /
@@ -109,6 +124,21 @@ rec {
       userRegistries = [ lab ];
       initialHashedPassword = ./placeholder.age;
       module = nixosLogin;
+    };
+
+    # The fixture machine as a VM test node: same registry, but a real
+    # (test-only) encrypted password and the VM node base.
+    vm = {
+      hostname = "fixture";
+      computerName = null;
+      system = "x86_64-linux";
+      nixpkgs = null;
+      primaryUser = null;
+      modulesSpecialArgs = { };
+      inherit hostPubkey;
+      userRegistries = [ lab ];
+      initialHashedPassword = ./vm/hashedInitialPassword.age;
+      module = vmNode;
     };
 
     fixture-darwin = {

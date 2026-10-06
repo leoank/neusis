@@ -104,6 +104,22 @@ in
       pkgNames = pkgs: lib.sort lib.lessThan (lib.unique (map lib.getName pkgs));
 
       hasPkg = name: pkgs: lib.any (p: lib.getName p == name) pkgs;
+
+      # T3: a NixOS VM test (Linux `pkgs` only). Same specialArgs as the
+      # real builders so machine/home modules work unchanged in a node.
+      # Everything in `args` goes to `pkgs.testers.runNixOSTest`.
+      mkVmTest =
+        pkgs:
+        { name, ... }@args:
+        pkgs.testers.runNixOSTest (
+          {
+            node.specialArgs = specialArgs;
+          }
+          // args
+          // {
+            name = "neusis-${name}";
+          }
+        );
     };
 
     perSystem =
