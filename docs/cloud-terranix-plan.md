@@ -23,7 +23,67 @@ manual against the live tenancy). **Live** = touches the OCI account.
 ## Phase 0 — Spikes (throwaway, `scratch/`, gitignored)
 
 Goal: answer §9 of the spec with evidence before any module is written.
-Nothing from here is committed except findings in `docs/porting.md`.
+Nothing from here is committed except findings in
+`docs/cloud-terranix-progress.md` (and `docs/porting.md` once a
+milestone lands).
+
+### Operator prerequisites (Ankur, manual; gates S1 and M4)
+
+Everything the code can't do for you. Have the five items in **D** ready
+and the rest done before S1 starts.
+
+**A. Account**
+
+1. Oracle Cloud account (Always Free for now). Note the **home region**
+   (console → profile → tenancy): Always Free A1 capacity is only there.
+2. Optional, recommended later: upgrade to Pay-As-You-Go. Still free
+   within Always Free limits, but stops the 7-day idle reclamation of A1
+   instances and usually gets A1 capacity faster.
+
+**B. Compartment + IAM** (console → Identity & Security)
+
+3. Compartments → create `neusis` (parent: root). Copy its **OCID**.
+4. Domains → Default → Groups → create `neusis-admins`.
+5. Users → create `neusis-tf` (no console password needed) → add to
+   `neusis-admins`. (Or use your own user; a separate user is cleaner to
+   rotate/revoke.)
+6. Policies → create `neusis-tf` in the **root** compartment with:
+   ```
+   Allow group neusis-admins to manage all-resources in compartment neusis
+   Allow group neusis-admins to inspect compartments in tenancy
+   Allow group neusis-admins to read availability-domains in tenancy
+   Allow group neusis-admins to read instance-images in tenancy
+   Allow group neusis-admins to inspect tenancies in tenancy
+   ```
+   (`inspect tenancies` is for the Object Storage namespace lookup. If a
+   `plan` later fails with `NotAuthorizedOrNotFound`, widen the second
+   group of statements, not the first.)
+
+**C. API key** (console → `neusis-tf` → API keys → Add API key)
+
+7. Choose *Generate API key pair*, **download the private key**, Add.
+8. Copy the *Configuration file preview*; it has `user`, `fingerprint`,
+   `tenancy`, `region`. Keep both files out of this repo.
+
+**D. Hand-over (what I need from you)**
+
+| # | Item | Secret? | Becomes |
+|---|---|---|---|
+| 1 | API private key PEM (step 7) | yes | HM agenix `modules/secrets/ank/ociApiKey.age` → `~/.oci/neusis_api_key.pem` |
+| 2 | Config preview (step 8), as a `[neusis]` profile | yes (OCIDs + fingerprint) | HM agenix `modules/secrets/ank/ociConfig.age` → `~/.oci/config` |
+| 3 | Compartment OCID (step 3) | yes-ish (keeps OCIDs out of the public repo) | goes into `modules/secrets/ank/ociTfEnv.age` as `TF_VAR_compartment_ocid=…`, sourced by the stack wrapper |
+| 4 | State passphrase: `openssl rand -base64 32` | yes | same env secret: `TF_VAR_state_passphrase=…` |
+| 5 | Home region name (e.g. `ap-tokyo-1`) and whether PAYG was enabled | no | plain values in the stack |
+
+Creating 1–4: either you run `agenix edit modules/secrets/ank/<name>.age`
+and paste, or you put the plaintext files somewhere outside the repo and
+tell me the paths and I run the edits (your master identity
+`~/.ssh/id_ed25519` is what `agenix edit` uses). Afterwards `agenix
+rekey` is run as usual. The HM wiring (`~/.oci/*`, env file) is M4.
+
+Nothing else is needed from the account side: the base image, bucket,
+VCN, instance and ghost001's host key are all created by the stacks and
+the repo.
 
 ### S1 — Can OCI boot a repo-built aarch64 NixOS qcow2 on A1.Flex? (Live)
 
@@ -52,27 +112,57 @@ Nothing from here is committed except findings in `docs/porting.md`.
 Exit: a written recipe (resources + attributes) that boots, or the
 decision to fall back to nixos-anywhere onto a platform image (spec §8).
 
-### S2 — Does terranix pass the OpenTofu `encryption` block through?
+### S2 — Does terranix pass the OpenTofu `encryption` block through? ✅ 2026-10-17
 
-In `scratch/`, a 20-line flake importing `terranix.flakeModule` with a
-config that sets `terraform.encryption = { … pbkdf2 + aes_gcm, state/plan
-enforced … }` and `backend.local`. Check the generated `config.tf.json`,
-run `init`/`apply` with a `null_resource`, inspect that
-`terraform.tfstate` is ciphertext, and confirm that unsetting the
-passphrase makes `plan` fail (enforced). Fallback if the block doesn't
-serialise: the `TF_ENCRYPTION` env var from `prefixText`.
+Done in `scratch/s2`. **Yes**, with one JSON-syntax rule: references
+inside the encryption block must be **bare strings**, not `${…}`
+templates (OpenTofu: "a single static variable reference is required").
+The passphrase is the exception: it's a normal expression, so
+`"\${var.state_passphrase}"` works. Verified: `terraform.tfstate` is
+`{"serial":…,"meta":{…},"encrypted_data":"…"}` with no plaintext; a
+wrong passphrase fails every command ("decryption failed"); an unset one
+fails in `prefixText` before tofu runs. `TF_ENCRYPTION` is not needed.
+Shape for `state-encryption.nix`:
 
-Exit: the exact Nix attrset shape for `state-encryption.nix` (M2).
+```nix
+variable.state_passphrase = { type = "string"; sensitive = true; };
+terraform.encryption = {
+  key_provider.pbkdf2.main.passphrase = "\${var.state_passphrase}";
+  method.aes_gcm.main.keys = "key_provider.pbkdf2.main";
+  state = { method = "method.aes_gcm.main"; enforced = true; };
+  plan  = { method = "method.aes_gcm.main"; enforced = true; };
+};
+```
 
-### S3 — Flake-module ergonomics check
+### S3 — Flake-module ergonomics check ✅ 2026-10-17
 
-Still in `scratch/`: confirm `nix run .#foo.plan` / `.#foo.terraform --
-state list` work, confirm `workdir` is relative to cwd (so the wrapper
-needs a repo-root guard), and check what `nix flake check --all-systems`
-does with `packages.<sys>.foo` for non-Linux systems (§9.6). Decide
-`exportDevShells` on/off.
+Findings that shape M1's helper:
 
-Exit: notes feeding M1's `terranix.nix` feature.
+- `prefixText` runs **after** `cd <workdir>`, so a repo-root guard has
+  to look upward (`test -f ../../flake.nix` for a two-level workdir) or
+  use `git rev-parse --show-toplevel`.
+- `workdir` is relative to the invoking cwd — running from `/tmp`
+  created `/tmp/infra/spike/`. The guard is mandatory.
+- The `init/plan/apply/destroy` scripts **don't forward arguments**;
+  `nix run .#x -- -auto-approve` is silently ignored. Arbitrary
+  invocations go through `nix run .#x.terraform -- <args>`.
+- The bare `.terraform` wrapper does **not** relink `config.tf.json`;
+  only the scripts do. Running `.terraform` after a config change uses
+  the stale JSON. The helper's `prefixText` must `ln -sf` the current
+  `result.terraformConfiguration` itself so every path is fresh.
+- `tofu validate` works offline against the Nix-provided plugins → the
+  T2 `tofu-validate-<stack>` check is viable as planned.
+- `nix flake check --no-build --all-systems` evaluates
+  `packages.<sys>.<stack>` for all three systems (a cheap shell script).
+  A stack whose config embeds the aarch64-linux image path would, under
+  a full `nix flake check`, build that image once (same drv on every
+  eval system). Acceptable.
+- `devShells.<sys>.<stack>` are exported per stack; harmless, keep
+  `exportDevShells` default.
+- `.terraform.lock.hcl` is still written (records the Nix-provided
+  provider hash). Gitignore it; the Nix pin is the lock.
+- nixpkgs warns `terraform-providers.null` → `hashicorp_null`; use the
+  new names (`p.hashicorp_null`, `p.oracle_oci`).
 
 ---
 
