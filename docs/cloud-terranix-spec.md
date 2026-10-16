@@ -1,6 +1,6 @@
 # Cloud machines with terranix — architecture
 
-Status: **draft for review** (2026-10-07). Nothing here is implemented yet.
+Status: **decided** (2026-10-16; decisions in §12). Build plan: `docs/cloud-terranix-plan.md`.
 Once this is locked in, it gets turned into a milestone plan; decisions
 taken during review are recorded in §12 and, as work lands, in
 `docs/porting.md`.
@@ -113,7 +113,7 @@ What it **doesn't** do, which shapes the design:
 ```
                       neusis flake (this repo)
  ┌──────────────────────────────────────────────────────────────────────┐
- │ flake.neusis.machines.oci001 ─┬─► nixosConfigurations.oci001          │
+ │ flake.neusis.machines.ghost001 ─┬─► nixosConfigurations.ghost001          │
  │   (system, hostPubkey, module) │      (mkNeusisFlake, users, agenix,   │
  │                                │       tailscale, features.nixos.      │
  │                                │       oci-guest)                      │
@@ -132,15 +132,15 @@ What it **doesn't** do, which shapes the design:
                                             ▼              ▼
  ┌─────────────────────────── OCI tenancy ──────────────────────────────┐
  │ Object Storage: neusis-images/oci-base-aarch64-<hash>.qcow2           │
- │ Custom image (QCOW2, A1-compatible) ─────────► Instance oci001        │
+ │ Custom image (QCOW2, A1-compatible) ─────────► Instance ghost001        │
  │ VCN / subnet / IGW / security list / reserved IP ─┘  (boots base image)│
  └───────────────────────────────────────────────────────────┬──────────┘
                                                              │
-                 neusis cloud bootstrap oci001  ─────────────┘
+                 neusis cloud bootstrap ghost001  ─────────────┘
                  (push pre-generated host key, nixos-rebuild switch
-                  --flake .#oci001 → host config, agenix, tailscale)
+                  --flake .#ghost001 → host config, agenix, tailscale)
                                                              │
-                 day 2: nixos-rebuild switch --target-host oci001 (tailnet)
+                 day 2: nixos-rebuild switch --target-host ghost001 (tailnet)
 ```
 
 ### 4.2 Infrastructure tool: OpenTofu through the terranix flake-module
@@ -170,7 +170,7 @@ What it **doesn't** do, which shapes the design:
 | Reusable terranix modules | `modules/terranixModules/{state-encryption,oci/provider,oci/network,oci/image,oci/instance}.nix` | `flake.terranixModules.*` | library |
 | OCI guest hardware profile (NixOS) | `modules/features/nixos/oci-guest.nix` | `flake.neusis.features.nixos.oci-guest` | feature |
 | Base image | `modules/images/oci-base.nix` | `packages.<linux>.oci-base-image` | package |
-| The machine | `modules/machines/oci001.nix` + `registry/machines/anklab.nix` (`nixos = [ … ]`) | `nixosConfigurations.oci001` | fleet config |
+| The machine | `modules/machines/ghost001.nix` + `registry/machines/anklab.nix` (`nixos = [ … ]`) | `nixosConfigurations.ghost001` | fleet config |
 | The stacks | `modules/infra/oci-images.nix`, `modules/infra/oci-anklab.nix` | `perSystem.terranix.terranixConfigurations.*` → `packages.<sys>.oci-*` | fleet config |
 | Operator credentials | `modules/users/ank/…` (HM agenix secret + `~/.oci/config`) | — | user bundle |
 | Bootstrap command | `cli/` (`neusis cloud bootstrap`) | `packages.<sys>.neusis` | CLI |
@@ -194,9 +194,9 @@ the reusable modules expand them into resources, for example:
           neusis.oci = {
             profile = "neusis";                 # ~/.oci/config profile
             compartment = "ocid1.compartment…";
-            network.anklab = { cidr = "10.42.0.0/16"; bootstrapSsh = true; };
-            instances.oci001 = {
-              machine = self.neusis.machines.oci001; # hostname, system
+            network.anklab = { cidr = "10.42.0.0/16"; publicSsh = true; };
+            instances.ghost001 = {
+              machine = self.neusis.machines.ghost001; # hostname, system
               network = "anklab";
               shape = { name = "VM.Standard.A1.Flex"; ocpus = 4; memoryGb = 24; };
               bootVolumeGb = 100;
@@ -247,7 +247,7 @@ default, plus a `fetch-ssh-keys` unit that pulls root's
   object storage. Deliberately **not** in `nixosConfigurations` (that
   would put a secrets-less "host" in agenix-rekey's host list and in T1
   as a machine).
-- **Host config** (`nixosConfigurations.oci001`): ordinary neusis
+- **Host config** (`nixosConfigurations.ghost001`): ordinary neusis
   machine, plus `oci-guest`, agenix + `nixosModules.secrets`, tailscale +
   `ank_mesh`, users from `registry.users.anklab`, and an
   `initialHashedPassword`, which `mkNeusisOS` requires once there are
@@ -278,15 +278,15 @@ default, plus a `fetch-ssh-keys` unit that pulls root's
 
 ### 5.1 Define the machine (in git, before anything exists)
 
-1. `modules/machines/oci001.nix` + add it to `registry.machines.anklab.nixos`.
+1. `modules/machines/ghost001.nix` + add it to `registry.machines.anklab.nixos`.
 2. **Pre-generate the host SSH key** on the operator machine
    (`ssh-keygen -t ed25519`). The private half goes in as
-   `modules/secrets/bootstrap/oci001/etc/ssh/ssh_host_ed25519_key.age`
+   `modules/secrets/bootstrap/ghost001/etc/ssh/ssh_host_ed25519_key.age`
    (encrypted to the master identity, the same root-shaped layout that
    `neusis anywhere` already understands). The public half is the
    machine's `hostPubkey`.
 3. `agenix rekey`. The host's secrets (tailscale auth key, initial
-   password, …) are rekeyed for `oci001` **before the instance exists**.
+   password, …) are rekeyed for `ghost001` **before the instance exists**.
    This removes the classic "boot → keyscan → edit registry → rekey →
    redeploy" two-commit dance.
 4. T0/T1 green: the host config evaluates, and the stacks evaluate.
@@ -323,8 +323,8 @@ display name. Hand-written OCIDs never appear in Nix.
 `nix run .#oci-anklab.plan` / `.apply` creates:
 
 - VCN, internet gateway, route table, public subnet, and a security list
-  (or NSG) allowing ICMP, tailscale's UDP 41641, and **TCP 22 only while
-  `bootstrapSsh = true`** (optionally restricted to the operator's IP).
+  (or NSG) allowing ICMP, tailscale's UDP 41641, and TCP 22 while
+  `publicSsh = true` (the default, restrictable to `sshAllowCidrs`).
 - Reserved public IP (survives instance replacement; the bootstrap and
   any DNS have a stable target).
 - `oci_core_instance`: shape config, boot volume size, image from the
@@ -334,29 +334,29 @@ display name. Hand-written OCIDs never appear in Nix.
   [ source_details[0].source_id, metadata ]`**: re-baking an image or
   editing metadata must never replace a running host. Replacement is
   always explicit (§5.7).
-- Outputs: `instances.oci001.{public_ip, ocid}` (read by the bootstrap
+- Outputs: `instances.ghost001.{public_ip, ocid}` (read by the bootstrap
   command through `tofu output -json`).
 
 After apply, the instance boots the **base image**, which is already
 NixOS from this repo, reachable as root over SSH with ank's key.
 
-### 5.4 Bootstrap — `neusis cloud bootstrap oci001`
+### 5.4 Bootstrap — `neusis cloud bootstrap ghost001`
 
 One idempotent command (extends the existing `neusis anywhere` code
 path in the Go CLI, with a thin flake app wrapper):
 
 1. Read the IP from `tofu output -json` in `infra/oci-anklab/` and wait
    for SSH.
-2. Decrypt `modules/secrets/bootstrap/oci001/**.age` with the master
+2. Decrypt `modules/secrets/bootstrap/ghost001/**.age` with the master
    identity (existing `anywhere decrypt` logic) and copy them into place
    (`/etc/ssh/ssh_host_ed25519_key{,.pub}`, 0600/0644). Restart sshd and
    check that the presented host key matches `hostPubkey`.
-3. `nixos-rebuild switch --flake .#oci001 --target-host root@<ip>`
+3. `nixos-rebuild switch --flake .#ghost001 --target-host root@<ip>`
    (build on the builders, or locally with `--build-host`). Activation
    runs agenix with the now-present host key: secrets decrypt, users get
    their initial password, tailscale joins the tailnet with the
    persistent auth key.
-4. Verify: `tailscale status` shows `oci001`; `ssh ank@oci001` over the
+4. Verify: `tailscale status` shows `ghost001`; `ssh ank@ghost001` over the
    tailnet works.
 
 Why not bake the host config into the image? It buys almost nothing:
@@ -367,17 +367,18 @@ change). Why not cloud-init/user-data for the key? OCI metadata is
 readable by anything on the instance, stored in OCI, and copied into
 state. That breaks principle 5.
 
-### 5.5 Lock down
+### 5.5 Lock down (optional)
 
-Flip `bootstrapSsh = false` in the stack and apply: public port 22
-closes. From here the machine is reached only over tailscale
-(and the OCI serial console as break-glass). A plan with no changes
-after this is the "steady state" signal.
+Public SSH stays open after bootstrap by default (decision §12.8).
+Setting `publicSsh = false` in the stack and applying closes port 22;
+the machine is then reached only over tailscale (and the OCI serial
+console as break-glass). A plan with no changes is the "steady state"
+signal either way.
 
 ### 5.6 Operate (day 2)
 
 - **OS changes** (the common case): edit the flake, then
-  `nixos-rebuild switch --flake .#oci001 --target-host oci001` over the
+  `nixos-rebuild switch --flake .#ghost001 --target-host ghost001` over the
   tailnet, as a flake app/`neusis` subcommand so it's one command.
   No terranix involvement.
 - **Infra changes** (shape resize, disk, rules): `plan` → review →
@@ -413,8 +414,8 @@ needed. Reserved IP and block volumes survive.
 
 `nix run .#oci-anklab.plan` with the instance removed from the stack →
 apply (or `destroy` for the whole stack). Then remove the machine from
-the registry, delete `modules/secrets/bootstrap/oci001/` and
-`modules/secrets/rekeyed/oci001/`, `agenix rekey`, and remove the node
+the registry, delete `modules/secrets/bootstrap/ghost001/` and
+`modules/secrets/rekeyed/ghost001/`, `agenix rekey`, and remove the node
 from the tailnet. Log it in `docs/porting.md`.
 
 ## 6. State and secrets
@@ -448,7 +449,7 @@ Exported for consumer repos (via `flakeModules.default`): the
 `terranixModules` option + modules, `features.nixos.oci-guest`, a
 `mkOciBaseImage { system, extraModules }` lib helper (so a consumer can
 bake their own base), and the `neusis cloud bootstrap` CLI. Fleet-only:
-`modules/infra/*`, `modules/machines/oci001.nix`, `infra/*` state.
+`modules/infra/*`, `modules/machines/ghost001.nix`, `infra/*` state.
 A `templates/` entry for "cloud machine on OCI" can come later.
 
 ## 8. Alternatives considered
@@ -495,16 +496,16 @@ A `templates/` entry for "cloud machine on OCI" can come later.
     values: shape/ocpus/memory land in the resource; `ignore_changes`
     contains `source_details[0].source_id`; aarch64 machine + x86 shape
     → `expectedError` from the assertion; port 22 rule present iff
-    `bootstrapSsh`.
+    `publicSsh`.
   - `tests/terranixModules/state-encryption.test.nix`: `enforced = true`
     for state and plan.
   - `tests/features/nixos/oci-guest.test.nix` +
-    `tests/machines/oci001.test.nix`: host and base image agree on
+    `tests/machines/ghost001.test.nix`: host and base image agree on
     `fileSystems."/"`, ESP, `boot.loader.grub.efiSupport`; the host
     imports secrets + tailscale; `hostPubkey` matches the bootstrap key's
     `.pub` (plain string compare).
 - **T1**: `nix flake check --no-build --all-systems` instantiates
-  `nixosConfigurations.oci001`, the base image, and the stack packages.
+  `nixosConfigurations.ghost001`, the base image, and the stack packages.
 - **T2**: `checks.<sys>.tofu-validate-<stack>`: build `config.tf.json`
   and run `tofu init -backend=false && tofu validate` offline with
   Nix-provided plugins. Catches freeform attribute typos without
@@ -530,9 +531,9 @@ A `templates/` entry for "cloud machine on OCI" can come later.
 - Docs: this spec → `docs/cloud/tutorial.md` once built; porting-log
   entries per milestone; `AGENTS.md` layout/commands updated.
 
-## 12. Open decisions (need your call before the milestone plan)
+## 12. Decisions (answered 2026-10-16)
 
-1. **Machine name**: `oci001` is a placeholder (rovers theme → e.g.
+1. **Machine name**: `ghost001` is a placeholder (rovers theme → e.g.
    `sojourner`/`curiosity`?).
    *Answer* Use the name "ghost001"
 2. **Account and shape**: Always Free vs PAYG; region; A1.Flex size
