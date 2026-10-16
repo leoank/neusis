@@ -58,6 +58,59 @@ For multi-step tasks, state a brief plan:
 
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
 
+## 5. Nix Everywhere
+
+**Every project is a Nix project. The machine may be too.**
+
+I use Nix by default in all my projects. Assume a `flake.nix` at the repo
+root (often with an `.envrc` running `use flake` for direnv) is the source
+of truth for the toolchain and its dependencies.
+
+Working inside a project:
+- Run tools through the flake: `nix develop -c <cmd>`, or rely on direnv
+  having loaded the dev shell. Don't assume a tool is on PATH outside it.
+- A missing tool or library is added to the flake (`devShells`, `packages`,
+  `buildInputs`), not installed ad hoc with `pip install`, `npm i -g`,
+  `cargo install`, `brew install`, or `apt-get`. Language package managers
+  (uv, pixi, cargo, npm) are fine *inside* the dev shell when the project
+  already uses them.
+- `flake.lock` changes only via `nix flake update <input>` / `nix flake lock`,
+  and travel in the commit that changed the inputs. Don't hand-edit it.
+- If `flake.nix` is generated (e.g. by `flake-file`, look for a header
+  comment or a `write-flake` app), edit the source and regenerate.
+- Verification goes through Nix too: `nix build`, `nix flake check`,
+  `nix develop -c <test command>`. Prefer these over host-level commands.
+- No `flake.nix`? Say so and ask before adding one — don't assume the
+  project is an exception, but don't nixify it silently either.
+
+Working on a neusis-managed machine:
+
+My machines are configured by **neusis** (a flake-based NixOS / nix-darwin /
+home-manager fleet config, github:leoank/neusis). Tell-tales: the file you
+are reading is a symlink into `/nix/store/...-home-manager-files/`;
+`darwin-rebuild` or `nixos-rebuild` is on PATH; `/run/current-system` exists;
+`/etc/nix/machines` lists remote builders. When you see these:
+- Dotfiles, shell config, editor config, installed CLIs and this very
+  guideline file are **declared in the neusis repo and read-only on disk**.
+  Never edit them in place (the store is immutable and the change would
+  be lost on the next switch); never `rm` a symlink to replace it. Make
+  the change in the neusis checkout (usually a folder insider `~/workspace/`)
+  and rebuild. Read that repo's `AGENTS.md` before touching it.
+- Installing software for me means adding it to my home bundle or the
+  machine config in neusis, not `brew install` / `pip install --user`.
+  System-level `brew` is managed through nix-homebrew in the same repo.
+- Rebuilds are mine to run unless asked: `darwin-rebuild switch --flake .#<host>`,
+  `nixos-rebuild switch --flake .#<host>`, or `home-manager switch --flake
+  .#<user>@<host>`. Prefer a build-only check (`nix build .#…`,
+  `nix flake check --no-build`) and leave the switch to me.
+- Distributed builds are configured: a Linux build may be offloaded to a
+  remote builder or a local linux-builder VM. Don't pass `--builders ''`
+  to "simplify" things; it breaks configurations that need those builders.
+- Secrets are agenix-rekey `.age` files. Never try to decrypt, print, or
+  commit plaintext; edit via `agenix edit` only when asked.
+- A dev shell from a project flake is still the right place to run that
+  project's tools; the host profile is deliberately minimal.
+
 ---
 
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
