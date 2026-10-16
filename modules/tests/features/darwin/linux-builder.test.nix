@@ -1,16 +1,16 @@
-# Tests for flake.neusis.features.darwin.virtualization: the ephemeral
-# linux-builder VM (rogue only) and its log file.
+# Tests for flake.neusis.features.darwin.linux-builder: the ephemeral
+# linux-builder VM (opt-in, currently unused) and its log file.
 { self, ... }:
 {
   perSystem =
     { lib, ... }:
     let
       t = self.neusis.lib.tests;
-      cfg = t.evalDarwin { modules = [ self.neusis.features.darwin.virtualization ]; };
+      cfg = t.evalDarwin { modules = [ self.neusis.features.darwin.linux-builder ]; };
       lb = cfg.nix.linux-builder;
     in
     {
-      tests.feature-darwin-virtualization = {
+      tests.feature-darwin-linux-builder = {
         test-linux-builder-vm = {
           expr = {
             on = lb.enable;

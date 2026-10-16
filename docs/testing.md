@@ -319,11 +319,11 @@ the same agnostic modules on their NixOS side here.
   (trusted users only). The shared build key
   (`modules/secrets/common/remote-build.pub`) must be in `ank`'s
   `authorized_keys` on each builder.
-- **Locally from a Mac without them**: `checks.aarch64-linux.vm-*` are
-  dispatched to rogue's `linux-builder`. There is no nested
-  virtualisation inside that VM, so QEMU falls back to software emulation:
-  the smoke test (boot, `uname`) takes about 2 minutes wall-clock, the
-  service tests 2–3 minutes each; it works, just slowly.
+- **Locally from a Mac without them**: there is no local Linux builder
+  any more (`features.darwin.linux-builder` exists but rogue stopped
+  importing it on 2026-10-17 — the VM reserved 24 GB). `nix.linux-builder`
+  can be re-enabled per host for offline work; inside that VM QEMU falls
+  back to software emulation (minutes per test).
 - **CI**: GitHub's ubuntu runners have KVM, so `checks.x86_64-linux.vm-*`
   run at native speed there (Phase 7.7, pushes to `main` only).
 - `nix flake check --no-build --all-systems` evaluates every VM test

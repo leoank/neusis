@@ -1,7 +1,10 @@
+# Ephemeral linux-builder VM for nix-darwin hosts. Opt-in per machine;
+# no host imports it today — the VM held 24 GB on rogue, so aarch64-linux
+# builds go to spirit/oppy via the builders registry instead.
 { ... }:
 {
 
-  flake.neusis.features.darwin.virtualization =
+  flake.neusis.features.darwin.linux-builder =
     { ... }:
     {
 

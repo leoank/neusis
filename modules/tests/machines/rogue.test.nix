@@ -81,15 +81,15 @@
             ssh = cfg.services.openssh.enable;
           };
           expected = {
-            linuxBuilder = true;
+            linuxBuilder = false;
             kanata = true;
             buildServer = true;
-            # darwin001 from the registry + the local linux-builder VM
-            # darwin001 is deliberately not a builder for rogue
+            # spirit/oppy from the registry; the linux-builder VM is no
+            # longer imported (memory) and darwin001 is deliberately not a
+            # builder for rogue
             buildsOffloadTo = [
               "spirit"
               "oppy"
-              "linux-builder"
             ];
             tailscale = false;
             homebrew = true;

@@ -73,7 +73,7 @@ nix run .#neusis-test                                 # T0: nix-unit eval tests 
 NEUSIS_TEST_SYSTEM=x86_64-linux nix run .#neusis-test # T0 for the Linux variants
 nix flake check --no-build --all-systems              # T1: every machine/home/package check instantiates
 nix flake check                                       # T2: build them all (slow)
-nix build .#checks.aarch64-linux.vm-neusis-os -L      # T3: a NixOS VM test via the linux-builder (minutes)
+nix build .#checks.aarch64-linux.vm-neusis-os -L      # T3: a NixOS VM test on spirit/oppy (minutes)
 ```
 
 Verification ladder before claiming something works (details in
@@ -83,10 +83,9 @@ sets); **T1** `nix flake check --no-build --all-systems` (automates the old
 **T2** `nix build .#checks.aarch64-darwin.darwin-rogue` etc.; **T3** the
 NixOS VM tests `checks.<linux-system>.vm-*` (`modules/tests/vm/`), which
 boot the fixture machine, the services, a two-node build cluster, a home
-bundle and the packages — software-emulated through rogue's linux-builder,
-native under KVM in CI. Do **not** pass
-`--builders ''` when building `rogue` — its linux-builder VM closure needs
-the aarch64-linux builder from `/etc/nix/machines`.
+bundle and the packages — run on spirit/oppy (KVM) from a Mac, native under KVM in CI. Do **not**
+pass `--builders ''` for Linux builds — a Mac has no local Linux builder;
+the aarch64-linux/x86_64-linux builders come from `/etc/nix/machines`.
 
 Testing conventions: every module/feature/machine has a test file at the
 mirrored path under `modules/tests/` (`<name>.test.nix`, a flake-parts

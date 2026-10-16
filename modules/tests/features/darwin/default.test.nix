@@ -35,11 +35,11 @@
           expr = builtins.attrNames self.neusis.features.darwin;
           expected = [
             "defaults"
+            "linux-builder"
             "nix-homebrew"
             "setup-keyboard"
             "system-defaults"
             "theme"
-            "virtualization"
           ];
         };
       };
