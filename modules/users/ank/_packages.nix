@@ -36,6 +36,7 @@
       pnpm
       mosh
       rmpc
+      zotero
     ]
     ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
       extra-container
