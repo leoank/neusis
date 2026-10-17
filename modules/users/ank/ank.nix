@@ -1,5 +1,22 @@
-{ self, ... }:
+{ self, inputs, ... }:
 {
+  # yajna.nix — the lab notebook CLI and its Neovim plugin, from
+  # github:leoank/yajna (packages.yajna, packages.yajna-nvim). Its flake
+  # pins nixpkgs-unstable, so point it at ours to dedup the closure.
+  flake-file.inputs = {
+    yajna = {
+      url = "github:leoank/yajna";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
+    };
+  };
+  flake.neusis.users.ank.hmBundles.yajna =
+    { pkgs, ... }:
+    {
+      home.packages = [
+        inputs.yajna.packages.${pkgs.stdenv.hostPlatform.system}.yajna
+      ];
+    };
+
   # Creating home manager feature bundles
   # hmBundles can be named anything and need not match one to one with a machine
   flake.neusis.users.ank.hmBundles.kalam-ide =
@@ -35,6 +52,29 @@
         tools = {
           claude = {
             enable = true;
+            # `settings` replaces the module default wholesale, so the
+            # defaults are restated here. The yajna repo is a plugin
+            # marketplace: its plugin brings the lab-notebook skill and
+            # the /yajna:project commands. settings.json is read-only
+            # under home-manager, so the plugin is declared here instead
+            # of installed with `/plugin install`.
+            settings = {
+              hooks = {
+                PostToolUse = [ ];
+                PreToolUse = [ ];
+              };
+              includeCoAuthoredBy = false;
+              permissions.defaultMode = "acceptEdits";
+              theme = "dark";
+              extraKnownMarketplaces.yajna = {
+                source = {
+                  source = "github";
+                  repo = "leoank/yajna";
+                };
+                autoUpdate = true;
+              };
+              enabledPlugins."yajna@yajna" = true;
+            };
             # Headless browser for developing/checking web pages (e.g.
             # the docs site). nixpkgs pins its own Chromium, so no
             # `npx` downloads; snapshots go to /tmp, not the repo.
@@ -203,6 +243,7 @@
         self.neusis.features.hm.mac-app-util
         self.neusis.users.ank.hmBundles.kalam-ide
         self.neusis.users.ank.hmBundles.neusis-cli
+        self.neusis.users.ank.hmBundles.yajna
         self.neusis.users.ank.hmBundles.terminal-life
         self.neusis.users.ank.hmBundles.agent-harness
         self.neusis.users.ank.hmBundles.darwin-tools

@@ -75,5 +75,9 @@
       url = "github:darrylmorley/homebrew-whatcable";
       flake = false;
     };
+    yajna = {
+      url = "github:leoank/yajna";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
+    };
   };
 }

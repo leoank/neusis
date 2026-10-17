@@ -19,5 +19,6 @@
     ./editor.nix
     ./dap.nix
     ./ui.nix
+    ./yajna.nix
   ];
 }
