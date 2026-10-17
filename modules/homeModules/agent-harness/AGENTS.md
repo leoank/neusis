@@ -150,6 +150,33 @@ are reading is a symlink into `/nix/store/...-home-manager-files/`;
 - Prefer `git pull --rebase=merges` (or plain `git pull`) when the branch
   carries a merge commit; plain `--rebase` flattens it.
 
+## 7. Lab Notebook (yajna)
+
+**Research work is recorded in a yajna notebook. Ask before starting a project without one.**
+
+`yajna` (github:leoank/yajna) is my markdown-first lab notebook: a repo
+with `yajna.toml` holds pages for projects, experiments, runs, protocols,
+materials and a daily log under `lab/`, created and checked by the `yajna`
+CLI. My notebook is the private `manthan` repo; a project may also carry
+its own single-project notebook inside its code tree. The Claude plugin
+`yajna` (installed on my machines) brings the `yajna` skill and the
+`/yajna:project`, `/yajna:code-project`, `/yajna:bio-project`,
+`/yajna:ml-project` and `/yajna:hardware-project` commands.
+
+- When the directory has a `yajna.toml`, load the `yajna` skill and follow
+  it: identify as `agent:<name>`, create pages only through the CLI, log
+  what you did, record a session page, and keep runs reproducible.
+- When I ask you to start something new (a project, an experiment, a
+  spike, a piece of software or hardware) and no `yajna.toml` is in
+  sight, ask me first whether it should live in the notebook: as a new
+  project in `manthan` (`/yajna:project` and its variants interview me
+  before creating anything), as a project-shaped notebook inside the new
+  repo (`yajna init project`), or not at all. Do not decide this
+  yourself, and do not scaffold a notebook unasked.
+- Research-shaped questions ("what did we find about X", "which runs of
+  EXP-0007 did best") are answered from the notebook (`yajna timeline`,
+  `yajna tree`, `yajna runs`), not from memory.
+
 ---
 
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
