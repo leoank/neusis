@@ -111,6 +111,32 @@
           };
         };
 
+        # A store symlink makes Claude Code watch /nix/store itself (see the
+        # module comment), so settings.json is copied in at activation.
+        test-claude-settings-installed-as-real-file = {
+          expr =
+            let
+              cfg = harness { tools.claude.enable = true; };
+              target = "${cfg.programs.claude-code.configDir}/settings.json";
+              script = cfg.home.activation.claudeSettings;
+              plain = s: builtins.unsafeDiscardStringContext (toString s);
+              src = plain cfg.home.file.${target}.source;
+              data = plain script.data;
+            in
+            {
+              linked = cfg.home.file.${target}.enable;
+              after = script.after;
+              copiesGenerated = lib.hasInfix src data && lib.hasInfix target data;
+              offWithoutClaude = (harness { enable = true; }).home.activation ? claudeSettings;
+            };
+          expected = {
+            linked = false;
+            after = [ "linkGeneration" ];
+            copiesGenerated = true;
+            offWithoutClaude = false;
+          };
+        };
+
         test-claude-forwards-mcp-servers = {
           expr =
             let

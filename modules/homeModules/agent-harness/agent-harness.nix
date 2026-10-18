@@ -362,6 +362,26 @@
           home.file.".claude/CLAUDE.md".source = cfg.agentsMd;
         })
 
+        # Install claude's settings.json as a real file, not a symlink.
+        # HM's link resolves to a file directly in /nix/store, and Claude
+        # Code watches the directory of the *resolved* path: every session
+        # then re-lists and lstats the whole store (~186k entries),
+        # idling at 400%+ CPU and growing a 10+ GB heap over a few hours.
+        # The file is overwritten on every switch, as the symlink was.
+        (
+          let
+            cc = config.programs.claude-code;
+            target = "${cc.configDir}/settings.json";
+          in
+          lib.mkIf (cfg.tools.claude.enable && (cc.settings != { } || cc.marketplaces != { })) {
+            home.file.${target}.enable = false;
+            home.activation.claudeSettings = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+              run ${pkgs.coreutils}/bin/install -Dm644 $VERBOSE_ARG \
+                ${config.home.file.${target}.source} ${lib.escapeShellArg target}
+            '';
+          }
+        )
+
         # opencode.
         (lib.mkIf cfg.tools.opencode.enable {
           programs.opencode = {
