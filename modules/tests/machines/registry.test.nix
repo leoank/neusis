@@ -18,6 +18,7 @@
             nixos = map (m: m.hostname) r.machines.anklab.nixos;
             declared = builtins.attrNames self.neusis.machines;
             outputs = builtins.attrNames self.darwinConfigurations;
+            nixosOutputs = builtins.attrNames self.nixosConfigurations;
           };
           expected = {
             labs = [ "anklab" ];
@@ -25,15 +26,17 @@
               "rogue"
               "darwin001"
             ];
-            nixos = [ ];
+            nixos = [ "ghost001" ];
             declared = [
               "darwin001"
+              "ghost001"
               "rogue"
             ];
             outputs = [
               "darwin001"
               "rogue"
             ];
+            nixosOutputs = [ "ghost001" ];
           };
         };
 
@@ -83,8 +86,9 @@
         };
 
         # spirit and oppy are dedicated Linux builders (not neusis-managed
-        # machines); rogue is offered to its peers; darwin001 deliberately
-        # is not (Nix would prefer its slow slots over building on rogue).
+        # machines); rogue and ghost001 (low priority) are offered to their
+        # peers; darwin001 deliberately is not (Nix would prefer its slow
+        # slots over building on rogue).
         test-builders-are-the-linux-builders-plus-rogue = {
           expr = {
             order = map (b: b.hostName) r.builders.anklab;
@@ -103,12 +107,21 @@
               b.hostName == "rogue" && b.hostPubkey == self.neusis.machines.rogue.hostPubkey && b.systems == [ "aarch64-darwin" ]
             ) r.builders.anklab;
             darwin001Absent = !(lib.any (b: b.hostName == "darwin001") r.builders.anklab);
+            ghost001 =
+              let
+                b = lib.findFirst (b: b.hostName == "ghost001") null r.builders.anklab;
+              in
+              {
+                inherit (b) sshUser systems maxJobs speedFactor;
+                keyMirrored = b.hostPubkey == self.neusis.machines.ghost001.hostPubkey;
+              };
           };
           expected = {
             order = [
               "spirit"
               "oppy"
               "rogue"
+              "ghost001"
             ];
             linuxBuilders = lib.genAttrs [ "spirit" "oppy" ] (_: {
               sshUser = "ank";
@@ -122,6 +135,13 @@
             });
             rogueMirrored = true;
             darwin001Absent = true;
+            ghost001 = {
+              sshUser = "nixremote";
+              systems = [ "aarch64-linux" ];
+              maxJobs = 2;
+              speedFactor = 1;
+              keyMirrored = true;
+            };
           };
         };
 
@@ -131,7 +151,10 @@
             kumarank = builtins.attrNames self.neusis.users.kumarank.neusisOS.machineToBundlesMap;
           };
           expected = {
-            ank = [ "rogue" ];
+            ank = [
+              "ghost001"
+              "rogue"
+            ];
             kumarank = [ "darwin001" ];
           };
         };

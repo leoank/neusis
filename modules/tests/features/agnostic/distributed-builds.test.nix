@@ -61,9 +61,11 @@
             machines = [
               "spirit"
               "oppy"
+              "ghost001"
             ];
             sshKey = [ "/etc/nix/remote-build-key" ];
             knownHosts = [
+              "ghost001"
               "oppy"
               "spirit"
             ];
@@ -77,6 +79,7 @@
             "spirit:12:10"
             "oppy:12:10"
             "rogue:8:2"
+            "ghost001:2:1"
           ];
         };
 
@@ -86,6 +89,7 @@
             "spirit"
             "oppy"
             "rogue"
+            "ghost001"
           ];
         };
       };

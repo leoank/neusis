@@ -5,5 +5,8 @@
       self.neusis.machines.rogue
       self.neusis.machines.darwin001
     ];
+    nixos = [
+      self.neusis.machines.ghost001
+    ];
   };
 }

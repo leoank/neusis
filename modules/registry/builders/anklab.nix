@@ -78,5 +78,18 @@ in
       mandatoryFeatures = [ ];
       hostPubkey = m.rogue.hostPubkey;
     }
+    # ghost001 (OCI A1, 4 OCPUs): offered mainly to exercise the builder
+    # stack on a NixOS host; low priority and two slots so real work still
+    # lands on spirit/oppy. Reached over the tailnet.
+    {
+      hostName = m.ghost001.hostname;
+      sshUser = "nixremote";
+      systems = [ m.ghost001.system ];
+      maxJobs = 2;
+      speedFactor = 1;
+      supportedFeatures = [ "benchmark" ];
+      mandatoryFeatures = [ ];
+      hostPubkey = m.ghost001.hostPubkey;
+    }
   ];
 }

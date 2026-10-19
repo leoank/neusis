@@ -90,6 +90,7 @@
             buildsOffloadTo = [
               "spirit"
               "oppy"
+              "ghost001"
             ];
             tailscale = false;
             homebrew = true;

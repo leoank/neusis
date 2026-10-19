@@ -83,6 +83,7 @@
               "spirit"
               "oppy"
               "rogue"
+              "ghost001"
             ];
             tailscale = true;
             defaultMesh = "leoank";

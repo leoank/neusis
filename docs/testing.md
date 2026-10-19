@@ -389,7 +389,13 @@ Two consequences, both only visible on a store that has never built it
   as a warm-store command (the hosts). CI instantiates `checks.<system>`
   with `nix eval` instead, which realises IFD inputs as it goes and still
   builds no check; on Linux the Darwin checks cannot be instantiated at all
-  (aarch64-darwin IFD), so the macOS job does those.
+  (aarch64-darwin IFD), so the macOS job does those. The same applies in
+  the other direction since ghost001 (aarch64-linux) joined: from a Mac,
+  `nix flake check --no-build` fails on `nixos-ghost001` with "path …-ank
+  is not valid" (agenix-rekey's home rekeyed dir, a Linux IFD it won't
+  build), while `nix eval .#checks.aarch64-linux.nixos-ghost001.drvPath`
+  — and the `home-ank@ghost001` / `tofu-validate-*` checks — instantiate
+  fine through the Linux builders. Use `nix eval` for the Linux hosts.
 - `builtins.readFile` of a derivation output inside a test is also IFD;
   prefer attributes that carry the content (`writeText`'s `.text`).
 

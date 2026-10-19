@@ -203,7 +203,7 @@
 
   # Secrets bundle — agenix-rekey home secrets (personal tokens).
   flake.neusis.users.ank.hmBundles.secrets =
-    { ... }:
+    { config, ... }:
     {
       imports = [ self.homeModules.secrets ];
 
@@ -223,6 +223,24 @@
       # `agenix edit modules/secrets/ank/<name>.age`.
       age.secrets.ghauthToken.rekeyFile = ../../secrets/ank/ghauthToken.age;
       age.secrets.atuinToken.rekeyFile = ../../secrets/ank/atuinToken.age;
+
+      # Oracle Cloud operator credentials for the terranix stacks
+      # (docs/cloud-terranix-plan.md, "Operator prerequisites"): the API
+      # signing key and its ~/.oci/config profile for the provider, and
+      # the TF_VAR_* env file the stack wrapper sources (compartment
+      # OCID, state passphrase). Placeholders until filled the same way.
+      age.secrets.ociApiKey = {
+        rekeyFile = ../../secrets/ank/ociApiKey.age;
+        path = "${config.home.homeDirectory}/.oci/neusis_api_key.pem";
+      };
+      age.secrets.ociConfig = {
+        rekeyFile = ../../secrets/ank/ociConfig.age;
+        path = "${config.home.homeDirectory}/.oci/config";
+      };
+      age.secrets.ociTfEnv = {
+        rekeyFile = ../../secrets/ank/ociTfEnv.age;
+        path = "${config.home.homeDirectory}/.config/neusis/tf.env";
+      };
     };
 
   # Configuring user for neusisOS
@@ -252,6 +270,15 @@
         self.neusis.users.ank.hmBundles.casks
         self.neusis.users.ank.hmBundles.secrets
         ./_packages.nix
+      ];
+      # Headless cloud host: shell/editor/CLI bundles only — no GUI, casks
+      # or personal tokens (the `secrets` bundle needs ank's private key).
+      ghost001 = [
+        self.neusis.features.agnostic.nix-pkgs
+        self.neusis.users.ank.hmBundles.kalam-ide
+        self.neusis.users.ank.hmBundles.neusis-cli
+        self.neusis.users.ank.hmBundles.yajna
+        self.neusis.users.ank.hmBundles.terminal-life
       ];
     };
   };
