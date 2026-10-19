@@ -2,9 +2,10 @@
 # `neusis.oci.{compartment,availabilityDomain,namespace}`.
 #
 # Credentials come from the operator's `~/.oci/config` profile (an HM
-# agenix secret), never from Nix. The compartment OCID is a variable fed
-# by `TF_VAR_compartment_ocid` from the same env file as the state
-# passphrase, which keeps every OCID out of the (public) repo.
+# agenix secret), never from Nix. The region and compartment OCID are
+# variables fed by `TF_VAR_region` / `TF_VAR_compartment_ocid` from the
+# same env file as the state passphrase, which keeps every tenancy fact
+# out of the (public) repo.
 { ... }:
 {
   flake.terranixModules.oci-provider =
@@ -21,8 +22,9 @@
         };
         region = lib.mkOption {
           type = lib.types.str;
+          default = lib.tf.ref "var.region";
           example = "ap-tokyo-1";
-          description = "OCI region identifier. Always Free A1 capacity exists only in the home region.";
+          description = "OCI region identifier (expression). Always Free A1 capacity exists only in the home region.";
         };
         compartment = lib.mkOption {
           type = lib.types.str;
@@ -50,6 +52,7 @@
           region = cfg.region;
         };
 
+        variable.region.type = "string";
         variable.compartment_ocid.type = "string";
 
         data.oci_identity_availability_domains.ads.compartment_id = cfg.compartment;

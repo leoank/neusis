@@ -46,5 +46,33 @@
         qcow2 = "${image}/${cfg.image.fileName}";
         nixosConfig = cfg;
       };
+
+    # T2 check for a stack: render its Terraform JSON and run an offline
+    # `tofu init -backend=false && tofu validate` against the Nix-provided
+    # providers, so freeform attribute typos fail before any apply.
+    # `modules` is the stack's module list; `extraModules` can override
+    # what validate cannot resolve in a sandbox (an image file, say).
+    mkValidateCheck =
+      {
+        pkgs,
+        name,
+        modules,
+        extraModules ? [ ],
+      }:
+      let
+        config = inputs.terranix.lib.terranixConfiguration {
+          inherit pkgs;
+          modules = modules ++ extraModules;
+        };
+        tofu = pkgs.opentofu.withPlugins (p: [ p.oracle_oci ]);
+      in
+      pkgs.runCommand "tofu-validate-${name}" { nativeBuildInputs = [ tofu ]; } ''
+        export HOME=$TMPDIR
+        mkdir work && cd work
+        ln -s ${config} config.tf.json
+        tofu init -backend=false -input=false >/dev/null
+        tofu validate
+        touch $out
+      '';
   };
 }

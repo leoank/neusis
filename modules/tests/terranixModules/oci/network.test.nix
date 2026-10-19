@@ -13,7 +13,6 @@
             self.terranixModules.oci-provider
             self.terranixModules.oci-network
             {
-              neusis.oci.region = "ap-tokyo-1";
               neusis.oci.network.anklab = net;
             }
           ];

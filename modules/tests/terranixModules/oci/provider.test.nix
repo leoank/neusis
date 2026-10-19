@@ -8,10 +8,7 @@
       cfg =
         (inputs.terranix.lib.evalTerranixConfiguration {
           inherit pkgs;
-          modules = [
-            self.terranixModules.oci-provider
-            { neusis.oci.region = "ap-tokyo-1"; }
-          ];
+          modules = [ self.terranixModules.oci-provider ];
         }).config;
     in
     {
@@ -24,7 +21,7 @@
           expected = {
             provider.oci = {
               config_file_profile = "neusis";
-              region = "ap-tokyo-1";
+              region = "\${var.region}";
             };
             source = "oracle/oci";
           };
@@ -34,13 +31,15 @@
         # `neusis.oci.*` option values are checked through what reads
         # them: the lookups here, `availability_domain` in the instance
         # test, `namespace` in the image test)
-        test-compartment-comes-from-a-variable = {
+        test-region-and-compartment-come-from-variables = {
           expr = {
+            region = cfg.variable.region;
             variable = cfg.variable.compartment_ocid;
             adLookup = cfg.data.oci_identity_availability_domains.ads.compartment_id;
             nsLookup = cfg.data.oci_objectstorage_namespace.ns.compartment_id;
           };
           expected = {
+            region.type = "string";
             variable.type = "string";
             adLookup = "\${var.compartment_ocid}";
             nsLookup = "\${var.compartment_ocid}";

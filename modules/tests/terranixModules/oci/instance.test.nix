@@ -24,7 +24,6 @@
             self.terranixModules.oci-network
             self.terranixModules.oci-instance
             {
-              neusis.oci.region = "ap-tokyo-1";
               neusis.oci.network.anklab.cidr = "10.42.0.0/16";
               neusis.oci.instances = instances;
             }

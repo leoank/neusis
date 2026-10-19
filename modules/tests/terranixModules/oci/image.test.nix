@@ -15,7 +15,6 @@
             self.terranixModules.oci-provider
             self.terranixModules.oci-image
             {
-              neusis.oci.region = "ap-tokyo-1";
               neusis.oci.images = images;
             }
           ];
