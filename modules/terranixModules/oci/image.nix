@@ -61,7 +61,7 @@
               source_image_type = "QCOW2";
               operating_system = "NixOS";
             };
-            freeform_tags."neusis.store-hash" = hash;
+            freeform_tags."neusis-store-hash" = hash;
             # A new image exists before the old one goes; instances ignore
             # the change (oci-instance) so nothing gets replaced.
             lifecycle.create_before_destroy = true;

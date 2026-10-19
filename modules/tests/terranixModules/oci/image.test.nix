@@ -31,7 +31,7 @@
           expr = {
             inherit (cfg.resource.oci_objectstorage_object.oci-base-aarch64) object source bucket;
             bucketName = cfg.resource.oci_objectstorage_bucket.images.name;
-            tag = cfg.resource.oci_core_image.oci-base-aarch64.freeform_tags."neusis.store-hash";
+            tag = cfg.resource.oci_core_image.oci-base-aarch64.freeform_tags."neusis-store-hash";
           };
           expected = {
             object = "oci-base-aarch64-${hash}.qcow2";
