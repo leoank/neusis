@@ -64,3 +64,9 @@ Status line format: `<date> <time TZ> — <phase/milestone> — <what>`.
   `scratch/s2` (stack `validate`). Hit and fixed: top-level `mkIf`
   recursion, `//` dropping sibling keys, terranix dropping empty blocks.
   T0 246/246, T1 green. Next: M3 (oci-guest profile + base image).
+- 2026-10-19 — **M3 done.** `features.nixos.oci-guest`,
+  `lib.cloud.mkOciBaseImage`, `packages.<linux>.oci-base-image`, tests for
+  the guest layout, the host-independence of the image and the
+  base↔guest layout invariant. T0 255/255, T1 green (the image drvs
+  instantiate for both Linux systems), T2: the aarch64 image built on
+  spirit/oppy (`nixos-image-oci-26.05.20261015.26f4107-aarch64-linux.qcow2`).

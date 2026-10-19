@@ -2328,3 +2328,21 @@ keys vanish from the result (`cfg ? resource` is false when nothing is
 declared). The attribute names were checked against the provider schema
 (`tofu providers schema -json` from the spike) and the whole module set
 passes an offline `tofu validate` with the Nix-provided provider.
+
+## 2026-10-19 — cloud machines (terranix): M3 oci-guest profile + base image
+
+`features.nixos.oci-guest` (the first `features/nixos/*`) wraps nixpkgs's
+`virtualisation/oci-common.nix` — growable ext4 root by label, ESP, GRUB as
+removable EFI, serial consoles, OCI NTP, networkd — and sets sshd to
+root-by-key-only. `lib.cloud.mkOciBaseImage { system; extraModules }`
+builds the qcow2 every OCI host first boots: `oci-image.nix` + `oci-guest`
++ flakes enabled + `stateVersion` 26.05, no users, secrets or mesh (the
+`fetch-ssh-keys` unit from nixpkgs pulls root's keys from instance
+metadata). It returns the image derivation with `qcow2` (path of the
+file, what `neusis.oci.images.<n>.file` takes) and `nixosConfig`.
+`packages.{aarch64,x86_64}-linux.oci-base-image` instantiate it. The test
+pins the base-image/oci-guest invariant: both evaluate to the same disk
+layout and bootloader, which is what makes `nixos-rebuild switch` from
+the base image to a host config safe. Deliberately not a
+`nixosConfiguration`: that would hand agenix-rekey a host without a key
+and make T1 treat it as a machine.
