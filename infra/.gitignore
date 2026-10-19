@@ -5,3 +5,4 @@ config.tf.json
 .terraform.lock.hcl
 *.tfplan
 crash.log
+*.tfstate.backup
