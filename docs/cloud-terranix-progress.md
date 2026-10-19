@@ -45,3 +45,13 @@ Status line format: `<date> <time TZ> — <phase/milestone> — <what>`.
   policy, API key, the four secrets + region) written into the plan
   (Phase 0 → "Operator prerequisites"). **Blocked on Ankur** for S1 and
   M4's credential wiring; M1–M3 can proceed meanwhile.
+- 2026-10-19 — **M1 done.** `terranix` input (locked at terranix main
+  2026-09-21, follows nixpkgs), `features/flake/terranix.nix` +
+  `_terranix-defaults.nix` (OpenTofu + pinned `oracle_oci`, `workdir =
+  infra/<stack>`, repo-root guard, config relink, `~/.config/neusis/tf.env`
+  secrets, passphrase required), `flake.terranixModules` schema,
+  `flakeModules.terranix` export, `infra/.gitignore`. Gotcha: write-flake
+  can't run while the new module already imports from the new input —
+  bootstrap with empty `imports`, then restore. T0 227/227 on both test
+  sets, T1 all-systems green. Ankur is doing the OCI account prep in
+  parallel (S1 still blocked on it).

@@ -1,0 +1,7 @@
+# Per-stack OpenTofu working directories (modules/infra/<stack>.nix sets
+# `workdir = "infra/<stack>"`). Committed: the encrypted terraform.tfstate.
+.terraform/
+config.tf.json
+.terraform.lock.hcl
+*.tfplan
+crash.log

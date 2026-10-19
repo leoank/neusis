@@ -71,6 +71,10 @@
       url = "github:danth/stylix/release-26.05";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    terranix = {
+      url = "github:terranix/terranix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     whatcable-tap = {
       url = "github:darrylmorley/homebrew-whatcable";
       flake = false;

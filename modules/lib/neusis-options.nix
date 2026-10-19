@@ -449,6 +449,17 @@ in
       '';
     };
 
+    terranixModules = mkOption {
+      type = types.lazyAttrsOf types.deferredModule;
+      default = { };
+      description = ''
+        Reusable terranix modules (`modules/terranixModules/`), consumed
+        from a stack's `terranix.terranixConfigurations.<stack>.modules`
+        list. Same shape as `nixosModules`, but evaluated by terranix
+        into Terraform JSON rather than by NixOS.
+      '';
+    };
+
     # NOTE: `flake.homeModules` and `flake.darwinModules` are NOT
     # declared here. home-manager's and nix-darwin's own flake-parts
     # modules declare them when those inputs are loaded — declaring

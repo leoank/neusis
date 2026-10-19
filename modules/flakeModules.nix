@@ -30,6 +30,14 @@
       ];
     };
 
+    # terranix input + flake-parts module + the neusis stack defaults
+    # (OpenTofu, pinned providers, repo-root guard, secrets env file).
+    terranix = {
+      imports = [
+        ./features/flake/terranix.nix
+      ];
+    };
+
     darwin-system-defaults = {
       imports = [
         ./features/darwin/system-defaults.nix

@@ -51,6 +51,7 @@
             "default"
             "lib"
             "options"
+            "terranix"
           ];
         };
 

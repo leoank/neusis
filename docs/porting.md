@@ -2277,3 +2277,28 @@ concurrency is capped from this side: `maxJobs = 12` each instead of 300.
 Effective lists — rogue: spirit, oppy, linux-builder; darwin001: spirit,
 oppy, rogue. When the two hosts can be touched, set `cores = 16` there and
 raise `maxJobs` toward 24.
+
+## 2026-10-19 — cloud machines (terranix): M1 input, flake feature, schema
+
+First milestone of `docs/cloud-terranix-plan.md` (design in
+`docs/cloud-terranix-spec.md`, day-to-day trail in
+`docs/cloud-terranix-progress.md`). `features/flake/terranix.nix` declares
+the `terranix` input and imports its flake-parts module;
+`_terranix-defaults.nix` re-declares `terranix.terranixConfigurations` with
+a submodule that merges into terranix's own and gives every stack the
+neusis defaults: `workdir = infra/<stack>`, OpenTofu with the nixpkgs-pinned
+`oracle_oci` provider, and a `prefixText` that guards against running
+outside the repo root, relinks `config.tf.json` (the bare `.terraform`
+wrapper never refreshes it), sources `~/.config/neusis/tf.env` (or
+`$NEUSIS_TF_ENV`) for the `TF_VAR_*` secrets and refuses to run without
+`TF_VAR_state_passphrase`. `flake.terranixModules` joins the schema;
+`flakeModules.terranix` exports the feature for consumers. `infra/` holds
+the per-stack working dirs (only the encrypted state is meant to be
+committed).
+
+Bootstrapping gotcha: `nix run .#write-flake` evaluates the flake, so a
+module that both declares a new input and imports from it cannot be
+written in one step — temporarily empty the `imports`, write-flake, `nix
+flake update <input>`, restore. The test evaluates the defaults with
+`flake-parts.lib.evalFlakeModule` against `inputs.terranix.flakeModule` and
+a dummy stack, so nothing leaks into the real `packages`.
