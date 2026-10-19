@@ -20,7 +20,7 @@
           };
           expected = {
             provider.oci = {
-              config_file_profile = "neusis";
+              config_file_profile = "DEFAULT";
               region = "\${var.region}";
             };
             source = "oracle/oci";

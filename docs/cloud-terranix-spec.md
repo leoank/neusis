@@ -268,7 +268,7 @@ default, plus a `fetch-ssh-keys` unit that pulls root's
    signing key.
 3. Store the API private key as an agenix secret in ank's home bundle.
    HM decrypts it to `~/.oci/neusis_api_key.pem` and writes a
-   `~/.oci/config` profile `[neusis]` (tenancy/user OCID, fingerprint,
+   `~/.oci/config` `[DEFAULT]` profile (tenancy/user OCID, fingerprint,
    region, key_file). The OCI provider uses `config_file_profile =
    "neusis"`, and the `oci` CLI works with the same profile. This follows
    the "personal credentials live in the user bundle" rule. The flake

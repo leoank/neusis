@@ -75,7 +75,7 @@ and the rest done before S1 starts.
 | # | Item | Secret? | Becomes |
 |---|---|---|---|
 | 1 | API private key PEM (step 7) | yes | HM agenix `modules/secrets/ank/ociApiKey.age` → `~/.oci/neusis_api_key.pem` |
-| 2 | Config preview (step 8), as a `[neusis]` profile | yes (OCIDs + fingerprint) | HM agenix `modules/secrets/ank/ociConfig.age` → `~/.oci/config` |
+| 2 | Config preview (step 8), as the `[DEFAULT]` profile | yes (OCIDs + fingerprint) | HM agenix `modules/secrets/ank/ociConfig.age` → `~/.oci/config` |
 | 3 | Compartment OCID (step 3) | yes-ish (keeps OCIDs out of the public repo) | goes into `modules/secrets/ank/ociTfEnv.age` as `TF_VAR_compartment_ocid=…`, sourced by the stack wrapper |
 | 4 | State passphrase: `openssl rand -base64 32` | yes | same env secret: `TF_VAR_state_passphrase=…` |
 | 5 | Home region name (e.g. `ap-tokyo-1`) | no, but kept out of the repo with the rest | same env secret: `TF_VAR_region=…` |
@@ -93,7 +93,7 @@ the repo.
 ### S1 — Can OCI boot a repo-built aarch64 NixOS qcow2 on A1.Flex? (Live)
 
 1. Account prep (manual, §5.0 of the spec): compartment, IAM user +
-   policy, API key, `~/.oci/config` profile `neusis` — by hand for the
+   policy, API key, `~/.oci/config` (`[DEFAULT]` profile) — by hand for the
    spike; the HM-managed version lands in M4.
 2. Build the stock image:
    `nix build --impure --expr '(import <nixpkgs>/nixos { configuration = { imports = [ <nixpkgs>/nixos/modules/virtualisation/oci-image.nix ]; nixpkgs.hostPlatform = "aarch64-linux"; }; }).config.system.build.OCIImage'`
@@ -271,7 +271,7 @@ Under `modules/terranixModules/`, each exported as
   anywhere` consumes) + `.pub` in clear; `agenix rekey` → `rekeyed/ghost001/`.
 - Operator side (ank's HM bundle, `modules/users/ank/`): agenix secrets
   for the OCI API private key and the state passphrase; HM writes
-  `~/.oci/config` (`[neusis]` profile) and exposes the passphrase path
+  `~/.oci/config` (`[DEFAULT]` profile) and exposes the passphrase path
   the M1 `prefixText` reads. `oci-cli` + `opentofu` in the bundle's
   packages (or only via the stack devShells — decide in M1/S3).
 - Tests: `tests/machines/ghost001.test.nix` (evaluates via `evalNixos`;

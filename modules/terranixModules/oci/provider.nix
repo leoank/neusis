@@ -17,7 +17,7 @@
       options.neusis.oci = {
         profile = lib.mkOption {
           type = lib.types.str;
-          default = "neusis";
+          default = "DEFAULT";
           description = "Profile in ~/.oci/config holding the API key for this stack.";
         };
         region = lib.mkOption {
