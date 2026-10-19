@@ -141,3 +141,17 @@ Status line format: `<date> <time TZ> — <phase/milestone> — <what>`.
   `/nix/store/6hvs4yrq…-oci-image/nixos-image-oci-26.05.20261015.26f4107-aarch64-linux.qcow2`,
   2.6 GB (8 GiB virtual). Procedure recorded in the plan ("Baking the
   image"). The VM has been stopped; restart it for the next bake.
+- 2026-10-19 — **First live contact (M5).** Ankur filled the three HM
+  secrets and ran `agenix rekey` + `home-manager switch`; `~/.oci/*` and
+  `~/.config/neusis/tf.env` are agenix symlinks. The API key
+  authenticates (`oci iam region-subscription list`: home region
+  us-ashburn-1; compartment `neusis` ACTIVE). Two fixes from the first
+  `nix run .#oci-images.plan`: the console's config preview writes a
+  `[DEFAULT]` profile, so `neusis.oci.profile` now defaults to that
+  (`770bf3d`); and `oci_core_compute_global_image_capability_schemas`
+  filtered by our compartment returns null — global schemas are
+  tenancy-scoped, so the data source now takes no arguments (`a02844b`;
+  terranix keeps an empty block as long as the top-level key isn't
+  empty). Second plan: 5 to add (bucket, object, image, A1 shape
+  compatibility, capability schema), namespace and AD lookups resolved.
+  `apply -auto-approve` started (2.6 GB upload + import).
