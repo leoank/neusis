@@ -136,10 +136,10 @@
             ++ lib.mapAttrsToList mkImage cfg.images
           )
         );
-        # (non-empty body: terranix drops empty blocks)
-        data.oci_core_compute_global_image_capability_schemas.global = lib.mkIf (cfg.images != { }) {
-          compartment_id = cfg.compartment;
-        };
+        # Global schemas are tenancy-scoped: listing them filtered by our
+        # compartment returns nothing, so no arguments at all (terranix
+        # keeps an empty block as long as its top-level key is not empty).
+        data.oci_core_compute_global_image_capability_schemas.global = lib.mkIf (cfg.images != { }) { };
       };
     };
 }
