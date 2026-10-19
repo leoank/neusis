@@ -49,15 +49,20 @@ and the rest done before S1 starts.
    rotate/revoke.)
 6. Policies → create `neusis-tf` in the **root** compartment with:
    ```
-   Allow group neusis-admins to manage all-resources in compartment neusis
-   Allow group neusis-admins to inspect compartments in tenancy
-   Allow group neusis-admins to read availability-domains in tenancy
-   Allow group neusis-admins to read instance-images in tenancy
-   Allow group neusis-admins to inspect tenancies in tenancy
+   Allow group 'Default'/'neusis-admins' to manage all-resources in compartment neusis
+   Allow group 'Default'/'neusis-admins' to inspect compartments in tenancy
+   Allow group 'Default'/'neusis-admins' to inspect compute-global-image-capability-schema in tenancy
+   Allow group 'Default'/'neusis-admins' to inspect backup-policies in tenancy
    ```
-   (`inspect tenancies` is for the Object Storage namespace lookup. If a
-   `plan` later fails with `NotAuthorizedOrNotFound`, widen the second
-   group of statements, not the first.)
+   Line 1 is everything the stacks create (network, instance, volumes,
+   bucket/object, custom image, its capability schema). Line 2 is
+   `ListAvailabilityDomains` (there is no `availability-domains` resource
+   type — a statement naming one invalidates the whole policy). Line 3 is
+   the tenancy-level global schema the image stack reads; line 4 the
+   Oracle-defined `bronze` backup policy the instance stack looks up.
+   `'Default'/` is the identity-domain qualifier (group in the Default
+   domain); if a `plan` later fails with `NotAuthorizedOrNotFound`, widen
+   lines 2–4, not line 1.
 
 **C. API key** (console → `neusis-tf` → API keys → Add API key)
 
@@ -73,7 +78,7 @@ and the rest done before S1 starts.
 | 2 | Config preview (step 8), as a `[neusis]` profile | yes (OCIDs + fingerprint) | HM agenix `modules/secrets/ank/ociConfig.age` → `~/.oci/config` |
 | 3 | Compartment OCID (step 3) | yes-ish (keeps OCIDs out of the public repo) | goes into `modules/secrets/ank/ociTfEnv.age` as `TF_VAR_compartment_ocid=…`, sourced by the stack wrapper |
 | 4 | State passphrase: `openssl rand -base64 32` | yes | same env secret: `TF_VAR_state_passphrase=…` |
-| 5 | Home region name (e.g. `ap-tokyo-1`) and whether PAYG was enabled | no | plain values in the stack |
+| 5 | Home region name (e.g. `ap-tokyo-1`) | no, but kept out of the repo with the rest | same env secret: `TF_VAR_region=…` |
 
 Creating 1–4: either you run `agenix edit modules/secrets/ank/<name>.age`
 and paste, or you put the plaintext files somewhere outside the repo and
@@ -284,6 +289,36 @@ Under `modules/terranixModules/`, each exported as
 ---
 
 ## Phase 2 — Stacks and first contact (Live from M5)
+
+### Baking the image (learned in M3; prerequisite for M5)
+
+`make-disk-image` runs the bootloader install inside `vmTools.runInLinuxVM`,
+whose host-side virtiofsd must be a *native* binary: on spirit/oppy the
+aarch64 derivation runs under binfmt (qemu-user) and the emulated virtiofsd
+gets no mount ID from `statx` ("mount ID (0) does not match expected
+value"), so the build fails regardless of sandbox settings. Until a native
+aarch64 Linux builder is in the registry (ghost001 itself, once it exists),
+bake on rogue with nixpkgs' ad-hoc builder VM — no config change:
+
+```bash
+# 1. a native aarch64 VM (8 GB, 4 vCPU; key lands in ./keys, ssh on :31022)
+mkdir -p ~/tmp/linux-builder && cd ~/tmp/linux-builder
+QEMU_OPTS="-m 8G -smp 4" nix run nixpkgs#darwin.linux-builder   # leave running
+# 2. from the repo, ship the derivation in and build it there (TCG, no KVM)
+export NIX_SSHOPTS="-p 31022 -i ~/tmp/linux-builder/keys/builder_ed25519 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+DRV=$(nix eval --raw .#packages.aarch64-linux.oci-base-image.drvPath)
+nix copy --derivation --to ssh-ng://builder@localhost "$DRV"
+ssh $NIX_SSHOPTS builder@localhost "NIX_CONFIG='experimental-features = nix-command' \
+  nix build --option system-features kvm --no-link --print-out-paths '$DRV^out'"
+# 3. bring the output back (unsigned; ank is a trusted user on rogue)
+nix copy --no-check-sigs --from ssh-ng://builder@localhost <printed out path>
+```
+
+Afterwards `nix build .#packages.aarch64-linux.oci-base-image` resolves to
+the store path without rebuilding, and `nix run .#oci-images.apply` uses
+it. ~10 min end to end on rogue (M3 Max); the result is a 2.6 GB qcow2
+with an 8 GiB virtual disk. Wrap this in a `neusis` subcommand or flake
+app in M8 if it stays the way to bake.
 
 ### M5 — Stack `oci-images` (Live)
 

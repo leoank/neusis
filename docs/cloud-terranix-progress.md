@@ -70,3 +70,74 @@ Status line format: `<date> <time TZ> — <phase/milestone> — <what>`.
   base↔guest layout invariant. T0 255/255, T1 green (the image drvs
   instantiate for both Linux systems), T2: the aarch64 image built on
   spirit/oppy (`nixos-image-oci-26.05.20261015.26f4107-aarch64-linux.qcow2`).
+- 2026-10-19 — **M4 code done, blocked on rekey.** `machines/ghost001.nix`,
+  registry (first `nixos` entry) + builders entry, ank's bundles for
+  ghost001, host keypair generated and the private half encrypted to the
+  master pubkey under `secrets/bootstrap/ghost001/`, placeholder HM secrets
+  `ociApiKey`/`ociConfig`/`ociTfEnv` wired into ank's `secrets` bundle,
+  machine test + registry/builder/home test updates. T0 261/261. T1 fails
+  only on `nixos-ghost001`: `modules/secrets/rekeyed/ghost001` does not
+  exist yet → needs `agenix rekey` (master identity, Ankur). Ankur has
+  created the `neusis` compartment (OCID noted locally, to go into
+  `ociTfEnv.age`, not the repo).
+- 2026-10-19 — **Correction on M3's T2.** The first aarch64 image build was
+  reported green by mistake (the exit code read was `tail`'s). The real
+  build fails on spirit/oppy inside `make-disk-image`'s `runInLinuxVM`:
+  virtiofsd aborts with "Mount point's (/nix/store) mount ID (0) does not
+  match expected value" under the Nix sandbox (Nix 2.31.3, kernel 6.12,
+  `sandbox = true`), so QEMU never gets its store socket. M3's
+  code/tests are unaffected (the commit claims eval/T1 only in its
+  message; the progress line above overstated T2). Trying the build on
+  spirit with `--option sandbox false` (ank is a trusted user there) as
+  the workaround; if that is the only way, baking becomes a documented
+  "build on a builder with the sandbox off" step until the virtiofsd/
+  sandbox issue is fixed upstream or the builders' config can change.
+- 2026-10-19 — **M5/M6 code (Live-free part).** `modules/infra/
+  oci-images.nix` (bakes `oci-base-aarch64` from
+  `packages.aarch64-linux.oci-base-image.qcow2`) and `oci-anklab.nix`
+  (network 10.42.0.0/16, `publicSsh = true`, ghost001 = A1.Flex 4/24,
+  50 GB boot + 150 GB data volume, reserved IP, ank's keys), each with a
+  `checks.<sys>.tofu-validate-<stack>` built by
+  `lib.cloud.mkValidateCheck` (offline `tofu init -backend=false` +
+  `validate` in the sandbox; the images check stands in an empty store
+  file for the qcow2). The region joined the env file as `TF_VAR_region`
+  so no tenancy fact is in the repo. T0 265/265, both validate checks
+  build green on aarch64-darwin. Applies wait for the secrets + rekey.
+- 2026-10-19 — **M7 code (Live-free part).** `cli/internal/cloud` +
+  `neusis cloud {bootstrap,deploy}`: bootstrap reads the IP from
+  `nix run .#<stack>.terraform -- output -json`, reads the pinned
+  `hostPubkey` with `nix eval`, waits for SSH, decrypts
+  `modules/secrets/bootstrap/<host>/` with the master identity (reusing
+  the `anywhere` decryptor), streams the tree to `/` over ssh + restarts
+  sshd, then talks to the host only through a temp known_hosts pinned to
+  the registry key (`StrictHostKeyChecking=yes`, also passed to
+  `nixos-rebuild` via `NIX_SSHOPTS`) and runs `nixos-rebuild switch
+  --flake .#<host> --target-host`. `deploy` is the day-2 subset. Dev
+  shell gains `age` and `nixos-rebuild`. `go vet`/`go test ./...` green,
+  `nix build .#neusis` green. Commit order once the rekey lands and T1 is
+  green: M4 → M5/M6 → M7.
+- 2026-10-19 — image bake: `--option sandbox false` over `--store
+  ssh-ng://spirit` was not honoured (build still ran in `/build`, same
+  virtiofsd error); retrying with `nix build` run directly on spirit as
+  ank (trusted user there).
+- 2026-10-19 — **Image bake root cause.** Not the sandbox: the aarch64
+  `oci-image` derivation runs on spirit/oppy under binfmt (qemu-user)
+  emulation, and the *emulated* aarch64 `virtiofsd` gets no mount ID
+  from `statx` there (virtiofsd 1.13.3 falls back to
+  `name_to_handle_at`, then to 0 → "mount ID (0) does not match"). A
+  native x86_64 virtiofsd inside a Nix build on spirit works, sandbox on
+  or off. So `make-disk-image` (= `vmTools.runInLinuxVM`) needs a
+  *native* aarch64 Linux builder. Trying nixpkgs' ad-hoc
+  `nix run nixpkgs#darwin.linux-builder` VM on rogue (no config change;
+  `QEMU_OPTS="-m 8G -smp 4"`, ssh `builder@localhost:31022` with the
+  key it drops in `./keys`), building inside it with
+  `--option system-features kvm` (no /dev/kvm; runInLinuxVM's qemu is
+  `accel=kvm:tcg`, so it falls back to TCG). If this works, "bake" =
+  start that VM, `nix copy --derivation` the image drv in, build there,
+  `nix copy` the qcow2 back — to be wrapped in the plan/runbook.
+- 2026-10-19 — **Image baked; M3 T2 green for real.** Native build inside
+  the ad-hoc `darwin.linux-builder` VM on rogue (8 GB/4 vCPU, TCG for the
+  inner VM) succeeded in ~10 min; copied back with `--no-check-sigs`:
+  `/nix/store/6hvs4yrq…-oci-image/nixos-image-oci-26.05.20261015.26f4107-aarch64-linux.qcow2`,
+  2.6 GB (8 GiB virtual). Procedure recorded in the plan ("Baking the
+  image"). The VM has been stopped; restart it for the next bake.

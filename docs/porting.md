@@ -2346,3 +2346,32 @@ layout and bootloader, which is what makes `nixos-rebuild switch` from
 the base image to a host config safe. Deliberately not a
 `nixosConfiguration`: that would hand agenix-rekey a host without a key
 and make T1 treat it as a machine.
+
+## 2026-10-19 — cloud machines (terranix): M4 ghost001, the first NixOS host
+
+`machines/ghost001.nix` (aarch64-linux, `oci-guest` + nix-settings/nix-pkgs
++ agenix/secrets + distributed-builds + tailscale/ank_mesh, anklab users,
+`stateVersion` 26.05) is the first entry in `registry.machines.anklab.nixos`,
+so `nixosConfigurations.ghost001`, `homeConfigurations."ank@ghost001"` and
+the `nixos-ghost001` / `home-ank@ghost001` checks now exist. It is also a
+builder (`registry.builders.anklab`: aarch64-linux, maxJobs 2, speedFactor
+1) so the build-server side of the stack finally runs on a NixOS host;
+rogue and darwin001 offload to it last.
+
+Host key ahead of the host: the keypair was generated on the operator
+machine, the private half is `modules/secrets/bootstrap/ghost001/etc/ssh/
+ssh_host_ed25519_key.age` (age-encrypted straight to the master pubkey —
+no master private key needed to *create* it; the same root-shaped tree
+`neusis anywhere decrypt` consumes), the public half is the machine's
+`hostPubkey`, and the machine test pins that the two agree. `agenix rekey`
+can therefore produce `rekeyed/ghost001/` before the instance exists; until
+it has run, `nix flake check` fails on `nixos-ghost001` with "Path
+'modules/secrets/rekeyed/ghost001' does not exist" — expected.
+
+ank's `secrets` bundle gains three placeholder HM secrets for the OCI
+operator side (`ociApiKey` → `~/.oci/neusis_api_key.pem`, `ociConfig` →
+`~/.oci/config`, `ociTfEnv` → `~/.config/neusis/tf.env`, the file the
+stack wrapper sources). ank's home on ghost001 is the headless subset
+(nix-pkgs, kalam-ide, neusis-cli, yajna, terminal-life): no GUI bundles,
+and not `secrets`, whose tokens decrypt with ank's private key, which a
+server does not carry.
