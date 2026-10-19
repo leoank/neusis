@@ -31,6 +31,7 @@ to be installed, though it will use nix and git when they are present.`,
 		newUpdateCmd(),
 		newVersionCmd(),
 		newAnywhereCmd(),
+		newCloudCmd(),
 	)
 	return root
 }

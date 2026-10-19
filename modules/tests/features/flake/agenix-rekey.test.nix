@@ -14,11 +14,16 @@
           expr = {
             name = shell.name;
             agenix = shellTools "agenix";
+            # neusis cloud bootstrap needs these on PATH
+            age = shellTools "age";
+            nixosRebuild = shellTools "nixos-rebuild";
             addToGit = shell.AGENIX_REKEY_ADD_TO_GIT or null;
           };
           expected = {
             name = "nix-shell";
             agenix = true;
+            age = true;
+            nixosRebuild = true;
             addToGit = true;
           };
         };
