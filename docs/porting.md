@@ -2302,3 +2302,29 @@ written in one step — temporarily empty the `imports`, write-flake, `nix
 flake update <input>`, restore. The test evaluates the defaults with
 `flake-parts.lib.evalFlakeModule` against `inputs.terranix.flakeModule` and
 a dummy stack, so nothing leaks into the real `packages`.
+
+## 2026-10-19 — cloud machines (terranix): M2 reusable OCI modules
+
+`modules/terranixModules/` adds `state-encryption` (pbkdf2 + AES-GCM,
+state and plan enforced) and `oci-{provider,network,image,instance}`,
+exported as `flake.terranixModules.*`. Stacks set typed `neusis.oci.*`
+options; the modules expand them into provider resources. Facts come from
+elsewhere, not from Nix: the compartment OCID is `var.compartment_ocid`
+(env file), the AD and Object Storage namespace are data lookups, images
+are found by display name (`oci_core_images`) so the image stack and the
+machine stack never share an OCID, and the instance ignores
+`source_details[0].source_id` and `metadata` so a re-baked image never
+replaces a host. `oci-instance` asserts that the shape family matches the
+machine's architecture (`.A<n>.` shapes ↔ `aarch64-*`).
+
+Two module-system lessons: a `mkIf`/`mkMerge` over a config-dependent list
+at the top of `config` recurses (the module system needs `config`'s
+attribute names before it can resolve the option the condition reads), so
+every module keeps static top-level keys (`resource`, `data`, …) and
+merges inside them; and `//` on alternatives silently drops sibling keys —
+use `mkMerge [ … (mkIf c { … }) ]`. terranix drops empty blocks, so a
+data source with no arguments needs some attribute, and empty top-level
+keys vanish from the result (`cfg ? resource` is false when nothing is
+declared). The attribute names were checked against the provider schema
+(`tofu providers schema -json` from the spike) and the whole module set
+passes an offline `tofu validate` with the Nix-provided provider.

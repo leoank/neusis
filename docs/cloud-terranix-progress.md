@@ -55,3 +55,12 @@ Status line format: `<date> <time TZ> — <phase/milestone> — <what>`.
   bootstrap with empty `imports`, then restore. T0 227/227 on both test
   sets, T1 all-systems green. Ankur is doing the OCI account prep in
   parallel (S1 still blocked on it).
+- 2026-10-19 — **M2 done.** `terranixModules/{state-encryption,oci/*}` +
+  mirrored nix-unit tests (22 cases: wiring, `publicSsh` rules, store-hash
+  object naming, A1 shape + UEFI capability schema, reserved IP, data
+  volume, backup policy, arch/shape and unknown-network assertions).
+  Attribute names taken from `tofu providers schema -json` (oracle/oci
+  v8.14.0); the full module set passes an offline `tofu validate` in
+  `scratch/s2` (stack `validate`). Hit and fixed: top-level `mkIf`
+  recursion, `//` dropping sibling keys, terranix dropping empty blocks.
+  T0 246/246, T1 green. Next: M3 (oci-guest profile + base image).

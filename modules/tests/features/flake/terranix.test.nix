@@ -39,13 +39,18 @@
         test-schema-exports-terranix-modules = {
           expr = {
             option = self ? terranixModules;
-            # None yet: M2 adds the first ones.
             modules = builtins.attrNames self.terranixModules;
             flakeModule = self.flakeModules ? terranix;
           };
           expected = {
             option = true;
-            modules = [ ];
+            modules = [
+              "oci-image"
+              "oci-instance"
+              "oci-network"
+              "oci-provider"
+              "state-encryption"
+            ];
             flakeModule = true;
           };
         };
