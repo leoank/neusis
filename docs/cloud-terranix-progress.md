@@ -155,3 +155,11 @@ Status line format: `<date> <time TZ> — <phase/milestone> — <what>`.
   empty). Second plan: 5 to add (bucket, object, image, A1 shape
   compatibility, capability schema), namespace and AD lookups resolved.
   `apply -auto-approve` started (2.6 GB upload + import).
+- 2026-10-20 — **M4 T2 green.** `nixosConfigurations.ghost001` toplevel
+  built through spirit/oppy:
+  `/nix/store/3d70zg9bzgbldx9q1rw58rnzl09iy5xq-nixos-system-ghost001-26.05.20261015.26f4107`
+  (first attempt lost `yajna`'s output to a transient "Nix daemon
+  disconnected" while copying back from the builder; the retry went
+  through). The closure is in rogue's store, so bootstrap will only copy,
+  not build. Still blocked on the custom-image decision (PAYG vs
+  nixos-anywhere fallback).
