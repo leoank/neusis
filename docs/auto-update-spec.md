@@ -387,12 +387,12 @@ or builds as today.
 
 | Layer | File | Content |
 |---|---|---|
-| input | `modules/features/agnostic/auto-update.nix` | `flake-file.inputs.comin = { url = "github:nlewo/comin"; inputs.nixpkgs.follows = "nixpkgs"; }`, then `write-flake` and lock. |
-| registry | `modules/registry/deploy-groups/anklab.nix`, `modules/registry/signers/anklab.nix` (+ `*-options.nix`) | §4.2, §5 |
-| feature | `flake.neusis.features.agnostic.auto-update` | Config only. It sets `services.comin`: enabled, hostname, and one remote at `https://github.com/leoank/neusis.git` with `branches.main.name = "deploy/<group>"` and `poller.period = <group pollPeriod>`. It also sets `sshAllowedSignersPath`, retention, a `postDeploymentCommand` (§9.4) and the notify secrets. All values are `mkDefault`. |
-| package | `modules/packages/neusis-notify.nix` | §6.4 |
+| input + module | `modules/agnosticModules/auto-update.nix` | `flake-file.inputs.comin = { url = "github:nlewo/comin/v0.14.0"; inputs.nixpkgs.follows = "nixpkgs"; }` and the reusable `neusis.services.auto-update` module (re-exported as `{nixos,darwin}Modules.auto-update`). It turns `url`, `branch`, `pollPeriod`, `signers` and `notify.*` into one comin remote, `sshAllowedSignersPath` and the `postDeploymentCommand` hook (§9.4), and pins `services.comin.package` to the comin flake. It configures comin but does not import it (an import can't depend on the platform). |
+| registry | `modules/registry/deploy-groups/anklab.nix`, `modules/registry/signers/anklab.nix` (schema in `lib/neusis-options.nix`, helpers in `lib/auto-update.nix`) | §4.2, §5 |
+| feature | `flake.neusis.features.agnostic.auto-update` | anklab policy, config only: this repo's URL, the branch and poll period of the host's group, the anklab signers, and mail from `ghcibot@leoank.me` to `leoank98@gmail.com`. A host in no group fails an assertion. |
+| package | `modules/packages/neusis-notify/` | §6.4 |
 | cache | `flake.neusis.features.agnostic.neusis-cache` | §8.4 |
-| machine | `machines/<host>.nix` | `imports = [ inputs.comin.<nixos\|darwin>Modules.comin self.neusis.features.agnostic.auto-update self.neusis.features.agnostic.neusis-cache ];` |
+| machine | `machines/<host>.nix` | `imports = [ inputs.comin.<nixos\|darwin>Modules.comin self.<nixos\|darwin>Modules.auto-update self.neusis.features.agnostic.auto-update self.neusis.features.agnostic.neusis-cache ];` plus `neusis.services.auto-update.notify.environmentFile` once the notify secret exists. |
 
 ### 9.2 Configurability
 
@@ -421,13 +421,15 @@ or builds as today.
 
 Homebrew stays as it is. The post-deployment command:
 
-- appends one JSON line per deploy to `/var/log/neusis/auto-update.jsonl`
-  with commit, group, status and activation duration;
+- appends one JSON line per deploy to `/var/log/neusis/auto-update.jsonl`:
+  time, host, status, commit, ref (`origin/deploy/<group>`), comin
+  generation and error. comin doesn't pass timings to the hook, so
+  durations come from `comin status`;
 - on darwin, also records the Homebrew delta (a diff of `brew list
   --versions` and `brew list --cask --versions` against the previous
   entry);
-- calls `neusis-notify` (failure: high priority; success: min priority,
-  with the Homebrew delta summarised).
+- calls `neusis-notify`. A failure is high priority, ntfy plus email; a
+  success is min priority, ntfy only.
 
 After a few weeks of data we decide about `upgrade` and `cleanup`.
 
@@ -573,7 +575,7 @@ Each milestone ends at the listed check:
 
 | # | Question | In |
 |---|---|---|
-| R1 | Does comin's darwin module work with nix-darwin 26.05 (root-only activation, `system.primaryUser`, Homebrew activation as the primary user)? | M6 (rogue) |
+| R1 | Does comin's darwin module work with nix-darwin 26.05 (root-only activation, `system.primaryUser`, Homebrew activation as the primary user)? Partly answered: comin v0.14 runs `$out/activate-user` and then `$out/activate`. In 26.05, `activate-user` is a deprecated stub that warns and exits 0, so activation works today, but comin breaks once nix-darwin removes the stub (announced for after 25.11). Watch comin releases. | M6 (rogue) |
 | R2 | Can a host evaluate from comin's checkout with no master identity? | M2, M6 |
 | R3 | Does rogue's closure build on a hosted macOS runner after freeing disk? | M4 |
 | R5 | Can a GitHub App be a ruleset bypass actor on a personal-account repo? | M5 |

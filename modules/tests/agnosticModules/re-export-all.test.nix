@@ -12,6 +12,7 @@
         test-agnostic-module-set = {
           expr = agnostic;
           expected = [
+            "auto-update"
             "build-client"
             "build-server"
             "hm-system-init"

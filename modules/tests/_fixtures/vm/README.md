@@ -11,6 +11,7 @@ protects anything; never reuse these keys.
 | `hashedInitialPassword.age` | `mkpasswd -m sha-512 neusis-test`, encrypted to `age_key.pub` — the fixture login password is `neusis-test` |
 | `build_key`, `build_key.pub` | SSH key the build-client node uses to reach the build-server node |
 | `server_host_key`, `server_host_key.pub` | SSH host key of the build-server node, pinned by the client's `knownHosts` |
+| `signing_key`, `signing_key.pub` | SSH commit-signing key `vm-auto-update` signs deploy commits with; comin trusts the public half |
 
 Regenerate with `age-keygen`, `mkpasswd`, `ssh-keygen` (see the `vm-*`
 tests for how each is wired).

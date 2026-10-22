@@ -108,7 +108,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        test: [neusis-os, tailscale, kanata, build-cluster, home-bundle, packages]
+        test: [neusis-os, tailscale, kanata, build-cluster, home-bundle, packages, auto-update]
     steps:
       - uses: actions/checkout@v4
       - name: Enable KVM for the runner user

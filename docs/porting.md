@@ -2393,3 +2393,44 @@ host in at most one group, `after` naming a real group with no loops,
 consumes them yet; the comin feature (M2) and CI (M4–M5) will. The bare
 `deploy` branch is deliberately absent: git cannot hold `deploy` next to
 `deploy/<group>`.
+
+## 2026-10-22 — auto-updates M2: comin module, anklab feature, neusis-notify
+
+Second milestone of `docs/auto-update-spec.md`. The `comin` input is
+pinned to `github:nlewo/comin/v0.14.0` (follows our nixpkgs) and declared
+in `agnosticModules/auto-update.nix`, whose `neusis.services.auto-update`
+(`url`, `branch`, `pollPeriod`, `signers`, `notify.*`, `logFile`) becomes
+one comin remote, an `allowed_signers` file and a post-deployment hook.
+The module configures comin but cannot import it (an import cannot depend
+on the platform), so a machine imports `inputs.comin.<platform>Modules.comin`
+next to it, the agenix pattern. `services.comin.package` is set at normal
+priority to the comin flake's build: comin's own module prefers
+`pkgs.comin` (mkDefault), which would drift from the module's config
+schema once nixpkgs carries an older comin.
+
+The hook appends one JSON line per deployment to
+`/var/log/neusis/auto-update.jsonl` (comin passes `COMIN_STATUS`, commit,
+ref, generation and error; no timings), records the Homebrew delta on
+darwin (as the primary user — `brew` refuses root; nix-darwin 26.05
+renamed `homebrew.brewPrefix` to `homebrew.prefix`, which the darwin hook
+check caught), and calls `neusis-notify`: failures to ntfy + email,
+successes to ntfy at min priority. comin v0.14 runs the hook only after a
+deployment, so host-side eval/build failures are not alerted until its
+`postBuildCommand` is released. On darwin comin activates through
+`$out/activate-user` + `$out/activate`; 26.05 still ships `activate-user`
+as a deprecated stub, so this works until nix-darwin removes it.
+
+`features.agnostic.auto-update` is the anklab policy: this repo, the
+branch and poll period of the host's deploy group, the anklab signers,
+mail from ghcibot@leoank.me to leoank98@gmail.com, and an assertion for a
+host in no group. Notifications stay off until a machine points
+`notify.environmentFile` at the agenix dotenv secret (`NTFY_TOPIC`,
+`SENDGRID_API_KEY`) — created at enrolment (M6). No machine is enrolled
+yet.
+
+`vm-auto-update` (T3, also added to the CI matrix) runs comin against a
+local bare repo whose flake has a fake toplevel. The first version built
+it with `sandbox = false` and bare coreutils paths, and the builder was
+SIGKILLed a few ms in on roughly every other run (seen on spirit, never
+reproduced on rogue); building with a static busybox `path:` input in the
+normal sandbox passed three runs out of three.
