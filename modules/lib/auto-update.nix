@@ -55,7 +55,8 @@
       in
       map (n: "deploy group `${n}`: name must match [a-z0-9][a-z0-9-]*") badNames
       ++ lib.mapAttrsToList (
-        h: es: "machine `${h}` is in more than one deploy group: ${lib.concatMapStringsSep ", " (e: e.group) es}"
+        h: es:
+        "machine `${h}` is in more than one deploy group: ${lib.concatMapStringsSep ", " (e: e.group) es}"
       ) repeated
       ++ map (n: "deploy group `${n}`: `after` names unknown group `${after n}`") unknownAfter
       ++ map (n: "deploy group `${n}`: `after` chain loops back to itself") cyclic

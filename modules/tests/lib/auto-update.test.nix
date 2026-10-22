@@ -20,13 +20,16 @@
 
       valid = {
         canary = group [ "a" ] { };
-        stable = group [
-          "b"
-          "c"
-        ] {
-          after = "canary";
-          soakHours = 24;
-        };
+        stable =
+          group
+            [
+              "b"
+              "c"
+            ]
+            {
+              after = "canary";
+              soakHours = 24;
+            };
       };
     in
     {
