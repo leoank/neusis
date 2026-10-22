@@ -2375,3 +2375,21 @@ stack wrapper sources). ank's home on ghost001 is the headless subset
 (nix-pkgs, kalam-ide, neusis-cli, yajna, terminal-life): no GUI bundles,
 and not `secrets`, whose tokens decrypt with ank's private key, which a
 server does not carry.
+
+## 2026-10-22 — auto-updates M1: deploy groups and signers registries
+
+First milestone of `docs/auto-update-spec.md` (plan in its §15).
+`registry.deployGroups.<lab>.<group>` (`machines`, `after`, `soakHours`,
+`pollPeriod`, and a read-only `branch` = `deploy/<group>`) and
+`registry.signers.<lab>` (`principal` + `key`, one `allowed_signers` line
+each) join the schema in `lib/neusis-options.nix`. anklab gets two
+groups — `canary` (ghost001) and `stable` (rogue, after canary, 24 h soak)
+— and one signer, ank's `id_ed25519` read from his public key file (it
+verifies the existing signed history with `git verify-commit`).
+
+`lib.autoUpdate` holds the pure helpers: `checkGroups` (ref-safe names, a
+host in at most one group, `after` naming a real group with no loops,
+`soakHours` only with `after`), `groupOf` and `allowedSigners`. Nothing
+consumes them yet; the comin feature (M2) and CI (M4–M5) will. The bare
+`deploy` branch is deliberately absent: git cannot hold `deploy` next to
+`deploy/<group>`.
