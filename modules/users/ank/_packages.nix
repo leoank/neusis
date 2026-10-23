@@ -37,6 +37,7 @@
       mosh
       rmpc
       zotero
+      pandoc
     ]
     ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
       extra-container
@@ -50,6 +51,7 @@
       inputs.fresh-apps.packages.${pkgs.stdenv.hostPlatform.system}.signal-desktop
       inputs.fresh-apps.packages.${pkgs.stdenv.hostPlatform.system}.whatsapp
       spotify
+      #kicad-unstable
       pkgs.unstable.obsidian
       # broken right now. uncomment later
       #pkgs.unstable.blender
