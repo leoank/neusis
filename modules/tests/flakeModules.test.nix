@@ -69,9 +69,14 @@
               "hm-system-init"
               "secrets"
             ];
+            # cloud surface (spec §7)
+            terranix = lib.sort lib.lessThan (builtins.attrNames consumer.terranixModules);
+            ociGuest = consumer.neusis.features.nixos ? oci-guest;
+            cloudLib = lib.sort lib.lessThan (builtins.attrNames consumer.neusis.lib.cloud);
           };
           expected = {
             lib = [
+              "cloud"
               "neusisOS"
               "utils"
             ];
@@ -81,6 +86,18 @@
               "secrets"
             ];
             nixosModules = true;
+            terranix = [
+              "oci-image"
+              "oci-instance"
+              "oci-network"
+              "oci-provider"
+              "state-encryption"
+            ];
+            ociGuest = true;
+            cloudLib = [
+              "mkOciBaseImage"
+              "mkValidateCheck"
+            ];
           };
         };
 

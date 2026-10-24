@@ -61,6 +61,16 @@
         ./agnosticModules/hm-system-init.nix
         ./agnosticModules/secrets.nix
         ./agnosticModules/re-export-all.nix
+        # Cloud machines (spec §7): the terranix modules, the OCI guest
+        # profile and `lib.cloud` (base image, validate check). Pair with
+        # `flakeModules.terranix` for the stack runner itself.
+        ./terranixModules/state-encryption.nix
+        ./terranixModules/oci/provider.nix
+        ./terranixModules/oci/network.nix
+        ./terranixModules/oci/image.nix
+        ./terranixModules/oci/instance.nix
+        ./features/nixos/oci-guest.nix
+        ./lib/cloud.nix
       ];
     };
   };
