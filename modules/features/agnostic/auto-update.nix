@@ -15,8 +15,9 @@
 #
 # A host outside every group fails an assertion. Notifications stay off
 # until the machine sets `neusis.services.auto-update.notify.environmentFile`
-# (the agenix secret with NTFY_TOPIC and SENDGRID_API_KEY); the deploy
-# log is written regardless.
+# (the agenix secret with SENDGRID_API_KEY, and NTFY_TOPIC in phase 2);
+# the deploy log is written regardless. Success pings go to ntfy only, so
+# they are off until ntfy exists (docs/auto-update-spec.md §6.4).
 { self, ... }:
 {
   flake.neusis.features.agnostic.auto-update =
@@ -46,6 +47,7 @@
         notify = {
           emailFrom = "ghcibot@leoank.me";
           emailTo = [ "leoank98@gmail.com" ];
+          onSuccess = false;
         };
       }
       // lib.optionalAttrs (group != null) {

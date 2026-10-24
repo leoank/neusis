@@ -1,16 +1,19 @@
 # Auto-updates — architecture
 
-Status: **decided** (2026-10-21/22; decisions in §14). Open items left are
-in §13 and are external dependencies, not design choices. The build
-plan is §15, and work that lands is logged in `docs/porting.md`.
-Companion doc for the lab admin: `docs/attic-cache-setup.md`.
+Status: **decided** (2026-10-21/22/24; decisions in §14). Open items left
+are in §13 and are external dependencies, not design choices. The build
+plan is §15, in two phases: **phase 1** is signed, gated, pull-based
+updates with email alerts; **phase 2** adds the attic binary cache and
+ntfy. Work that lands is logged in `docs/porting.md`. Companion doc for
+the lab admin (phase 2): `docs/attic-cache-setup.md`.
 
 Goal: keep the fleet current without anyone running `nix flake update`
 or `*-rebuild switch` by hand.
 
 1. **Inputs loop.** Bump `flake.lock` daily. Run the full test ladder and
    build every host's system and image. Land the bump on `main` only if
-   everything passes. If anything fails, alert by ntfy and email.
+   everything passes. If anything fails, alert by email (ntfy joins in
+   phase 2).
 2. **Promotion.** Every commit on `main` goes through the same gates. A
    commit that passes moves the `deploy/<group>` branches forward, each
    group gated by its own machines. Groups update independently. The
@@ -18,8 +21,10 @@ or `*-rebuild switch` by hand.
 3. **Hosts loop.** Each enrolled host runs **comin**. It polls its
    group's branch (every 60 s by default), checks the head commit's
    signature, and switches to its own configuration.
-4. **Binary cache.** CI pushes what it builds to an attic cache on
-   spirit, so a host downloads its update instead of compiling it.
+4. **Binary cache (phase 2).** CI pushes what it builds to an attic
+   cache on spirit, so a host downloads its update instead of compiling
+   it. Until then hosts substitute from the public caches and build the
+   rest themselves or on the builders, as they do today.
 
 ---
 
@@ -237,14 +242,21 @@ re-runs quickly, because the Linux closures substitute from attic.
 | T1 | ubuntu + macOS | instantiate every system's checks |
 | T2 | ubuntu | `pkg-*`, `check-flake-file`, `tofu-validate-*` |
 | T3 | ubuntu (KVM) | `vm-*`, now a gate on every candidate |
-| **system/ghost001** | `ubuntu-24.04-arm` (native aarch64, free for public repos) | `nixos-ghost001`, `pkg-oci-base-image`, `home-ank@ghost001`, then `attic push` |
+| **system/ghost001** | `ubuntu-24.04-arm` (native aarch64, free for public repos) | `nixos-ghost001`, `pkg-oci-base-image`, `home-ank@ghost001`; in phase 2, then `attic push` |
 | **system/rogue** | `macos-latest` (experiment, §7.2) | `darwin-rogue`, `home-ank@rogue` |
 
 The system matrix comes from the registry (`nix eval --json` over the
 deploy groups), so enrolling a machine needs no YAML change. Each system
 job reports a per-machine status that promotion reads.
 
-### 6.4 Alerts: ntfy and email (plus a GitHub issue)
+### 6.4 Alerts: email and a GitHub issue; ntfy in phase 2
+
+**Phase 1 sends email only** (plus CI's GitHub issue). `neusis-notify`
+already speaks ntfy, so phase 2 is configuration: create the topic, add
+`NTFY_TOPIC` to the CI secrets and the hosts' notify secret, and turn
+success pings back on (`notify.onSuccess`, off in the anklab feature
+until then because success pings go to ntfy only). The tables below are
+the phase 2 picture; in phase 1 drop every "ntfy".
 
 A single package, `neusis-notify` (`modules/packages/`), is used by CI
 and by hosts. Usage: `neusis-notify --title … --priority … --tags … <body>`.
@@ -297,8 +309,8 @@ secrets of the same names.
 
 ghost001 and its OCI base image build on GitHub's **`ubuntu-24.04-arm`**
 runners (native aarch64, free for public repos), substituting from
-cache.nixos.org and attic. Then the job pushes to attic with the CI
-token. This keeps CI independent of spirit and oppy, which we don't
+cache.nixos.org (and, in phase 2, attic, then pushing to it with the CI
+token). This keeps CI independent of spirit and oppy, which we don't
 control. If a build ever outgrows the runner (time or disk), offload it
 to spirit/oppy as remote builders over the tailnet (§8.3). That is a
 config change, not a redesign.
@@ -329,7 +341,11 @@ Building on rogue over the tailnet from CI was considered and dropped.
 rogue is a laptop, often asleep or on the other tailnet profile, so the
 gate would be flaky.
 
-## 8. Binary cache
+## 8. Binary cache (phase 2)
+
+Nothing in phase 1 depends on this section. CI still builds every
+system as a gate, but it doesn't keep or push the results, and it
+doesn't need to join the tailnet.
 
 ### 8.1 Choice: attic on spirit
 
@@ -429,7 +445,8 @@ Homebrew stays as it is. The post-deployment command:
   --versions` and `brew list --cask --versions` against the previous
   entry);
 - calls `neusis-notify`. A failure is high priority, ntfy plus email; a
-  success is min priority, ntfy only.
+  success is min priority, ntfy only. In phase 1 that means a failure
+  emails and a success sends nothing.
 
 After a few weeks of data we decide about `upgrade` and `cleanup`.
 
@@ -487,16 +504,32 @@ Rulesets:
 
 ## 13. Open items (external)
 
-1. **The admin applies `docs/attic-cache-setup.md`.** They have agreed.
+Phase 1:
+
+1. **SendGrid sender verification** for `ghcibot@leoank.me` (single
+   sender, or domain authentication for `leoank.me`), plus the
+   `SENDGRID_API_KEY` Actions secret and the hosts' notify secret
+   (Ankur).
+2. **The GitHub App and the bot signing key** (Ankur, at M3–M4).
+
+Phase 2:
+
+3. **The admin applies `docs/attic-cache-setup.md`.** They have agreed.
    That covers atticd on spirit, the tokens and the `tag:neusis-ci`
    OAuth client.
-2. **SendGrid sender verification** for `ghcibot@leoank.me` (single
-   sender, or domain authentication for `leoank.me`), plus the
-   `SENDGRID_API_KEY` Actions secret (Ankur).
-3. **ntfy topic:** pick a long random topic on ntfy.sh, stored as the
+4. **ntfy topic:** pick a long random topic on ntfy.sh, stored as the
    `NTFY_TOPIC` secret.
 
 ## 14. Decisions
+
+2026-10-24:
+
+- **attic and ntfy move to phase 2.** Phase 1 ships signed, gated, pull
+  updates with email alerts and CI's GitHub issue. CI builds every
+  system as a gate without pushing to a cache and without joining the
+  tailnet, so ghost001's move to `cslab_mesh` is no longer on the
+  phase 1 path. The anklab feature sets `notify.onSuccess = false` until
+  ntfy exists.
 
 2026-10-22:
 
@@ -539,46 +572,51 @@ Rulesets:
 
 ## 15. Build plan
 
-Each milestone ends at the listed check:
+Each milestone ends at the listed check. M0 (remove darwin001) was
+dropped on 2026-10-22; darwin001 stays in the repo until a separate
+cleanup.
 
-0. **M0 Cleanup:** remove darwin001 (machine file, registry,
-   `machineToBundlesMap`, `home-kumarank@darwin001`, its rekeyed
-   secrets, its tests). Check: T0 + T1.
-1. **M1 Registries:** deploy groups and signers, with options and
-   nix-unit invariants. Check: T0 + T1.
-2. **M2 `neusis-notify` + the comin feature:** the input (`write-flake` +
-   lock), the feature and tests, and the notify package. Plus a
-   `vm-auto-update` T3 test with a local bare repo inside the VM, in
-   which:
-   - a signed good commit switches;
-   - a broken commit is a no-op with a notification (to a stub ntfy in
-     the VM);
-   - an unsigned commit is refused.
+### Phase 1: signed, gated pull updates with email alerts
 
-   Check: T0, T1, T3.
-3. **M3 Cache:** the admin applies `docs/attic-cache-setup.md`. We
-   create the cache and add the `neusis-cache` feature and the cache
-   signing key. Before this, ghost001 moves to `cslab_mesh`. Check: a
-   push from rogue, then substitution on ghost001.
-4. **M4 CI builds:** the App, the `tag:neusis-ci` OAuth client, `gates.yml`
-   (with the arm64 ghost001 build + sign + push), and the macOS rogue
-   experiment. Check: a dispatched run builds and pushes ghost001, and
-   the experiment is recorded either way.
-5. **M5 Pipelines:** `update-inputs.yml`, `pipeline.yml`,
-   `promote.yml`, alerts and rulesets. Check: a dispatched bump lands
-   and promotes canary; a deliberately broken bump fires ntfy, email
-   and the issue.
-6. **M6 Enroll:** ghost001 (canary), then rogue (stable). Check: a
-   deploy visible in `comin status`, the JSONL log and ntfy.
+1. **M1 Registries** (done, `0265ccb`): deploy groups and signers, with
+   options and nix-unit invariants. Check: T0 + T1.
+2. **M2 comin module, feature, `neusis-notify`** (done, `0138ef9`,
+   `c21b5c5`): plus `vm-auto-update` (signed commit deploys, unsigned
+   head refused, eval failure is a no-op, failing switch alerts, next
+   commit deploys). Check: T0, T1, T3.
+3. **M3 CI builds:** the App and `gates.yml`, with the arm64 ghost001
+   system + image builds as gates (no cache push) and the macOS rogue
+   experiment. Check: a dispatched run builds ghost001, and the
+   experiment is recorded either way.
+4. **M4 Pipelines:** the bot signing key, `update-inputs.yml`,
+   `pipeline.yml`, `promote.yml`, email + issue alerts, and the
+   rulesets. Check: a dispatched bump lands and promotes canary; a
+   deliberately broken bump sends the email and opens the issue.
+5. **M5 Enroll:** the notify secret (`SENDGRID_API_KEY`), then ghost001
+   (canary), then rogue (stable). Check: a deploy visible in `comin
+   status` and the JSONL log; a failed deploy emails.
+
+### Phase 2: binary cache and ntfy
+
+6. **M6 Tailnet:** ghost001 moves from `ank_mesh` to `cslab_mesh`.
+   Check: ghost001 reaches spirit.
+7. **M7 Cache:** the admin applies `docs/attic-cache-setup.md`. We
+   create the cache and add the `neusis-cache` feature, the cache
+   signing key, and the sign + push step in `gates.yml` (CI joins the
+   tailnet as `tag:neusis-ci`). Check: CI pushes ghost001's closure and
+   ghost001 substitutes it.
+8. **M8 ntfy:** the topic, `NTFY_TOPIC` in the CI secrets and the hosts'
+   notify secret, and `notify.onSuccess` back on. Check: a deploy pings
+   ntfy; a failure reaches ntfy and email.
 
 ### Risks to retire
 
 | # | Question | In |
 |---|---|---|
-| R1 | Does comin's darwin module work with nix-darwin 26.05 (root-only activation, `system.primaryUser`, Homebrew activation as the primary user)? Partly answered: comin v0.14 runs `$out/activate-user` and then `$out/activate`. In 26.05, `activate-user` is a deprecated stub that warns and exits 0, so activation works today, but comin breaks once nix-darwin removes the stub (announced for after 25.11). Watch comin releases. | M6 (rogue) |
-| R2 | Can a host evaluate from comin's checkout with no master identity? | M2, M6 |
-| R3 | Does rogue's closure build on a hosted macOS runner after freeing disk? | M4 |
-| R5 | Can a GitHub App be a ruleset bypass actor on a personal-account repo? | M5 |
-| R6 | Do comin retention and `nix.gc.automatic` agree? | M6 |
+| R1 | Does comin's darwin module work with nix-darwin 26.05 (root-only activation, `system.primaryUser`, Homebrew activation as the primary user)? Partly answered: comin v0.14 runs `$out/activate-user` and then `$out/activate`. In 26.05, `activate-user` is a deprecated stub that warns and exits 0, so activation works today, but comin breaks once nix-darwin removes the stub (announced for after 25.11). Watch comin releases. | M5 (rogue) |
+| R2 | Can a host evaluate from comin's checkout with no master identity? | M2, M5 |
+| R3 | Does rogue's closure build on a hosted macOS runner after freeing disk? | M3 |
+| R5 | Can a GitHub App be a ruleset bypass actor on a personal-account repo? | M4 |
+| R6 | Do comin retention and `nix.gc.automatic` agree? | M5 |
 | R7 | ~~What does comin pass to the hook?~~ Answered from the v0.14.0 source: `COMIN_GIT_SHA`, `COMIN_GIT_REF`, `COMIN_GIT_MSG`, `COMIN_HOSTNAME`, `COMIN_GENERATION`, `COMIN_STATUS` (`done`/`failed`) and `COMIN_ERROR_MSG`, after deployments only (§6.4). | — |
-| R8 | Does attic keep the signatures already on pushed paths (our `nix store sign` key) in the narinfo it serves, so hosts can trust only our key? If not, trust attic's key and accept spirit's operator in the trust base (§11). | M3 |
+| R8 | Does attic keep the signatures already on pushed paths (our `nix store sign` key) in the narinfo it serves, so hosts can trust only our key? If not, trust attic's key and accept spirit's operator in the trust base (§11). | M7 |

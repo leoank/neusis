@@ -1,5 +1,7 @@
 # Attic binary cache on spirit — setup guide for the lab admin
 
+**Status:** phase 2 of the rollout; nothing here is needed yet.
+
 **Audience:** the administrator of `spirit` and `oppy` (NixOS, on the
 `shntnu.github` tailnet). Ankur doesn't manage these machines; this is
 what he is asking for and how to do it.

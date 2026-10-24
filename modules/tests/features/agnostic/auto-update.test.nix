@@ -43,7 +43,12 @@
             pollPeriod
             signers
             ;
-          inherit (au.notify) emailFrom emailTo environmentFile;
+          inherit (au.notify)
+            emailFrom
+            emailTo
+            environmentFile
+            onSuccess
+            ;
           failed = t.failedAssertions cfg;
         };
 
@@ -54,6 +59,8 @@
         emailFrom = "ghcibot@leoank.me";
         emailTo = [ "leoank98@gmail.com" ];
         environmentFile = null;
+        # ntfy is phase 2; success pings have no other channel
+        onSuccess = false;
         failed = [ ];
       };
     in
