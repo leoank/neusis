@@ -61,6 +61,21 @@
           };
         };
 
+        # Application state lives on the stack's data volume, by label,
+        # and its absence must not block boot.
+        test-data-volume-on-srv = {
+          expr = {
+            device = cfg.fileSystems."/srv".device;
+            fsType = cfg.fileSystems."/srv".fsType;
+            nofail = builtins.elem "nofail" cfg.fileSystems."/srv".options;
+          };
+          expected = {
+            device = "/dev/disk/by-label/data";
+            fsType = "ext4";
+            nofail = true;
+          };
+        };
+
         test-state-versions-are-pinned = {
           expr = {
             system = cfg.system.stateVersion;

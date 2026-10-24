@@ -39,6 +39,19 @@
 
         programs.zsh.enable = true;
 
+        # The 150 GB block volume from the `oci-anklab` stack (formatted
+        # once by hand: `mkfs.ext4 -L data /dev/sdb`), for application
+        # state that must survive reprovisioning. `nofail` so a missing
+        # or detached volume never blocks boot.
+        fileSystems."/srv" = {
+          device = "/dev/disk/by-label/data";
+          fsType = "ext4";
+          options = [
+            "nofail"
+            "x-systemd.device-timeout=10s"
+          ];
+        };
+
         neusis.services.secrets = {
           enable = true;
           hostPubkey = self.neusis.machines.ghost001.hostPubkey;
