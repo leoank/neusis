@@ -25,8 +25,9 @@ modules/           the live flake (dendritic; one flake-parts module per file)
   secrets/           agenix-rekey: common/, <user>/ (plaintext .age), rekeyed/<host>/,
                      bootstrap/<host>/ (pre-generated cloud host keys)
   packages/          kalam (nixvim flavours), gclb, neusis-cli
-  terranixModules/   reusable terranix (OpenTofu) modules: state-encryption, oci/*
-  infra/             the fleet's terranix stacks: oci-images (base image), oci-anklab (hosts)
+  terranixModules/   reusable terranix (OpenTofu) modules: state-encryption, oci/*, cloudflare/*
+  infra/             the fleet's terranix stacks: oci-images (base image), oci-anklab (hosts),
+                     cloudflare-leoank (public hostnames via Cloudflare Tunnel)
   images/            packages.<linux>.oci-base-image (lib.cloud.mkOciBaseImage)
   tests/             nix-unit suite + checks glue; mirrors the live tree
                      (tests/homeModules/brave.test.nix tests homeModules/brave.nix);

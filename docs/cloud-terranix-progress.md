@@ -262,3 +262,22 @@ Status line format: `<date> <time TZ> — <phase/milestone> — <what>`.
   `neusis` subcommand (ghost001 is now a native aarch64 builder, so the
   ad-hoc VM recipe may not be needed), a `templates/cloud-oci` entry,
   yajna back on ghost001 once 0.8.x builds on aarch64.
+- 2026-10-25 — **Cloudflare: stack + connector, waiting on secrets.**
+  New terranix modules `cloudflare-provider` (token/account as
+  `TF_VAR_cloudflare_api_token` / `TF_VAR_cloudflare_account_id`, zones
+  by name via a `cloudflare_zones` lookup) and `cloudflare-tunnel` (per
+  machine: `cloudflare_zero_trust_tunnel_cloudflared` + remotely-managed
+  `_config` with ordered ingress + 404 catch-all, a proxied CNAME per
+  service in its longest declared zone, the tunnel token as a sensitive
+  output). Provider pinned by nixpkgs (`cloudflare_cloudflare` 5.19.1, v5
+  resource names verified against `tofu providers schema`). Stack
+  `cloudflare-leoank` (zone leoank.me, tunnel for ghost001, no services
+  yet) with its `tofu-validate` check. Host side:
+  `nixosModules.cloudflare-tunnel` runs `cloudflared tunnel run
+  --token-file` with the token as a systemd credential (DynamicUser,
+  hardened); ghost001 enables it with the `cfTunnelGhost001` secret (a
+  placeholder encrypted to the master key until the first apply yields
+  the token — runbook §9). T0 306/306, both validate checks build,
+  `nixos-ghost001` instantiates. Not deployed to ghost001 yet (the unit
+  would loop on the placeholder); next: Ankur adds the two TF_VARs, first
+  apply, token → secret, deploy, then declare the first service.

@@ -164,3 +164,54 @@ stack runner (the terranix input, OpenTofu with the pinned OCI provider,
 the repo-root guard and the `tf.env` sourcing), then write
 `perSystem.terranix.terranixConfigurations.<stack>.modules` exactly as
 `modules/infra/oci-anklab.nix` does.
+
+## 9. Public hostnames via Cloudflare Tunnel (`cloudflare-leoank`)
+
+Services on a cloud host get a public `*.leoank.me` name without opening
+any inbound port: the host runs `cloudflared` for a tunnel whose ingress
+rules are managed remotely, both declared in the `cloudflare-leoank`
+stack. Adding a service is one attribute + `apply`; the host config does
+not change.
+
+```nix
+# modules/infra/cloudflare-leoank.nix
+neusis.cloudflare.tunnels.ghost001.services.whoami = {
+  hostname = "whoami.leoank.me";          # must fall under neusis.cloudflare.zones
+  service = "http://localhost:8080";      # the origin as seen on ghost001
+  # originRequest.no_tls_verify = true;   # extra origin_request settings
+};
+```
+
+Each service becomes an ingress rule (ordered, with a `http_status:404`
+catch-all last) and a proxied CNAME `<hostname> → <tunnel-id>.cfargotunnel.com`
+in the zone the hostname falls under (longest declared zone wins; a
+hostname outside every zone fails an assertion at eval).
+
+**Secrets (one-time):**
+
+1. In the operator tf.env (`agenix edit modules/secrets/ank/ociTfEnv.age`,
+   then `agenix rekey` + `home-manager switch`), add
+   `TF_VAR_cloudflare_api_token=…` — an API token with *Zone › Zone › Read*
+   and *Zone › DNS › Edit* on leoank.me plus *Account › Cloudflare Tunnel ›
+   Edit* — and `TF_VAR_cloudflare_account_id=…` (dashboard → account
+   overview).
+2. `nix run .#cloudflare-leoank.plan` → `.apply` creates the tunnel (and
+   the records, once services exist). Commit `infra/cloudflare-leoank/terraform.tfstate`.
+3. The host's tunnel token, from the stack into an agenix secret without
+   touching the terminal:
+
+   ```bash
+   nix run .#cloudflare-leoank.terraform -- output -raw tunnel_token_ghost001 > /tmp/t \
+     && agenix edit -i /tmp/t modules/secrets/ank/cfTunnelGhost001.age && rm -f /tmp/t
+   agenix rekey && git add modules/secrets/rekeyed
+   nix develop -c neusis cloud deploy ghost001
+   ```
+   (`cfTunnelGhost001.age` holds a placeholder until then, so the config
+   evaluates; the `cloudflared-tunnel` unit just restarts until the real
+   token lands.)
+
+Afterwards `systemctl status cloudflared-tunnel` on the host shows the
+connector registered, and the Zero Trust dashboard lists the tunnel as
+healthy. Day 2: edit services → `plan`/`apply`; rotating the token means
+rotating the tunnel (`apply -replace=cloudflare_zero_trust_tunnel_cloudflared.ghost001`)
+and repeating step 3.

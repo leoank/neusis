@@ -2502,3 +2502,22 @@ the `kvm` system feature and the hosted arm64 runners have none
 return once CI reaches spirit/oppy in phase 2. A workflow can be
 dispatched only once its file is on the default branch, which is why
 the branch was merged before the first run.
+
+## 2026-10-25 — cloud machines: Cloudflare Tunnel + DNS as a terranix stack
+
+Public hostnames for services on the cloud hosts, without inbound ports:
+`terranixModules/cloudflare/{provider,tunnel}.nix` declare a tunnel per
+machine with remotely-managed ingress and a proxied CNAME per service
+(`neusis.cloudflare.tunnels.<host>.services.<n> = { hostname; service; }`),
+the `cloudflare-leoank` stack instantiates it for leoank.me, and
+`nixosModules.cloudflare-tunnel` runs the connector from an agenix token
+(systemd credential, never in the store). Remotely-managed configuration
+was chosen over NixOS's `services.cloudflared` (locally-managed) so that
+adding a hostname is a stack change only and the host needs exactly one
+secret; the token is a sensitive stack output copied into agenix once.
+Credentials stay out of the repo as `TF_VAR_*` in the operator's tf.env,
+like the OCI facts. The Cloudflare provider is nixpkgs' v5
+(`cloudflare_cloudflare`): `cloudflare_dns_record` requires `ttl` (1 =
+automatic, mandatory for proxied records) and the tunnel `_config`
+resource takes `config.ingress` as a plain list — checked against the
+provider schema offline before writing the module.
