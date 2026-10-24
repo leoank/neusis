@@ -17,8 +17,14 @@
   flake.neusis.features.agnostic.cslab_mesh =
     { config, lib, ... }:
     {
-      # cslab tailnet auth key: `agenix edit modules/secrets/cslab/tsAuthKeyCslab.age`, then `agenix rekey`.
-      age.secrets.tsAuthKeyCslab.rekeyFile = ../../secrets/cslab/tsAuthKeyCslab.age;
+      # cslab tailnet credentials (auth key, OAuth client for force-claim /
+      # key-expiry): `agenix edit modules/secrets/cslab/<name>.age`, then
+      # `agenix rekey`.
+      age.secrets = {
+        tsAuthKeyCslab.rekeyFile = ../../secrets/cslab/tsAuthKeyCslab.age;
+        tsClientIdCslab.rekeyFile = ../../secrets/cslab/tsClientIdCslab.age;
+        tsClientSecretCslab.rekeyFile = ../../secrets/cslab/tsClientSecretCslab.age;
+      };
 
       neusis.services.tailscale = {
         enable = true;
@@ -27,7 +33,11 @@
           authKeyFile = config.age.secrets.tsAuthKeyCslab.path;
           hostName = config.networking.hostName;
           ephemeral = false;
+          forceHostName = true;
           tailnetOrg = "shntnu.github";
+          clientIdFile = config.age.secrets.tsClientIdCslab.path;
+          clientSecretFile = config.age.secrets.tsClientSecretCslab.path;
+          disableKeyExpiry = true;
         };
       };
     };
