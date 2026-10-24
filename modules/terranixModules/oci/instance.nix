@@ -84,7 +84,12 @@
               # Arm shapes are UEFI-only; say so explicitly rather than
               # relying on the imported image's launch options (which
               # OCI records as BIOS until the capability schema applies).
-              launch_options = lib.mkIf (isArmShape inst.shape.name) { firmware = "UEFI_64"; };
+              # (OCI insists on network_type whenever launch_options is set)
+              launch_options = lib.mkIf (isArmShape inst.shape.name) {
+                firmware = "UEFI_64";
+                network_type = "PARAVIRTUALIZED";
+                boot_volume_type = "PARAVIRTUALIZED";
+              };
               # Read by the image's fetch-ssh-keys unit on first boot.
               metadata.ssh_authorized_keys = lib.concatStringsSep "\n" inst.sshAuthorizedKeys;
               preserve_boot_volume = false;
