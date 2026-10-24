@@ -205,6 +205,63 @@
             "other-builder"
           ];
         };
+
+        test-deploy-group-defaults = {
+          expr =
+            let
+              g =
+                (evalOptions [
+                  {
+                    flake.neusis.machines.box.hostPubkey = f.hostPubkey;
+                    flake.neusis.registry.deployGroups.lab.canary = { };
+                  }
+                ]).neusis.registry.deployGroups.lab.canary;
+            in
+            {
+              inherit (g)
+                machines
+                branch
+                after
+                soakHours
+                pollPeriod
+                ;
+            };
+          expected = {
+            machines = [ ];
+            branch = "deploy/canary";
+            after = null;
+            soakHours = 0;
+            pollPeriod = 60;
+          };
+        };
+
+        # The branch is derived from the group name so CI and hosts agree.
+        test-deploy-group-branch-is-read-only = {
+          expr =
+            (evalOptions [ { flake.neusis.registry.deployGroups.lab.canary.branch = "main"; } ])
+            .neusis.registry.deployGroups.lab.canary.branch;
+          expectedError.type = "ThrownError";
+        };
+
+        test-signers-are-typed = {
+          expr =
+            (evalOptions [
+              {
+                flake.neusis.registry.signers.lab = [
+                  {
+                    principal = "alice@example.com";
+                    key = "ssh-ed25519 AAAA1";
+                  }
+                ];
+              }
+            ]).neusis.registry.signers.lab;
+          expected = [
+            {
+              principal = "alice@example.com";
+              key = "ssh-ed25519 AAAA1";
+            }
+          ];
+        };
       };
     };
 }

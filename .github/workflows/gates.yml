@@ -1,0 +1,137 @@
+# Gates a commit must pass before any deploy group moves to it
+# (docs/auto-update-spec.md §6.3): the test ladder (tests.yml, VM tests
+# included) plus a full build of every deploy-group member's system and
+# homes, and the OCI base image. The input-bump and main pipelines call
+# it (M4); dispatch it by hand to gate any ref.
+#
+# The members come from the registry (lib.autoUpdate.ciMatrix), so a
+# machine added to a group is built without editing this file. Linux
+# members build natively on the free arm64/x86_64 runners.
+#
+# Mac members are an experiment (§7.2): rogue's closure (~28 GiB) is
+# larger than a hosted macOS runner's guaranteed free disk, so the job
+# deletes the preinstalled Xcodes and simulators it does not need,
+# records disk and timings in the job summary, and does not fail the
+# gates while the experiment runs (continue-on-error).
+name: gates
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    uses: ./.github/workflows/tests.yml
+
+  plan:
+    name: deploy-group build matrix
+    runs-on: ubuntu-latest
+    outputs:
+      machines: ${{ steps.plan.outputs.machines }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@v16
+        with:
+          extra-conf: |
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+      - id: plan
+        run: |
+          machines=$(nix eval --json --impure --expr '
+            let f = builtins.getFlake (toString ./.);
+            in f.neusis.lib.autoUpdate.ciMatrix {
+              groups = f.neusis.registry.deployGroups.anklab;
+              inherit (f) checks;
+            }' | jq -c '[.[] | . + {
+              runner: {
+                "aarch64-linux": "ubuntu-24.04-arm",
+                "x86_64-linux": "ubuntu-latest",
+                "aarch64-darwin": "macos-latest"
+              }[.system],
+              experimental: (.system | endswith("darwin"))
+            }]')
+          echo "machines=$machines" >> "$GITHUB_OUTPUT"
+          echo "$machines" | jq .
+
+  system:
+    name: system ${{ matrix.host }} (${{ matrix.group }})
+    needs: plan
+    runs-on: ${{ matrix.runner }}
+    continue-on-error: ${{ matrix.experimental }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.machines) }}
+    env:
+      SYSTEM: ${{ matrix.system }}
+      CHECKS: ${{ toJSON(matrix.checks) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free disk
+        run: |
+          before=$(df -k / | awk 'NR == 2 { print $4 }')
+          if [ "$RUNNER_OS" = macOS ]; then
+            # Nix needs no Xcode; keep only the selected one.
+            xcrun simctl delete all || true
+            keep=$(xcode-select -p | sed 's|/Contents/Developer$||')
+            for x in /Applications/Xcode*.app; do
+              [ "$x" = "$keep" ] || sudo rm -rf "$x"
+            done
+            sudo rm -rf ~/Library/Developer/CoreSimulator ~/Library/Android \
+              /usr/local/share/dotnet ~/hostedtoolcache /Users/runner/hostedtoolcache
+          else
+            sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+              /opt/hostedtoolcache /usr/local/share/boost
+          fi
+          after=$(df -k / | awk 'NR == 2 { print $4 }')
+          echo "FREE_BEFORE_KB=$before" >> "$GITHUB_ENV"
+          echo "FREE_AFTER_KB=$after" >> "$GITHUB_ENV"
+          df -h /
+
+      - uses: DeterminateSystems/nix-installer-action@v16
+        with:
+          extra-conf: |
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build ${{ join(matrix.checks, ', ') }}
+        run: |
+          # (macOS runners ship bash 3.2: no mapfile)
+          start=$(date +%s)
+          status=0
+          jq -r --arg s "$SYSTEM" '.[] | ".#checks.\($s).\(.)"' <<<"$CHECKS" \
+            | xargs nix build --no-link --print-out-paths -L > outs.txt || status=$?
+          echo "BUILD_SECONDS=$(( $(date +%s) - start ))" >> "$GITHUB_ENV"
+          exit "$status"
+
+      - name: Record
+        if: always()
+        run: |
+          {
+            echo "### ${{ matrix.host }} on ${{ matrix.runner }}"
+            echo
+            echo "| | |"
+            echo "|---|---|"
+            echo "| free disk before cleanup | $(( FREE_BEFORE_KB / 1024 / 1024 )) GiB |"
+            echo "| free disk after cleanup | $(( FREE_AFTER_KB / 1024 / 1024 )) GiB |"
+            echo "| free disk after build | $(df -k / | awk 'NR == 2 { printf "%d", $4 / 1024 / 1024 }') GiB |"
+            echo "| build time | ${BUILD_SECONDS:-n/a} s |"
+            if [ -s outs.txt ]; then
+              while read -r out; do
+                echo "| closure of \`$(basename "$out")\` | $(nix path-info -Sh "$out" | awk '{ print $2, $3 }') |"
+              done < outs.txt
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  images:
+    name: image oci-base (aarch64-linux)
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@v16
+        with:
+          extra-conf: |
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+      - run: nix build --no-link -L .#checks.aarch64-linux.pkg-oci-base-image

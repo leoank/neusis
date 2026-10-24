@@ -255,6 +255,7 @@ command green before the next starts. Commit per item
 | 7.5 | `vm-home-bundle`: supercharged-git/-shell/terminal-velocity tools rendered and runnable for a user | T3 |
 | 7.6 | `vm-packages`: neusis CLI, gclb, kalam run inside a VM | T3 |
 | 7.7 | CI: VM tests on the x86_64 runner (KVM), pushes to main | workflow green |
+| 7.8 | `vm-auto-update`: comin via `nixosModules.auto-update` against a local bare repo — a signed commit deploys and pings ntfy, an unsigned head is refused, an eval failure is a no-op, a failing switch is logged and alerts ntfy + email (stub servers), the next signed commit deploys | T3 |
 | **Phase 8 — deferred** | | |
 | 8.0 | **Revisit the VM tests**: the first six prove the tier works; add/modify tests for more behaviours (e.g. tailscale profile switching, kanata remapping with a virtual keyboard, build-cluster with substitutes, home bundles for the other tools, a second NixOS node for hm-system-init across hosts) | T3 |
 | 8.1 | `nix-unit` flake input so T0 joins `nix flake check` | — |

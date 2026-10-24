@@ -277,6 +277,70 @@ let
     };
   };
 
+  # One auto-update deploy group (docs/auto-update-spec.md §4.2). Its
+  # members follow the `deploy/<group>` branch, which CI moves forward
+  # once the group's gates pass. `name` is the group's attribute key.
+  deployGroupType = types.submodule (
+    { name, ... }:
+    {
+      options = {
+        machines = mkOption {
+          type = types.listOf machineType;
+          default = [ ];
+          description = ''
+            Machines that follow this group's branch. Each entry is
+            typically a reference like `self.neusis.machines.<name>`. A
+            machine belongs to at most one group of a lab.
+          '';
+        };
+        branch = mkOption {
+          type = types.str;
+          default = "deploy/${name}";
+          readOnly = true;
+          description = "Git branch the group's machines deploy from.";
+        };
+        after = mkOption {
+          type = types.nullOr types.str;
+          default = null;
+          example = "canary";
+          description = ''
+            Name of the group this one trails: only commits that group
+            has run for `soakHours` are promoted here. `null` promotes
+            straight from a green `main`.
+          '';
+        };
+        soakHours = mkOption {
+          type = types.ints.unsigned;
+          default = 0;
+          description = "Hours a commit must have been the head of the `after` group before it is promoted here.";
+        };
+        pollPeriod = mkOption {
+          type = types.ints.positive;
+          default = 60;
+          description = "Seconds between polls of the group's branch on each member (comin's poller period).";
+        };
+      };
+    }
+  );
+
+  # One trusted commit signer: a line of an OpenSSH `allowed_signers`
+  # file. `principal` is the signer's committer email (what
+  # `git verify-commit` matches); `key` the SSH public key.
+  signerType = types.submodule {
+    options = {
+      principal = mkOption {
+        type = types.str;
+        example = "ank@leoank.me";
+        description = "Committer email the key signs for.";
+      };
+      key = mkOption {
+        type = types.str;
+        example = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA…";
+        description = "SSH public key (`<type> <base64>`, no comment).";
+      };
+    };
+  };
+
   # Per-target feature module collections. Each sub-attr is a flat map
   # of named module fragments scoped to where they're consumable.
   featuresType = types.submodule {
@@ -379,6 +443,26 @@ let
                 `hostPubkey`). Consumed by
                 `features.agnostic.build-client`, which drops the local
                 host and turns the rest into `nix.buildMachines`.
+              '';
+            };
+            deployGroups = mkOption {
+              type = types.lazyAttrsOf (types.attrsOf deployGroupType);
+              default = { };
+              description = ''
+                Per-lab auto-update deploy groups, keyed by group name.
+                Consumed by `features.agnostic.auto-update` (which
+                branch a host follows) and by CI (what to build and
+                promote). Check with `lib.autoUpdate.checkGroups`.
+              '';
+            };
+            signers = mkOption {
+              type = types.lazyAttrsOf (types.listOf signerType);
+              default = { };
+              description = ''
+                Per-lab trusted commit signers. Hosts deploy only
+                commits signed by one of these keys, and CI promotes
+                only such commits. Rendered with
+                `lib.autoUpdate.allowedSigners`.
               '';
             };
           };

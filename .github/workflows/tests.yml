@@ -8,8 +8,11 @@
 #   T2  build the cheap package checks (the Go CLI runs `go test` in its
 #       check phase)
 #
-#   T3  NixOS VM tests (checks.x86_64-linux.vm-*) under KVM, on pushes to
-#       main only — they are the slow tier
+#   T3  NixOS VM tests (checks.x86_64-linux.vm-*) under KVM, on everything
+#       but pull requests — they are the slow tier
+#
+# Also callable (`workflow_call`): gates.yml runs this ladder on every
+# auto-update candidate, VM tests included.
 #
 # The macOS runner covers the Darwin side natively (T0, T1 via nix eval,
 # package checks).
@@ -21,6 +24,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_call:
 
 permissions:
   contents: read
@@ -103,12 +107,12 @@ jobs:
 
   vm-tests:
     name: T3 VM ${{ matrix.test }}
-    if: github.event_name == 'push'
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        test: [neusis-os, tailscale, kanata, build-cluster, home-bundle, packages]
+        test: [neusis-os, tailscale, kanata, build-cluster, home-bundle, packages, auto-update]
     steps:
       - uses: actions/checkout@v4
       - name: Enable KVM for the runner user
