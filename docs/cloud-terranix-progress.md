@@ -281,3 +281,18 @@ Status line format: `<date> <time TZ> — <phase/milestone> — <what>`.
   `nixos-ghost001` instantiates. Not deployed to ghost001 yet (the unit
   would loop on the placeholder); next: Ankur adds the two TF_VARs, first
   apply, token → secret, deploy, then declare the first service.
+- 2026-10-25 — **Cloudflare tunnel live on ghost001.** Ankur added
+  `TF_VAR_cloudflare_api_token` / `TF_VAR_cloudflare_account_id` to the
+  tf.env secret; the deployed `~/.config/neusis/tf.env` was still the old
+  copy (no HM switch yet), so the stack ran with the vars sourced
+  in-process from the `.age`. First apply: tunnel + remote config (404
+  catch-all only), zone lookup fine with the token's scopes. Token went
+  from `output -raw tunnel_token_ghost001` straight into
+  `cfTunnelGhost001.age` via `age -r <master>` (no temp file —
+  `agenix edit -i` refuses to overwrite the placeholder), rekeyed.
+  Deployed from a clean worktree at HEAD (the main checkout carries
+  unrelated rc2s2 work in progress): `cloudflared-tunnel` active as a
+  DynamicUser, pulled the remote config (version 1), registered four
+  QUIC connections (iad). The pipeline for a public service is now: one
+  `services.<n>` entry → `apply` → the CNAME and ingress rule exist,
+  nothing to deploy on the host.
