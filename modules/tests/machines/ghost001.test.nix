@@ -109,7 +109,7 @@
           };
           expected = {
             tailscale = true;
-            defaultMesh = "leoank";
+            defaultMesh = "cslab";
             buildServer = true;
             buildsOffloadTo = [
               "spirit"

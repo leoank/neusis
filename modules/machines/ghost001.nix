@@ -27,13 +27,14 @@
           self.neusis.features.agnostic.nix-settings
           self.neusis.features.agnostic.nix-pkgs
           # agenix + neusis secrets (remoteBuildKey for distributed
-          # builds, the tailscale auth key via ank_mesh).
+          # builds, the tailscale credentials via cslab_mesh).
           inputs.agenix.nixosModules.default
           inputs.agenix-rekey.nixosModules.default
           self.nixosModules.secrets
           self.neusis.features.agnostic.distributed-builds
+          # cslab tailnet (the one ank's machines currently use).
           self.nixosModules.tailscale
-          self.neusis.features.agnostic.ank_mesh
+          self.neusis.features.agnostic.cslab_mesh
         ];
 
         programs.zsh.enable = true;
