@@ -266,12 +266,17 @@ func sshRun(ctx context.Context, target string, opts []string, remote string, er
 }
 
 // pushTree streams the decrypted root tree into / on the target and
-// restarts sshd. Permissions were normalised by CreateRootStructure and
-// travel with the tar stream.
+// restarts sshd. File modes were normalised by CreateRootStructure and
+// travel with the stream; ownership must not: the stream's directory
+// entries (".", "etc", …) carry the operator's uid and the temp dir's
+// 0700 mode, and extracting them as root once turned the host's "/"
+// into drwx------ UNKNOWN:wheel, breaking every non-root service. Hence
+// --no-overwrite-dir (keep metadata of existing directories) and
+// --no-same-owner (new files belong to root).
 func pushTree(ctx context.Context, tree, target string, errOut io.Writer) error {
 	tar := exec.CommandContext(ctx, "tar", "-C", tree, "-cf", "-", ".")
 	ssh := exec.CommandContext(ctx, "ssh", append(append([]string{"-o", "BatchMode=yes"}, firstContactOpts...), target,
-		"tar -C / -xf - && systemctl restart sshd")...)
+		"tar -C / --no-overwrite-dir --no-same-owner -xf - && systemctl restart sshd")...)
 	pipe, err := tar.StdoutPipe()
 	if err != nil {
 		return err
