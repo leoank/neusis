@@ -178,3 +178,25 @@ Status line format: `<date> <time TZ> — <phase/milestone> — <what>`.
   boot over SSH: NixOS 26.05 aarch64, EFI, root grown to 49 GB, `sdb` =
   data disk (unformatted), fetch-ssh-keys/sshd/networkd active. Both
   states committed (ciphertext). Next: `neusis cloud bootstrap ghost001`.
+- 2026-10-24 — **M7: ghost001 bootstrapped (with two CLI bugs found live).**
+  Tailscale credentials moved to `modules/secrets/{ank,cslab}/` (real
+  values + rekey by Ankur); ghost001 joins the **cslab** tailnet
+  (`88f6c65`); `yajna` 0.7.1 does not build for aarch64-linux, dropped
+  from ghost001's home for now (`6531672`). Bootstrap pushed and verified
+  the host key, then: (1) `nixos-rebuild` inside `nix develop` died on a
+  too-long ssh ControlPath (`$TMPDIR=/tmp/nix-shell.…`) → CLI forces
+  `TMPDIR=/tmp` for the child (`d54a7f2`); (2) the key push extracted the
+  tar stream's `.`/`etc` entries onto the real `/` and `/etc`, leaving
+  `/` as `drwx------ UNKNOWN:wheel`, so every non-root unit (networkd,
+  resolved, timesyncd, home-manager-ank) failed with `200/CHDIR` after
+  the switch → repaired by hand (`chown root:root / /etc /etc/ssh; chmod
+  755`), CLI now extracts with `--no-overwrite-dir --no-same-owner`
+  (`eff0755`). After that: ghost001 runs
+  `nixos-system-ghost001-26.05…`, agenix decrypted remoteBuildKey +
+  the three cslab secrets, `ank` (wheel) + home-manager active, tailscale
+  up as `ghost001` (100.65.218.47). Open: the autoconnect oneshot's
+  key-expiry step fails ("Failed to obtain OAuth token") — cslab OAuth
+  client credentials/scopes to check; and rogue is not on the cslab
+  tailnet, so its builder entry `nixremote@ghost001` is unreachable
+  from rogue (noisy "cannot build on" warnings) until rogue joins or the
+  entry changes.
