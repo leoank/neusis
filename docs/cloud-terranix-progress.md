@@ -242,3 +242,23 @@ Status line format: `<date> <time TZ> — <phase/milestone> — <what>`.
   Lesson for the runbook: a classic-agenix `.file` secret must list
   every new host as a recipient *before* its first switch, or the seeded
   password never lands.
+- 2026-10-24 — **M8 done.** Drift check: both stacks `plan
+  -detailed-exitcode` → 0 (the terranix wrappers forward `"$@"`, so the
+  S3 note about scripts not taking arguments is outdated for `.plan`).
+  `publicSsh = false` → apply (security list updated in place) → port 22
+  closed from the internet after a few seconds, SSH over the tailnet
+  fine → reverted, port open again ~5 s after apply; state committed.
+  Data volume: `/dev/sdb` (150 GB) was attached raw; `mkfs.ext4 -L data`
+  once, `fileSystems."/srv"` by label with `nofail` in `ghost001.nix`,
+  deployed, mounted (147 GB free). rogue is on the cslab tailnet now
+  (manual join + policy) and a probe derivation built on ghost001 via
+  rogue's daemon with the builders restricted to `nixremote@ghost001`.
+  Consumer surface: `flakeModules.default` imports the terranix
+  modules, `oci-guest` and `lib/cloud.nix` (consumer smoke test
+  extended). Docs: `docs/cloud/tutorial.md` runbook, AGENTS.md layout +
+  commands + T4, `docs/testing.md` T4 rung, porting entry. T0 295/295,
+  `go test ./...` green; T1/T2: the host checks instantiate and the two
+  `tofu-validate-*` checks build. Left for later: wrapping the bake in a
+  `neusis` subcommand (ghost001 is now a native aarch64 builder, so the
+  ad-hoc VM recipe may not be needed), a `templates/cloud-oci` entry,
+  yajna back on ghost001 once 0.8.x builds on aarch64.

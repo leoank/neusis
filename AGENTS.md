@@ -22,17 +22,22 @@ modules/           the live flake (dendritic; one flake-parts module per file)
   machines/          one file per host (darwin001, rogue); `_`-prefixed = shared snippets
   users/             per-user home bundles + machineToBundlesMap (ank, kumarank)
   registry/          machines / users / builders registries (system, roles, keys)
-  secrets/           agenix-rekey: common/, <user>/ (plaintext .age), rekeyed/<host>/
+  secrets/           agenix-rekey: common/, <user>/ (plaintext .age), rekeyed/<host>/,
+                     bootstrap/<host>/ (pre-generated cloud host keys)
   packages/          kalam (nixvim flavours), gclb, neusis-cli
+  terranixModules/   reusable terranix (OpenTofu) modules: state-encryption, oci/*
+  infra/             the fleet's terranix stacks: oci-images (base image), oci-anklab (hosts)
+  images/            packages.<linux>.oci-base-image (lib.cloud.mkOciBaseImage)
   tests/             nix-unit suite + checks glue; mirrors the live tree
                      (tests/homeModules/brave.test.nix tests homeModules/brave.nix);
                      harness.nix, _fixtures/ — see docs/testing.md
   lib/ shells/ overlays.nix deploy.nix
-cli/               Go `neusis` CLI that scaffolds consumer repos (flake.packages.<sys>.neusis)
+cli/               Go `neusis` CLI: scaffolds consumer repos, `neusis cloud bootstrap|deploy` (flake.packages.<sys>.neusis)
+infra/<stack>/     OpenTofu working dirs; only the encrypted terraform.tfstate is committed
 templates/         `nix flake init -t .#<name>` project templates (exposed by modules/templates.nix)
 scripts/           standalone helper scripts (anywhere.py: nixos-anywhere + age secrets bootstrap)
 examples/          consumer-repo examples (external-flake, flake-parts-consumer)
-docs/              overview, per-module tutorials, porting log, specs
+docs/              overview, per-module tutorials, porting log, specs; cloud/tutorial.md is the OCI runbook
 old_modules/       the complete pre-refactor (v1) tree, archived verbatim — see its README
 ```
 
@@ -69,6 +74,8 @@ nix run .#write-flake                                 # regenerate flake.nix aft
 nix build .#kalam .#kalam-full .#neusis               # packages
 agenix rekey                                          # after editing secrets or adding hosts
 cd cli && go test ./...                               # neusis CLI
+nix run .#oci-anklab.plan -- -detailed-exitcode        # cloud: drift check (0 clean, 2 changes); .apply/.destroy/.terraform likewise
+nix develop -c neusis cloud deploy ghost001           # cloud: day-2 switch over the tailnet (bootstrap for a fresh instance)
 nix run .#neusis-test                                 # T0: nix-unit eval tests (~1 min)
 NEUSIS_TEST_SYSTEM=x86_64-linux nix run .#neusis-test # T0 for the Linux variants
 nix flake check --no-build --all-systems              # T1: every machine/home/package check instantiates
@@ -83,7 +90,9 @@ sets); **T1** `nix flake check --no-build --all-systems` (automates the old
 **T2** `nix build .#checks.aarch64-darwin.darwin-rogue` etc.; **T3** the
 NixOS VM tests `checks.<linux-system>.vm-*` (`modules/tests/vm/`), which
 boot the fixture machine, the services, a two-node build cluster, a home
-bundle and the packages — run on spirit/oppy (KVM) from a Mac, native under KVM in CI. Do **not**
+bundle and the packages — run on spirit/oppy (KVM) from a Mac, native under KVM in CI;
+**T4** (manual, never CI) a read-only `plan -- -detailed-exitcode` against the live
+tenancy plus the bootstrap smoke check — see `docs/cloud/tutorial.md`. Do **not**
 pass `--builders ''` for Linux builds — a Mac has no local Linux builder;
 the aarch64-linux/x86_64-linux builders come from `/etc/nix/machines`.
 

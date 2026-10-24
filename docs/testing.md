@@ -77,10 +77,17 @@ Patterns worth copying:
 | **T1 eval flake** | `nix flake check --no-build --all-systems` (warm store); on a cold store realise `.#darwinConfigurations.rogue.pkgs.base16-schemes` first, or instantiate `checks.<system>` with `nix eval` — see §7.5 | ~40 s | every `checks.*` derivation instantiates (= today's `drvPath` ladder, automated) |
 | **T2 build** | `nix flake check` or `nix build .#checks.<sys>.<name>` | minutes–hours | systems, homes, packages really build |
 | **T3 VM** | `nix build .#checks.<linux-system>.vm-<name>` | 2–10 min each | NixOS VMs: full fixture machine, services under systemd, a two-node build cluster, home bundles, packages |
+| **T4 live** (manual, never CI) | `nix run .#<stack>.plan -- -detailed-exitcode`; after a deploy the smoke check in `docs/cloud/tutorial.md` §5 | ~1 min | the cloud stacks against the real tenancy (0 = no drift, 2 = changes), the bootstrapped host (tailscale name, agenix secrets, no failed units, `nixos-version`) |
 
 T0 is the default developer loop and the bulk of the new code. T1/T2 are
 mostly glue: wrap what already exists as `checks`. T3 is described in
-section 7.
+section 7. T4 is the only rung that touches something outside Nix (the
+OCI tenancy and a live host); it is read-only by construction (`plan`,
+`systemctl --failed`, …) and needs the operator's `tf.env`, so it is run
+by hand after an infra or host change, never by CI. The offline half of
+the cloud code sits lower: `checks.<sys>.tofu-validate-<stack>` (T2,
+`tofu validate` with Nix-provided plugins) and the terranix-module and
+machine unit tests (T0).
 
 ### 3.2 Where tests live ✅ mirror tree `modules/tests/**/<name>.test.nix`
 

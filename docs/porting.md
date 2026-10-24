@@ -2456,3 +2456,27 @@ and the host-key push extracted the tar stream's `.`/`etc` entries onto
 the kernel hostname (stage 2 does), so the first deploy ends with a
 reboot. ghost001 joins the cslab tailnet; tailscale credentials for both
 meshes now live under `modules/secrets/{ank,cslab}/`.
+
+## 2026-10-24 — cloud machines (terranix): M8, operations and consumer surface
+
+Day-2 surface closed out, each item exercised live on ghost001: the
+wrappers forward arguments, so `nix run .#<stack>.plan -- -detailed-exitcode`
+is the drift check (both stacks: exit 0, no drift); `publicSsh = false`
+applied and reverted (the TCP 22 rule disappears from the security list
+and the public port closes within seconds, tailnet SSH unaffected); the
+150 GB data volume formatted once by hand (`mkfs.ext4 -L data`) and
+mounted declaratively at `/srv` by label with `nofail`; rogue builds on
+`nixremote@ghost001` through its daemon now that both are on the cslab
+tailnet. `flakeModules.default` exports the cloud surface promised in
+spec §7 (the five `terranixModules`, `features.nixos.oci-guest`,
+`lib.cloud`); `docs/cloud/tutorial.md` is the operator runbook; T4 is
+the manual live rung in `docs/testing.md`.
+
+Two lessons for the runbook: a classic-agenix `.file` secret
+(`initialHashedPassword`) must list a new host among its recipients
+before the first switch — ghost001 was not, the seeded password never
+landed and, because `users.mutableUsers` keeps an existing shadow entry,
+the account stayed locked even after the secret was fixed (set once by
+hand); and freshly rekeyed files must be `git add`ed before a deploy, as
+a git flake does not see untracked `rekeyed/` entries. Tailscale OAuth
+for the cslab profile now comes from `secrets/common/{tsclient,tssecret}.age`.
