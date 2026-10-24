@@ -15,6 +15,7 @@
             "auto-update"
             "build-client"
             "build-server"
+            "cloudflare-tunnel"
             "hm-system-init"
             "kanata"
             "secrets"
