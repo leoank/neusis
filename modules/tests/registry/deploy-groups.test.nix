@@ -46,6 +46,34 @@
           expected = [ ];
         };
 
+        # What gates.yml builds before promoting each group.
+        test-anklab-ci-matrix = {
+          expr = self.neusis.lib.autoUpdate.ciMatrix {
+            inherit groups;
+            inherit (self) checks;
+          };
+          expected = [
+            {
+              host = "ghost001";
+              group = "canary";
+              system = "aarch64-linux";
+              checks = [
+                "home-ank@ghost001"
+                "nixos-ghost001"
+              ];
+            }
+            {
+              host = "rogue";
+              group = "stable";
+              system = "aarch64-darwin";
+              checks = [
+                "darwin-rogue"
+                "home-ank@rogue"
+              ];
+            }
+          ];
+        };
+
         test-every-member-is-built-by-the-lab = {
           expr = lib.filter (h: !(lib.elem h built)) (
             lib.concatMap (g: map (m: m.hostname) g.machines) (lib.attrValues groups)

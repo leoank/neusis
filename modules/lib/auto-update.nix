@@ -62,6 +62,35 @@
       ++ map (n: "deploy group `${n}`: `after` chain loops back to itself") cyclic
       ++ map (n: "deploy group `${n}`: `soakHours` needs `after`") soakWithoutAfter;
 
+    # CI build matrix for a lab's deploy groups (docs/auto-update-spec.md
+    # §6.3): one entry per member with the flake checks that must build
+    # before its group may move — its system (`nixos-<host>` or
+    # `darwin-<host>`) and every home on it (`home-<user>@<host>`).
+    # `checks` is the flake's `checks` output; only its names are read.
+    ciMatrix =
+      { groups, checks }:
+      lib.concatMap (
+        group:
+        map (
+          m:
+          let
+            host = m.hostname;
+            kind = if lib.hasSuffix "darwin" m.system then "darwin" else "nixos";
+            names = lib.attrNames (checks.${m.system} or { });
+          in
+          if !(lib.elem "${kind}-${host}" names) then
+            throw "ciMatrix: no check `${kind}-${host}` for ${m.system} (is ${host} in the lab's machine registry?)"
+          else
+            {
+              inherit host group;
+              inherit (m) system;
+              checks = lib.filter (
+                n: n == "${kind}-${host}" || (lib.hasPrefix "home-" n && lib.hasSuffix "@${host}" n)
+              ) names;
+            }
+        ) groups.${group}.machines
+      ) (lib.attrNames groups);
+
     # OpenSSH `allowed_signers` text for a signer list, restricted to git
     # signatures (comin accepts only key entries and `namespaces=`).
     allowedSigners = lib.concatMapStrings (s: "${s.principal} namespaces=\"git\" ${s.key}\n");

@@ -584,14 +584,19 @@ cleanup.
    `c21b5c5`): plus `vm-auto-update` (signed commit deploys, unsigned
    head refused, eval failure is a no-op, failing switch alerts, next
    commit deploys). Check: T0, T1, T3.
-3. **M3 CI builds:** the App and `gates.yml`, with the arm64 ghost001
-   system + image builds as gates (no cache push) and the macOS rogue
-   experiment. Check: a dispatched run builds ghost001, and the
-   experiment is recorded either way.
-4. **M4 Pipelines:** the bot signing key, `update-inputs.yml`,
+3. **M3 CI builds:** `gates.yml` (reusable and dispatchable): `tests.yml`
+   (now also `workflow_call`, VM tests on every non-PR event), one
+   build job per deploy-group member from `lib.autoUpdate.ciMatrix`
+   (system + homes; Linux native, Mac as the experiment, recorded in
+   the job summary), and the OCI base image on arm64. No cache push. The
+   App is not needed yet (gates only read). Check: a dispatched run
+   builds ghost001, and the experiment is recorded either way.
+4. **M4 Pipelines:** the App, the bot signing key, `update-inputs.yml`,
    `pipeline.yml`, `promote.yml`, email + issue alerts, and the
-   rulesets. Check: a dispatched bump lands and promotes canary; a
-   deliberately broken bump sends the email and opens the issue.
+   rulesets. `tests.yml` drops its own `push: main` trigger then, since
+   `pipeline.yml` runs it through `gates.yml` on every push to main.
+   Check: a dispatched bump lands and promotes canary; a deliberately
+   broken bump sends the email and opens the issue.
 5. **M5 Enroll:** the notify secret (`SENDGRID_API_KEY`), then ghost001
    (canary), then rogue (stable). Check: a deploy visible in `comin
    status` and the JSONL log; a failed deploy emails.

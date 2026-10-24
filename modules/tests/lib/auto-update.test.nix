@@ -103,6 +103,77 @@
           };
         };
 
+        test-ci-matrix-lists-system-and-home-checks = {
+          expr = au.ciMatrix {
+            groups = {
+              canary = group [ ] { } // {
+                machines = [
+                  {
+                    hostname = "a";
+                    system = "x86_64-linux";
+                  }
+                ];
+              };
+              stable = group [ ] { } // {
+                machines = [
+                  {
+                    hostname = "b";
+                    system = "aarch64-darwin";
+                  }
+                ];
+              };
+            };
+            checks = {
+              x86_64-linux = {
+                nixos-a = null;
+                "home-alice@a" = null;
+                "home-bob@ab" = null;
+                pkg-x = null;
+              };
+              aarch64-darwin = {
+                darwin-b = null;
+                "home-alice@b" = null;
+              };
+            };
+          };
+          expected = [
+            {
+              host = "a";
+              group = "canary";
+              system = "x86_64-linux";
+              checks = [
+                "home-alice@a"
+                "nixos-a"
+              ];
+            }
+            {
+              host = "b";
+              group = "stable";
+              system = "aarch64-darwin";
+              checks = [
+                "darwin-b"
+                "home-alice@b"
+              ];
+            }
+          ];
+        };
+
+        # A member without a system check would silently skip its gate.
+        test-ci-matrix-needs-the-system-check = {
+          expr = au.ciMatrix {
+            groups.canary = group [ ] { } // {
+              machines = [
+                {
+                  hostname = "a";
+                  system = "x86_64-linux";
+                }
+              ];
+            };
+            checks.x86_64-linux = { };
+          };
+          expectedError.type = "ThrownError";
+        };
+
         test-allowed-signers-render = {
           expr = au.allowedSigners [
             {
