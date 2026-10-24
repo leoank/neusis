@@ -2375,3 +2375,25 @@ stack wrapper sources). ank's home on ghost001 is the headless subset
 (nix-pkgs, kalam-ide, neusis-cli, yajna, terminal-life): no GUI bundles,
 and not `secrets`, whose tokens decrypt with ank's private key, which a
 server does not carry.
+
+## 2026-10-24 — cloud machines (terranix): M5–M7, ghost001 is live
+
+The whole lifecycle ran for real (trail in `docs/cloud-terranix-progress.md`):
+the aarch64 base image baked natively in nixpkgs' ad-hoc
+`darwin.linux-builder` VM (make-disk-image's virtiofsd cannot run under
+binfmt emulation on spirit/oppy), uploaded (69 s) and imported by the
+`oci-images` stack, ghost001 provisioned by `oci-anklab` and switched to
+its configuration by `neusis cloud bootstrap`/`deploy`. Account-side facts
+learned: Always Free tenancies have a custom-image limit of 0 (PAYG → 25);
+freeform tag keys may not contain `.`; capability-schema descriptors are
+camelCase JSON; an imported qcow2 records `firmware = BIOS`, so Arm
+instances pin `launch_options = { firmware = UEFI_64; network_type;
+boot_volume_type }` (OCI requires `network_type` with `launch_options`);
+global capability schemas are tenancy-scoped (list them without a
+compartment). Two CLI bugs surfaced only live: `nixos-rebuild`'s ssh
+ControlPath exceeds the Unix-socket limit under `nix develop`'s TMPDIR,
+and the host-key push extracted the tar stream's `.`/`etc` entries onto
+`/` (now `--no-overwrite-dir --no-same-owner`). A switch does not change
+the kernel hostname (stage 2 does), so the first deploy ends with a
+reboot. ghost001 joins the cslab tailnet; tailscale credentials for both
+meshes now live under `modules/secrets/{ank,cslab}/`.

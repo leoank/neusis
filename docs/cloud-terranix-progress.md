@@ -200,3 +200,15 @@ Status line format: `<date> <time TZ> — <phase/milestone> — <what>`.
   tailnet, so its builder entry `nixremote@ghost001` is unreachable
   from rogue (noisy "cannot build on" warnings) until rogue joins or the
   entry changes.
+- 2026-10-24 — **M7 done.** After the repair ghost001 was rebooted into
+  its generation (`systemctl reboot` — the first attempt silently never
+  ran, a shell quoting slip on my side): hostname `ghost001` (NixOS sets
+  the kernel hostname in stage 2, so a switch alone leaves the base
+  image's transient `oci-base`), tailscale connects at boot as
+  `ghost001` (100.65.218.47 on cslab), `/` and `/etc` root-owned, no
+  failed units except `neusis-tailscale-autoconnect` (its
+  disable-key-expiry step: "Failed to obtain OAuth token"). Lifecycle
+  proven end to end: bake → upload/import → provision → bootstrap →
+  deploy → reboot. Remaining before M8: the OAuth credentials, and how
+  rogue reaches `nixremote@ghost001` (rogue is not on the cslab tailnet;
+  its daemon now logs "cannot build on ssh-ng://nixremote@ghost001").
