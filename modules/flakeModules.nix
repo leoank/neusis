@@ -69,6 +69,9 @@
         ./terranixModules/oci/network.nix
         ./terranixModules/oci/image.nix
         ./terranixModules/oci/instance.nix
+        ./terranixModules/cloudflare/provider.nix
+        ./terranixModules/cloudflare/tunnel.nix
+        ./agnosticModules/cloudflare-tunnel.nix
         ./features/nixos/oci-guest.nix
         ./lib/cloud.nix
       ];

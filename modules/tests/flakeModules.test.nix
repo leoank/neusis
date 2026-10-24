@@ -82,11 +82,14 @@
             ];
             builders = true;
             agnostic = [
+              "cloudflare-tunnel"
               "hm-system-init"
               "secrets"
             ];
             nixosModules = true;
             terranix = [
+              "cloudflare-provider"
+              "cloudflare-tunnel"
               "oci-image"
               "oci-instance"
               "oci-network"
