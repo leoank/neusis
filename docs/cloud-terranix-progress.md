@@ -230,3 +230,15 @@ Status line format: `<date> <time TZ> — <phase/milestone> — <what>`.
   its recipients (master + three older hosts). Present since the
   bootstrap switch (journal 20:03); fix = re-encrypt with ghost001's
   host key added.
+- 2026-10-24 — **ghost001 login fixed.** `secrets/common/hashedInitialPassword.age`
+  re-encrypted with ghost001's host key added (recipients: master,
+  shantanu, karkinos, oppy, ghost001; `age -d | age -R`, plaintext never
+  on disk), redeployed: activation decrypts
+  `commonInitialHashedPassword` cleanly. The account stayed locked
+  anyway — with `users.mutableUsers = true` NixOS keeps an existing
+  shadow entry, so the `!` from the first (failed) activation persisted;
+  applied the declared hash once by hand (`usermod -p` from
+  `/run/agenix/commonInitialHashedPassword`), `passwd -S ank` → `P`.
+  Lesson for the runbook: a classic-agenix `.file` secret must list
+  every new host as a recipient *before* its first switch, or the seeded
+  password never lands.
