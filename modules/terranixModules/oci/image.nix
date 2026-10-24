@@ -27,10 +27,13 @@
       # Terraform resource names allow [A-Za-z0-9_-].
       sanitize = s: lib.replaceStrings [ "." ] [ "-" ] s;
 
+      # Descriptor field names are camelCase in the API (the oci CLI only
+      # displays them kebab-case); snake_case made CreateComputeImage-
+      # CapabilitySchema fail with a 500.
       capability = kind: value: builtins.toJSON {
-        descriptor_type = kind;
+        descriptorType = kind;
         source = "IMAGE";
-        default_value = value;
+        defaultValue = value;
         values = [ value ];
       };
 

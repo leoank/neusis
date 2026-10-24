@@ -70,9 +70,9 @@
           expected = {
             shapes = [ "VM.Standard.A1.Flex" ];
             firmware = {
-              descriptor_type = "enumstring";
+              descriptorType = "enumstring";
               source = "IMAGE";
-              default_value = "UEFI_64";
+              defaultValue = "UEFI_64";
               values = [ "UEFI_64" ];
             };
             capabilities = [
