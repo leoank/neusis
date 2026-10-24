@@ -27,7 +27,12 @@
 
               # OpenTofu (native state encryption, see spec §6) with the
               # providers pinned by nixpkgs: no registry downloads at init.
-              terraformWrapper.package = lib.mkDefault (pkgs.opentofu.withPlugins (p: [ p.oracle_oci ]));
+              terraformWrapper.package = lib.mkDefault (
+                pkgs.opentofu.withPlugins (p: [
+                  p.oracle_oci
+                  p.cloudflare_cloudflare
+                ])
+              );
 
               terraformWrapper.prefixText = lib.mkBefore ''
                 test -f ${up}/flake.nix || {

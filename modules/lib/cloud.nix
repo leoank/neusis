@@ -64,7 +64,10 @@
           inherit pkgs;
           modules = modules ++ extraModules;
         };
-        tofu = pkgs.opentofu.withPlugins (p: [ p.oracle_oci ]);
+        tofu = pkgs.opentofu.withPlugins (p: [
+          p.oracle_oci
+          p.cloudflare_cloudflare
+        ]);
       in
       pkgs.runCommand "tofu-validate-${name}" { nativeBuildInputs = [ tofu ]; } ''
         export HOME=$TMPDIR

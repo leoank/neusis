@@ -45,6 +45,8 @@
           expected = {
             option = true;
             modules = [
+              "cloudflare-provider"
+              "cloudflare-tunnel"
               "oci-image"
               "oci-instance"
               "oci-network"
