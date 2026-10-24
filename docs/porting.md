@@ -2480,3 +2480,25 @@ the account stayed locked even after the secret was fixed (set once by
 hand); and freshly rekeyed files must be `git add`ed before a deploy, as
 a git flake does not see untracked `rekeyed/` entries. Tailscale OAuth
 for the cslab profile now comes from `secrets/common/{tsclient,tssecret}.age`.
+
+## 2026-10-25 — auto-updates M3: the gates workflow
+
+`.github/workflows/gates.yml` (reusable and dispatchable) runs
+`tests.yml` (now also `workflow_call`, VM tests on every non-PR event)
+and builds every deploy-group member's system and homes, with the
+matrix taken from `lib.autoUpdate.ciMatrix` so enrolling a machine
+needs no YAML. The first dispatched run (40138344573, on the merge of
+`auto-updates`) passed every test and built both members: ghost001 on
+`ubuntu-24.04-arm` (system 14.0 GiB, home 13.1 GiB, 14.2 GiB
+together) and rogue on `macos-latest`, the experiment of spec §7.2.
+The Mac runner had 96 GiB free before deleting Xcodes and simulators
+(142 GiB after), far above the 14 GB GitHub guarantees, and the rogue
+system and home built in 1917 s without a binary cache of our own. It
+stays `continue-on-error` until a few more runs are green.
+
+The OCI base image was dropped from the gates: `make-disk-image` needs
+the `kvm` system feature and the hosted arm64 runners have none
+("missing system features: {kvm}"). It gates no deploy group; it can
+return once CI reaches spirit/oppy in phase 2. A workflow can be
+dispatched only once its file is on the default branch, which is why
+the branch was merged before the first run.

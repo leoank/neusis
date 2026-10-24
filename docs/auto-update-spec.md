@@ -11,7 +11,7 @@ Goal: keep the fleet current without anyone running `nix flake update`
 or `*-rebuild switch` by hand.
 
 1. **Inputs loop.** Bump `flake.lock` daily. Run the full test ladder and
-   build every host's system and image. Land the bump on `main` only if
+   build every host's system. Land the bump on `main` only if
    everything passes. If anything fails, alert by email (ntfy joins in
    phase 2).
 2. **Promotion.** Every commit on `main` goes through the same gates. A
@@ -38,7 +38,8 @@ or `*-rebuild switch` by hand.
 - Each host has a flake check: `checks.aarch64-darwin.darwin-rogue`,
   `checks.aarch64-linux.nixos-ghost001`, the `home-<user>@<host>`
   checks, and `checks.<sys>.pkg-oci-base-image` (ghost001's base
-  image). These are the "full images" CI builds (§7).
+  image). CI builds the system and home checks (§7); the base image
+  needs KVM and is not built in CI (§7.1).
 - `deploy.nix` exposes `nixosConfigurations.<hostname>` and
   `darwinConfigurations.<hostname>`, which is the attribute comin builds
   by default.
@@ -54,19 +55,21 @@ or `*-rebuild switch` by hand.
   runners, and T3 VM tests on pushes to `main`. No CI job builds a
   system closure.
 - **Measured: rogue's system closure is 28.1 GiB.** A hosted macOS
-  runner guarantees about 14 GB of free disk (§7.2).
+  runner guarantees about 14 GB of free disk, but `macos-latest` had
+  96 GiB free in practice (142 GiB after cleanup), and rogue built there
+  (§7.2).
 - **Measured: 194 of the last 200 commits are SSH-signed**
   (`supercharged-git`, `~/.ssh/id_ed25519`).
 - **Tailnets (measured from rogue):**
   - `spirit` and `oppy` are owned by `shntnu@` on the **`shntnu.github`**
     tailnet (`tail5e510f.ts.net`). **Ankur doesn't administer them.**
     They are identical NixOS boxes (384 threads, KVM).
-  - `ghost001` is on **`leoank.github`** today (`ank_mesh`).
+  - `ghost001` was on **`leoank.github`** (`ank_mesh`); it joined
+    `cslab_mesh` on 2026-10-24.
   - `rogue` has both profiles and is usually on `shntnu.github`.
   - **Decision (2026-10-22): every device lives on `shntnu.github`.**
-    ghost001 moves there (its machine file swaps `ank_mesh` for
-    `cslab_mesh`, a separate change made before M3), and CI joins it
-    too (§8.3). There are no cross-tailnet shares.
+    ghost001 has moved (its machine file swapped `ank_mesh` for
+    `cslab_mesh` on 2026-10-24), and CI joins it in phase 2 (§8.3). There are no cross-tailnet shares.
 - Homebrew on rogue (`machines/_homebrew.nix`): `upgrade = true`,
   `cleanup = "uninstall"`. **Unchanged by decision.** We collect data
   first (§9.4).
@@ -165,7 +168,7 @@ hold:
 1. **Shared gates** passed on `C`: T0, T1, T2 packages, T3 VM tests, and
    `check-flake-file`.
 2. **Group gate** passed on `C`: every member's system check, plus its
-   image and home checks if any, built in CI (§7).
+   home checks if any, built in CI (§7).
 3. **The head is signed by an allowed signer.** CI runs `git
    verify-commit` with the same file comin uses (§5).
 4. `deploy/<group>` **fast-forwards** to `C` (`main` is linear).
@@ -242,7 +245,7 @@ re-runs quickly, because the Linux closures substitute from attic.
 | T1 | ubuntu + macOS | instantiate every system's checks |
 | T2 | ubuntu | `pkg-*`, `check-flake-file`, `tofu-validate-*` |
 | T3 | ubuntu (KVM) | `vm-*`, now a gate on every candidate |
-| **system/ghost001** | `ubuntu-24.04-arm` (native aarch64, free for public repos) | `nixos-ghost001`, `pkg-oci-base-image`, `home-ank@ghost001`; in phase 2, then `attic push` |
+| **system/ghost001** | `ubuntu-24.04-arm` (native aarch64, free for public repos) | `nixos-ghost001`, `home-ank@ghost001`; in phase 2, then `attic push` |
 | **system/rogue** | `macos-latest` (experiment, §7.2) | `darwin-rogue`, `home-ank@rogue` |
 
 The system matrix comes from the registry (`nix eval --json` over the
@@ -307,13 +310,20 @@ secrets of the same names.
 
 ### 7.1 Linux: hosted, native
 
-ghost001 and its OCI base image build on GitHub's **`ubuntu-24.04-arm`**
+ghost001 builds on GitHub's **`ubuntu-24.04-arm`**
 runners (native aarch64, free for public repos), substituting from
 cache.nixos.org (and, in phase 2, attic, then pushing to it with the CI
 token). This keeps CI independent of spirit and oppy, which we don't
 control. If a build ever outgrows the runner (time or disk), offload it
 to spirit/oppy as remote builders over the tailnet (§8.3). That is a
 config change, not a redesign.
+
+The OCI base image (`pkg-oci-base-image`) is not built in CI. Its
+`make-disk-image` step boots a VM and requires the `kvm` system
+feature, which the hosted arm64 runners don't offer (the first gates
+run failed with "missing system features: {kvm}"). It only matters when
+a new cloud machine is provisioned, so it gates no deploy group. It can
+return once CI reaches a KVM builder (spirit/oppy, phase 2).
 
 ### 7.2 Mac: an experiment, with the host as the backstop
 
@@ -322,7 +332,7 @@ guaranteed free disk (about 14 GB). The images do ship many GB of
 preinstalled Xcode versions and SDKs, and deleting them is a common way
 to free space. The plan:
 
-1. **Experiment (M4):** on `macos-latest`, remove the unused Xcodes,
+1. **Experiment (M3):** on `macos-latest`, remove the unused Xcodes,
    simulators and caches, measure the free space, then build
    `darwin-rogue` with substitution on and record the time and peak
    disk use.
@@ -336,6 +346,12 @@ to free space. The plan:
    the fallback, not the goal. Revisit if a Mac mini or another
    always-on Mac joins the fleet (as a self-hosted runner or remote
    builder).
+
+**First result (2026-10-24, gates run 40138344573):** the runner had
+96 GiB free before cleanup and 142 GiB after, and `darwin-rogue` plus
+`home-ank@rogue` built in 1917 s with no binary cache of our own. So it
+fits; the job stays `continue-on-error` until a few more runs are green,
+then becomes the real gate for `stable` (step 2).
 
 Building on rogue over the tailnet from CI was considered and dropped.
 rogue is a laptop, often asleep or on the other tailnet profile, so the
@@ -383,11 +399,11 @@ Every device lives on `shntnu.github`:
 | Client | Reaches `spirit:8080` |
 |---|---|
 | rogue | directly (its `cslab` profile) |
-| ghost001 | directly, once it moves to `cslab_mesh` (§1) |
+| ghost001 | directly (`cslab_mesh`, since 2026-10-24) |
 | CI jobs | as an **ephemeral node tagged `tag:neusis-ci`**, joined with `tailscale/github-action` and an OAuth client the admin issues for that tag. A policy rule lets `tag:neusis-ci` reach only `spirit:8080` (and later `oppy:8080`). |
 
-Moving ghost001 also closes a latent gap: it lists spirit and oppy as
-remote builders, but it can't reach them from `leoank.github` today.
+Moving ghost001 also closed a latent gap: it lists spirit and oppy as
+remote builders, which it couldn't reach from `leoank.github`.
 
 ### 8.4 Client side: `features.agnostic.neusis-cache`
 
@@ -522,6 +538,11 @@ Phase 2:
 
 ## 14. Decisions
 
+2026-10-25:
+
+- **The OCI base image leaves the gates.** It needs KVM, which hosted
+  arm64 runners lack, and it gates no deploy group (§7.1).
+
 2026-10-24:
 
 - **attic and ntfy move to phase 2.** Phase 1 ships signed, gated, pull
@@ -588,9 +609,10 @@ cleanup.
    (now also `workflow_call`, VM tests on every non-PR event), one
    build job per deploy-group member from `lib.autoUpdate.ciMatrix`
    (system + homes; Linux native, Mac as the experiment, recorded in
-   the job summary), and the OCI base image on arm64. No cache push. The
-   App is not needed yet (gates only read). Check: a dispatched run
-   builds ghost001, and the experiment is recorded either way.
+   the job summary). No cache push. The App is not needed yet (gates
+   only read). Check: a dispatched run builds ghost001, and the
+   experiment is recorded either way. Done: run 40138344573 built
+   ghost001 and rogue; the OCI image was dropped (§7.1).
 4. **M4 Pipelines:** the App, the bot signing key, `update-inputs.yml`,
    `pipeline.yml`, `promote.yml`, email + issue alerts, and the
    rulesets. `tests.yml` drops its own `push: main` trigger then, since
@@ -603,8 +625,8 @@ cleanup.
 
 ### Phase 2: binary cache and ntfy
 
-6. **M6 Tailnet:** ghost001 moves from `ank_mesh` to `cslab_mesh`.
-   Check: ghost001 reaches spirit.
+6. **M6 Tailnet** (done early, 2026-10-24): ghost001 moved from
+   `ank_mesh` to `cslab_mesh`. Check: ghost001 reaches spirit.
 7. **M7 Cache:** the admin applies `docs/attic-cache-setup.md`. We
    create the cache and add the `neusis-cache` feature, the cache
    signing key, and the sign + push step in `gates.yml` (CI joins the
@@ -620,7 +642,7 @@ cleanup.
 |---|---|---|
 | R1 | Does comin's darwin module work with nix-darwin 26.05 (root-only activation, `system.primaryUser`, Homebrew activation as the primary user)? Partly answered: comin v0.14 runs `$out/activate-user` and then `$out/activate`. In 26.05, `activate-user` is a deprecated stub that warns and exits 0, so activation works today, but comin breaks once nix-darwin removes the stub (announced for after 25.11). Watch comin releases. | M5 (rogue) |
 | R2 | Can a host evaluate from comin's checkout with no master identity? | M2, M5 |
-| R3 | Does rogue's closure build on a hosted macOS runner after freeing disk? | M3 |
+| R3 | ~~Does rogue's closure build on a hosted macOS runner after freeing disk?~~ Yes: 96 GiB free before cleanup, built in 1917 s (§7.2). | — |
 | R5 | Can a GitHub App be a ruleset bypass actor on a personal-account repo? | M4 |
 | R6 | Do comin retention and `nix.gc.automatic` agree? | M5 |
 | R7 | ~~What does comin pass to the hook?~~ Answered from the v0.14.0 source: `COMIN_GIT_SHA`, `COMIN_GIT_REF`, `COMIN_GIT_MSG`, `COMIN_HOSTNAME`, `COMIN_GENERATION`, `COMIN_STATUS` (`done`/`failed`) and `COMIN_ERROR_MSG`, after deployments only (§6.4). | — |
