@@ -25,10 +25,13 @@
   flake.neusis.features.agnostic.ank_mesh =
     { config, ... }:
     {
+      # ank's tailnet credentials (auth key, OAuth client for force-claim /
+      # key-expiry). Edit with `agenix edit modules/secrets/ank/<name>.age`,
+      # then `agenix rekey`.
       age.secrets = {
-        tsAuthKeyLeoank.rekeyFile = ../../secrets/common/persistent_tsauthkey.age;
-        tsClientId.rekeyFile = ../../secrets/common/tsclient.age;
-        tsClientSecret.rekeyFile = ../../secrets/common/tssecret.age;
+        tsAuthKeyLeoank.rekeyFile = ../../secrets/ank/tsAuthKeyLeoank.age;
+        tsClientId.rekeyFile = ../../secrets/ank/tsClientId.age;
+        tsClientSecret.rekeyFile = ../../secrets/ank/tsClientSecret.age;
       };
 
       neusis.services.tailscale = {
