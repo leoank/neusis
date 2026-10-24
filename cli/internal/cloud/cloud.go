@@ -173,9 +173,7 @@ func Run(ctx context.Context, opts Options) error {
 	// 7. Switch to the real configuration.
 	args := NixosRebuildArgs(flakeDir, opts.Host, target, opts.BuildHost)
 	fmt.Fprintf(out, "Running: nixos-rebuild %s\n", strings.Join(args, " "))
-	cmd := exec.CommandContext(ctx, "nixos-rebuild", args...)
-	cmd.Dir = flakeDir
-	cmd.Env = append(os.Environ(), "NIX_SSHOPTS="+sshOpts)
+	cmd := nixosRebuild(ctx, flakeDir, args, "NIX_SSHOPTS="+sshOpts)
 	cmd.Stdout, cmd.Stderr, cmd.Stdin = out, errOut, os.Stdin
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("nixos-rebuild failed: %w", err)
@@ -195,10 +193,21 @@ func Deploy(ctx context.Context, flakeDir, host, target string, buildOnTarget bo
 	}
 	args := NixosRebuildArgs(abs, host, target, buildOnTarget)
 	fmt.Fprintf(out, "Running: nixos-rebuild %s\n", strings.Join(args, " "))
-	cmd := exec.CommandContext(ctx, "nixos-rebuild", args...)
-	cmd.Dir = abs
+	cmd := nixosRebuild(ctx, abs, args)
 	cmd.Stdout, cmd.Stderr, cmd.Stdin = out, errOut, os.Stdin
 	return cmd.Run()
+}
+
+// nixosRebuild builds the nixos-rebuild command. TMPDIR is forced to a
+// short path: nixos-rebuild puts its ssh ControlPath socket under
+// $TMPDIR, and inside `nix develop` (TMPDIR=/tmp/nix-shell.XXXXXX/…)
+// that exceeds the Unix-socket path limit ("unix_listener: path … too
+// long"), killing nix-copy-closure.
+func nixosRebuild(ctx context.Context, dir string, args []string, extraEnv ...string) *exec.Cmd {
+	cmd := exec.CommandContext(ctx, "nixos-rebuild", args...)
+	cmd.Dir = dir
+	cmd.Env = append(append(os.Environ(), "TMPDIR=/tmp"), extraEnv...)
+	return cmd
 }
 
 func tofuOutput(ctx context.Context, flakeDir, stack string, errOut io.Writer) ([]byte, error) {
