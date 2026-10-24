@@ -19,7 +19,7 @@
     userRegistries = [ self.neusis.registry.users.anklab ];
     initialHashedPassword = ../secrets/common/hashedInitialPassword.age;
     module =
-      { inputs, ... }:
+      { inputs, config, ... }:
       {
         imports = [
           # OCI hardware profile — the same one the base image boots with.
@@ -35,6 +35,8 @@
           # cslab tailnet (the one ank's machines currently use).
           self.nixosModules.tailscale
           self.neusis.features.agnostic.cslab_mesh
+          # Public hostnames under leoank.me (cloudflare-leoank stack).
+          self.nixosModules.cloudflare-tunnel
         ];
 
         programs.zsh.enable = true;
@@ -63,6 +65,16 @@
               pubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFH40XzfXPtcTwJ8FHxHXCaEteylFOwtuw5TaY5CZ5NS ank@leoank.me";
             }
           ];
+        };
+
+        # Connector for the tunnel declared in modules/infra/cloudflare-leoank.nix
+        # (remotely-managed ingress, so adding a public service never
+        # touches this file). Token: `nix run .#cloudflare-leoank.terraform
+        # -- output -raw tunnel_token_ghost001` → `agenix edit` → rekey.
+        age.secrets.cfTunnelToken.rekeyFile = ../secrets/ank/cfTunnelGhost001.age;
+        neusis.services.cloudflare-tunnel = {
+          enable = true;
+          tokenFile = config.age.secrets.cfTunnelToken.path;
         };
 
         # Release this host was created under (its base image is 26.05).

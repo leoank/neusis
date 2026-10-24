@@ -121,6 +121,9 @@
             buildsOffloadTo = map (b: b.hostName) cfg.nix.buildMachines;
             sshd = cfg.services.openssh.enable;
             flakes = lib.hasInfix "flakes" cfg.nix.extraOptions;
+            # cloudflared connector fed by the agenix tunnel token
+            tunnel = cfg.neusis.services.cloudflare-tunnel.enable;
+            tunnelToken = cfg.neusis.services.cloudflare-tunnel.tokenFile == cfg.age.secrets.cfTunnelToken.path;
           };
           expected = {
             tailscale = true;
@@ -133,6 +136,8 @@
             ];
             sshd = true;
             flakes = true;
+            tunnel = true;
+            tunnelToken = true;
           };
         };
 
