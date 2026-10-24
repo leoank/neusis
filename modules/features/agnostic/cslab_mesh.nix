@@ -1,9 +1,9 @@
 # Neusis mesh — CSLab shared tailnet (agnostic feature, config-only).
 #
-# Adds the `cslab` tailscale profile (shntnu.github mesh). No OAuth creds in
-# this copy, so force-claim / disable-expiry stay off (add cslab OAuth secrets
-# to turn them on). Config-only: the tailscale *module* is imported by the
-# machine (`self.<nixos|darwin>Modules.tailscale`).
+# Adds the `cslab` tailscale profile (shntnu.github mesh) with hostname
+# force-claim + non-expiring key (OAuth client from secrets/common/).
+# Config-only: the tailscale *module* is imported by the machine
+# (`self.<nixos|darwin>Modules.tailscale`).
 #
 # `defaultProfile` is set via `mkDefault "cslab"` so that:
 #   * imported alone      → cslab is the boot default;
@@ -17,13 +17,14 @@
   flake.neusis.features.agnostic.cslab_mesh =
     { config, lib, ... }:
     {
-      # cslab tailnet credentials (auth key, OAuth client for force-claim /
-      # key-expiry): `agenix edit modules/secrets/cslab/<name>.age`, then
-      # `agenix rekey`.
+      # cslab tailnet credentials: the auth key lives in secrets/cslab/, the
+      # OAuth client (force-claim / key-expiry) is the shared one in
+      # secrets/common/ (tsclient = id, tssecret = secret). Edit with
+      # `agenix edit modules/secrets/<dir>/<name>.age`, then `agenix rekey`.
       age.secrets = {
         tsAuthKeyCslab.rekeyFile = ../../secrets/cslab/tsAuthKeyCslab.age;
-        tsClientIdCslab.rekeyFile = ../../secrets/cslab/tsClientIdCslab.age;
-        tsClientSecretCslab.rekeyFile = ../../secrets/cslab/tsClientSecretCslab.age;
+        tsClientIdCslab.rekeyFile = ../../secrets/common/tsclient.age;
+        tsClientSecretCslab.rekeyFile = ../../secrets/common/tssecret.age;
       };
 
       neusis.services.tailscale = {

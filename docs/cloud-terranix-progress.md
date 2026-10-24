@@ -212,3 +212,21 @@ Status line format: `<date> <time TZ> — <phase/milestone> — <what>`.
   deploy → reboot. Remaining before M8: the OAuth credentials, and how
   rogue reaches `nixremote@ghost001` (rogue is not on the cslab tailnet;
   its daemon now logs "cannot build on ssh-ng://nixremote@ghost001").
+- 2026-10-24 — **cslab OAuth working.** The cslab profile's OAuth client
+  now comes from the shared `secrets/common/tsclient.age` (id) and
+  `secrets/common/tssecret.age` (secret) — `cslab_mesh` points its
+  `tsClientIdCslab`/`tsClientSecretCslab` rekeyFiles there (the
+  `secrets/cslab/tsClient*Cslab.age` copies are unreferenced now).
+  Rekeyed, redeployed: `neusis-tailscale-autoconnect` finishes
+  ("Successfully obtained OAuth token", key expiry already disabled).
+  Gotcha on the way: a deploy right after `agenix rekey` failed at eval
+  with "Rekeyed secret … not found" — the new `rekeyed/` files were
+  untracked and a git flake only sees tracked files; `git add` them
+  first. Found pre-existing: activation logs `age: error: no identity
+  matched any of the recipients` for `commonInitialHashedPassword`
+  (`passwd -S ank` → locked) — `mkNeusisOS` declares it as a classic
+  agenix `age.secrets.….file`, so `secrets/common/hashedInitialPassword.age`
+  must be encrypted to each host key directly, and ghost001 is not among
+  its recipients (master + three older hosts). Present since the
+  bootstrap switch (journal 20:03); fix = re-encrypt with ghost001's
+  host key added.

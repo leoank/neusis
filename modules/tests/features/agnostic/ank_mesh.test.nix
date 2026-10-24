@@ -82,6 +82,11 @@
             org = (ts cslab).profiles.cslab.tailnetOrg;
             authKey = (ts cslab).profiles.cslab.authKeyFile;
             secret = cslab.age.secrets ? tsAuthKeyCslab;
+            # OAuth client = the shared one under secrets/common/.
+            oauth = map (n: baseNameOf cslab.age.secrets.${n}.rekeyFile) [
+              "tsClientIdCslab"
+              "tsClientSecretCslab"
+            ];
             failed = t.failedAssertions cslab;
           };
           expected = {
@@ -89,6 +94,10 @@
             org = "shntnu.github";
             authKey = "/run/agenix/tsAuthKeyCslab";
             secret = true;
+            oauth = [
+              "tsclient.age"
+              "tssecret.age"
+            ];
             failed = [ ];
           };
         };
