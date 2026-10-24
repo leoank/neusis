@@ -163,3 +163,18 @@ Status line format: `<date> <time TZ> — <phase/milestone> — <what>`.
   through). The closure is in rogue's store, so bootstrap will only copy,
   not build. Still blocked on the custom-image decision (PAYG vs
   nixos-anywhere fallback).
+- 2026-10-24 — **PAYG upgrade; M5 done; M6 done; S1 retired.** After the
+  upgrade `custom-image-count` is 25. `oci-images` apply needed two more
+  fixes: capability-schema descriptors are camelCase in the API
+  (`descriptorType`/`defaultValue`; snake_case → 500 InternalError,
+  `3b218de`), and the import records `launch-options.firmware = BIOS`
+  for the qcow2, so Arm instances now pin `launch_options = { firmware =
+  UEFI_64; network_type/boot_volume_type = PARAVIRTUALIZED }` (OCI
+  requires `network_type` whenever `launch_options` is set; `fd39a05`,
+  `5a34f2c`). Image `oci-base-aarch64` is AVAILABLE and A1-compatible.
+  `oci-anklab` apply: VCN/subnet/IGW/route/security list, ghost001
+  (A1.Flex 4/24, launched in 46 s — capacity was there), 150 GB data
+  volume attached, bronze backup policy, reserved IP 129.80.54.71. First
+  boot over SSH: NixOS 26.05 aarch64, EFI, root grown to 49 GB, `sdb` =
+  data disk (unformatted), fetch-ssh-keys/sshd/networkd active. Both
+  states committed (ciphertext). Next: `neusis cloud bootstrap ghost001`.
