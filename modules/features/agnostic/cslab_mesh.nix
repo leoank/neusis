@@ -17,7 +17,8 @@
   flake.neusis.features.agnostic.cslab_mesh =
     { config, lib, ... }:
     {
-      age.secrets.tsAuthKeyCslab.rekeyFile = ../../secrets/common/persistent_cslab_mesh.age;
+      # cslab tailnet auth key: `agenix edit modules/secrets/cslab/tsAuthKeyCslab.age`, then `agenix rekey`.
+      age.secrets.tsAuthKeyCslab.rekeyFile = ../../secrets/cslab/tsAuthKeyCslab.age;
 
       neusis.services.tailscale = {
         enable = true;
