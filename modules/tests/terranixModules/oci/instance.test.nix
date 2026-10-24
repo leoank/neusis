@@ -64,6 +64,7 @@
               availability_domain
               ;
             boot = i.source_details.boot_volume_size_in_gbs;
+            firmware = i.launch_options.firmware;
             subnet = i.create_vnic_details.subnet_id;
             keys = i.metadata.ssh_authorized_keys;
           };
@@ -76,6 +77,7 @@
             };
             availability_domain = "\${data.oci_identity_availability_domains.ads.availability_domains[0].name}";
             boot = 50;
+            firmware = "UEFI_64";
             subnet = "\${oci_core_subnet.anklab.id}";
             keys = "ssh-ed25519 AAAA1 a\nssh-ed25519 AAAA2 b";
           };

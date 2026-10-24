@@ -81,6 +81,10 @@
                 # would be lost on replacement.
                 assign_public_ip = !inst.reservedIp;
               };
+              # Arm shapes are UEFI-only; say so explicitly rather than
+              # relying on the imported image's launch options (which
+              # OCI records as BIOS until the capability schema applies).
+              launch_options = lib.mkIf (isArmShape inst.shape.name) { firmware = "UEFI_64"; };
               # Read by the image's fetch-ssh-keys unit on first boot.
               metadata.ssh_authorized_keys = lib.concatStringsSep "\n" inst.sshAuthorizedKeys;
               preserve_boot_volume = false;
