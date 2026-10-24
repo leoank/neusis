@@ -273,11 +273,11 @@
       ];
       # Headless cloud host: shell/editor/CLI bundles only — no GUI, casks
       # or personal tokens (the `secrets` bundle needs ank's private key).
+      # (no `yajna` for now: 0.7.1 fails to build for aarch64-linux)
       ghost001 = [
         self.neusis.features.agnostic.nix-pkgs
         self.neusis.users.ank.hmBundles.kalam-ide
         self.neusis.users.ank.hmBundles.neusis-cli
-        self.neusis.users.ank.hmBundles.yajna
         self.neusis.users.ank.hmBundles.terminal-life
       ];
     };
