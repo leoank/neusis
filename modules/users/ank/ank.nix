@@ -275,6 +275,9 @@
         # Hold the machine out of idle sleep while a session is busy, so a turn
         # finishes and the hub link holds when the screen turns off (rc2s2 ADR-0031).
         keepAwake = true;
+        # The account's rate limits as health, the access token read from the keychain,
+        # never written (rc2s2 ADR-0030; checked on this login in EXP-20261025-25f6vm).
+        claudeUsage = true;
       };
 
       # rc2s2 on PATH for `rc2s2 run` (the PTY wrapper), `rc2s2 node hooks`

@@ -103,8 +103,8 @@
           description = ''
             Report the account's rate-limit utilisation as health: the daemon reads the
             OAuth access token from Claude Code's credential store, read only, and polls
-            Anthropic's usage endpoint once a minute (rc2s2 ADR-0030). Off until the
-            experiment on the real credential has passed.
+            Anthropic's usage endpoint every five minutes, backing off on a 429 (rc2s2
+            ADR-0030, EXP-20261025-25f6vm).
           '';
         };
 
