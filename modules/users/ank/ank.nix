@@ -272,6 +272,9 @@
         # The rc2s2 live checks start throwaway sessions here; the live hub must not
         # list them or push their turns to the phone (rc2s2 ADR-0028).
         ignoreCwd = [ "*/target/live-work-*" ];
+        # Hold the machine out of idle sleep while a session is busy, so a turn
+        # finishes and the hub link holds when the screen turns off (rc2s2 ADR-0031).
+        keepAwake = true;
       };
 
       # rc2s2 on PATH for `rc2s2 run` (the PTY wrapper), `rc2s2 node hooks`
