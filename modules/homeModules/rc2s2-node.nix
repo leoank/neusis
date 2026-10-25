@@ -46,6 +46,7 @@
           "--ignore-cwd"
           g
         ]) cfg.ignoreCwd
+        ++ lib.optional cfg.claudeUsage "--claude-usage"
         ++ cfg.extraArgs;
       cmdline = lib.escapeShellArgs args;
     in
@@ -92,6 +93,17 @@
             Globs over working directories whose Claude Code sessions the daemon does
             not track at all: not listed, not tailed, their dialogs not held. Keeps
             throwaway test sessions out of the live hub (rc2s2 ADR-0028).
+          '';
+        };
+
+        claudeUsage = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = ''
+            Report the account's rate-limit utilisation as health: the daemon reads the
+            OAuth access token from Claude Code's credential store, read only, and polls
+            Anthropic's usage endpoint once a minute (rc2s2 ADR-0030). Off until the
+            experiment on the real credential has passed.
           '';
         };
 
