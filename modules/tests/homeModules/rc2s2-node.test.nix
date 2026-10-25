@@ -85,6 +85,7 @@
                 name = "rogue";
                 ignoreCwd = [ "*/target/live-work-*" ];
                 claudeUsage = true;
+                keepAwake = true;
                 extraArgs = [
                   "--hold-secs"
                   "60"
@@ -100,12 +101,14 @@
               hasName = lib.hasInfix "--name rogue" line;
               hasIgnore = lib.hasInfix "--ignore-cwd '*/target/live-work-*'" line;
               hasUsage = lib.hasInfix "--claude-usage" line;
+              hasAwake = lib.hasInfix "--keep-awake" line;
               hasExtra = lib.hasInfix "--hold-secs 60" line;
             };
           expected = {
             hasName = true;
             hasIgnore = true;
             hasUsage = true;
+            hasAwake = true;
             hasExtra = true;
           };
         };

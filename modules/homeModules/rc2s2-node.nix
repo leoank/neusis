@@ -47,6 +47,7 @@
           g
         ]) cfg.ignoreCwd
         ++ lib.optional cfg.claudeUsage "--claude-usage"
+        ++ lib.optional cfg.keepAwake "--keep-awake"
         ++ cfg.extraArgs;
       cmdline = lib.escapeShellArgs args;
     in
@@ -104,6 +105,16 @@
             OAuth access token from Claude Code's credential store, read only, and polls
             Anthropic's usage endpoint once a minute (rc2s2 ADR-0030). Off until the
             experiment on the real credential has passed.
+          '';
+        };
+
+        keepAwake = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = ''
+            Keep the machine from idle-sleeping while a Claude Code session is busy
+            (`caffeinate -i` on Darwin), so a turn finishes and the hub link holds when
+            the screen turns off (rc2s2 ADR-0031).
           '';
         };
 
