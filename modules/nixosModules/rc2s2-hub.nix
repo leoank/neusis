@@ -22,10 +22,7 @@
   # and `rc2s2` (the node module) binaries. The node module reads
   # `inputs.rc2s2` too; it is declared once here.
   flake-file.inputs.rc2s2 = {
-    # TODO(flip-after-graduation): switch to "github:leoank/rc2s2" once the
-    # project has graduated out of the manthan lab and been pushed. The local
-    # path lets the modules build and eval before the repo exists.
-    url = "path:/Users/ank/workspace/chaos/manthan/rc2s2-a-remote-command-and-control-session-server/main/code/rc2s2-a-remote-command-and-control-session-server";
+    url = "github:leoank/rc2s2";
     inputs.nixpkgs.follows = "nixpkgs-unstable";
   };
 

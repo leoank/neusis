@@ -141,6 +141,36 @@
           };
         };
 
+        # The rc2s2 hub records on the data volume and pushes through a
+        # self-hosted ntfy, reachable over the tailnet only.
+        test-rc2s2-hub = {
+          expr =
+            let
+              e = cfg.systemd.services.rc2s2-hub.serviceConfig.ExecStart;
+            in
+            {
+              hub = cfg.neusis.services.rc2s2-hub.enable;
+              dbOnSrv = lib.hasInfix "--db /srv/rc2s2/hub.db" e;
+              tokensFromAgenix =
+                lib.hasInfix "--node-tokens ${cfg.age.secrets.rc2s2NodeTokens.path}" e
+                && lib.hasInfix "--client-tokens ${cfg.age.secrets.rc2s2ClientTokens.path}" e;
+              ntfy = cfg.services.ntfy-sh.enable;
+              ntfyLocalTopic = lib.hasInfix "--ntfy http://127.0.0.1:2586/rc2s2" e;
+              # Neither the hub nor ntfy opens a host port: tailnet only.
+              noOpenPorts =
+                !(builtins.elem 7700 (cfg.networking.firewall.allowedTCPPorts or [ ]))
+                && !(builtins.elem 2586 (cfg.networking.firewall.allowedTCPPorts or [ ]));
+            };
+          expected = {
+            hub = true;
+            dbOnSrv = true;
+            tokensFromAgenix = true;
+            ntfy = true;
+            ntfyLocalTopic = true;
+            noOpenPorts = true;
+          };
+        };
+
         test-no-failed-assertions = {
           expr = {
             system = t.failedAssertions cfg;

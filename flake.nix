@@ -71,6 +71,10 @@
       url = "github:graelo/homebrew-tap";
       flake = false;
     };
+    rc2s2 = {
+      url = "github:leoank/rc2s2";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
+    };
     stylix = {
       url = "github:danth/stylix/release-26.05";
       inputs.nixpkgs.follows = "nixpkgs";

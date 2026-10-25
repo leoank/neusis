@@ -35,6 +35,9 @@
           # cslab tailnet (the one ank's machines currently use).
           self.nixosModules.tailscale
           self.neusis.features.agnostic.cslab_mesh
+          # rc2s2 hub + self-hosted ntfy, reachable over the tailnet.
+          self.nixosModules.rc2s2-hub
+          self.neusis.features.nixos.rc2s2-hub
           # Public hostnames under leoank.me (cloudflare-leoank stack).
           self.nixosModules.cloudflare-tunnel
         ];

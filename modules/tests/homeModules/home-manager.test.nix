@@ -17,6 +17,7 @@
             "hammerspoon"
             "mpd"
             "qmd-reindex"
+            "rc2s2-node"
             "rmpc"
             "secrets"
             "supercharged-git"
