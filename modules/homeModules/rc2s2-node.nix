@@ -42,6 +42,10 @@
           "--name"
           cfg.name
         ]
+        ++ lib.concatMap (g: [
+          "--ignore-cwd"
+          g
+        ]) cfg.ignoreCwd
         ++ cfg.extraArgs;
       cmdline = lib.escapeShellArgs args;
     in
@@ -78,6 +82,17 @@
           type = lib.types.str;
           default = "127.0.0.1:7777";
           description = "Address the hook endpoint listens on (must match the hooks block in settings.json).";
+        };
+
+        ignoreCwd = lib.mkOption {
+          type = lib.types.listOf lib.types.str;
+          default = [ ];
+          example = [ "*/target/live-work-*" ];
+          description = ''
+            Globs over working directories whose Claude Code sessions the daemon does
+            not track at all: not listed, not tailed, their dialogs not held. Keeps
+            throwaway test sessions out of the live hub (rc2s2 ADR-0028).
+          '';
         };
 
         extraArgs = lib.mkOption {

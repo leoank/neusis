@@ -83,6 +83,7 @@
             let
               h = node {
                 name = "rogue";
+                ignoreCwd = [ "*/target/live-work-*" ];
                 extraArgs = [
                   "--hold-secs"
                   "60"
@@ -96,10 +97,12 @@
             in
             {
               hasName = lib.hasInfix "--name rogue" line;
+              hasIgnore = lib.hasInfix "--ignore-cwd '*/target/live-work-*'" line;
               hasExtra = lib.hasInfix "--hold-secs 60" line;
             };
           expected = {
             hasName = true;
+            hasIgnore = true;
             hasExtra = true;
           };
         };

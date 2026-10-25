@@ -269,6 +269,9 @@
         hub = "http://ghost001:7700";
         tokenFile = config.age.secrets.rc2s2RogueNodeToken.path;
         name = "rogue";
+        # The rc2s2 live checks start throwaway sessions here; the live hub must not
+        # list them or push their turns to the phone (rc2s2 ADR-0028).
+        ignoreCwd = [ "*/target/live-work-*" ];
       };
 
       # rc2s2 on PATH for `rc2s2 run` (the PTY wrapper), `rc2s2 node hooks`
