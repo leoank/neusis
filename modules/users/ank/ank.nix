@@ -243,6 +243,39 @@
       };
     };
 
+  # rc2s2 node — the daemon that observes and gates this machine's Claude Code
+  # sessions and streams them to the hub on ghost001. Attached to rogue only
+  # (it reads ~/.claude and watches the owner's live sessions).
+  flake.neusis.users.ank.hmBundles.rc2s2-node =
+    {
+      config,
+      pkgs,
+      inputs,
+      ...
+    }:
+    {
+      imports = [ self.homeModules.rc2s2-node ];
+
+      # Explicit stable path: the default darwin agenix path is under
+      # `$(getconf DARWIN_USER_TEMP_DIR)`, which a quoted launchd argument would
+      # not expand (same reason the oci* secrets above pin a path).
+      age.secrets.rc2s2RogueNodeToken = {
+        rekeyFile = ../../secrets/ank/rc2s2RogueNodeToken.age;
+        path = "${config.home.homeDirectory}/.config/rc2s2/node-token";
+      };
+
+      neusis.services.rc2s2-node = {
+        enable = true;
+        hub = "http://ghost001:7700";
+        tokenFile = config.age.secrets.rc2s2RogueNodeToken.path;
+        name = "rogue";
+      };
+
+      # rc2s2 on PATH for `rc2s2 run` (the PTY wrapper), `rc2s2 node hooks`
+      # and `rc2s2 ctl`.
+      home.packages = [ inputs.rc2s2.packages.${pkgs.stdenv.hostPlatform.system}.rc2s2 ];
+    };
+
   # Configuring user for neusisOS
   flake.neusis.users.ank.neusisOS = {
     username = "ank";
@@ -264,6 +297,7 @@
         self.neusis.users.ank.hmBundles.yajna
         self.neusis.users.ank.hmBundles.terminal-life
         self.neusis.users.ank.hmBundles.agent-harness
+        self.neusis.users.ank.hmBundles.rc2s2-node
         self.neusis.users.ank.hmBundles.darwin-tools
         self.neusis.users.ank.hmBundles.theming
         self.neusis.users.ank.hmBundles.browsers

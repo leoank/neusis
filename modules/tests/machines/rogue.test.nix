@@ -98,6 +98,33 @@
           };
         };
 
+        # The rc2s2 node daemon is wired on rogue (launchd agent), pointed at
+        # the ghost001 hub with its token from an agenix home secret, and the
+        # `rc2s2` binary is on PATH for the wrapper and ctl.
+        test-rc2s2-node = {
+          expr =
+            let
+              agent = home.launchd.agents.rc2s2-node;
+              line = lib.last agent.config.ProgramArguments;
+            in
+            {
+              enabled = agent.enable;
+              keepAlive = agent.config.KeepAlive;
+              hub = lib.hasInfix "--hub http://ghost001:7700" line;
+              name = lib.hasInfix "--name rogue" line;
+              tokenFromSecret = lib.hasInfix "--token-file ${home.age.secrets.rc2s2RogueNodeToken.path}" line;
+              onPath = t.hasPkg "rc2s2" home.home.packages;
+            };
+          expected = {
+            enabled = true;
+            keepAlive = true;
+            hub = true;
+            name = true;
+            tokenFromSecret = true;
+            onPath = true;
+          };
+        };
+
         test-no-failed-assertions = {
           expr = {
             system = t.failedAssertions cfg;
