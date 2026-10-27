@@ -10,16 +10,22 @@
     };
   };
   flake.neusis.users.ank.hmBundles.yajna =
-    { pkgs, ... }:
+    { config, pkgs, ... }:
     {
       home.packages = [
         inputs.yajna.packages.${pkgs.stdenv.hostPlatform.system}.yajna
       ];
-      # The per-user yajna config (ADR-0032 in yajna): outside any notebook,
-      # `yajna log` and `yajna todo` write to manthan. Notebooks are found by
-      # name from yajna's own record of where it has run, so no paths here.
+      # The per-user yajna config (ADR-0032 in yajna): the notebooks on this
+      # home, by namespace, so `--in manthan` etc. work from anywhere; outside
+      # any notebook, `yajna log` and `yajna todo` write to manthan. Pinned
+      # entries win over yajna's own record of where it has run.
       xdg.configFile."yajna/config.toml".text = ''
         default = "manthan"
+
+        [repos]
+        manthan = "${config.home.homeDirectory}/workspace/chaos/manthan/main"
+        rc2s2 = "${config.home.homeDirectory}/workspace/hub/leoank/rc2s2"
+        yajna = "${config.home.homeDirectory}/workspace/chaos/yajna/main"
       '';
     };
 
