@@ -57,6 +57,7 @@
             # the same bundles power the integrated and standalone homes
             kalam = t.hasPkg "nixvim" home.home.packages && t.hasPkg "nixvim" cfg.home-manager.users.ank.home.packages;
             neusisCli = t.hasPkg "neusis" home.home.packages;
+            yajnaDefault = home.xdg.configFile."yajna/config.toml".text;
           };
           expected = {
             hmUsers = [ "ank" ];
@@ -66,6 +67,7 @@
             standaloneHome = "/Users/ank";
             kalam = true;
             neusisCli = true;
+            yajnaDefault = "default = \"manthan\"\n";
           };
         };
 

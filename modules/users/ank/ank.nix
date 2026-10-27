@@ -15,6 +15,12 @@
       home.packages = [
         inputs.yajna.packages.${pkgs.stdenv.hostPlatform.system}.yajna
       ];
+      # The per-user yajna config (ADR-0032 in yajna): outside any notebook,
+      # `yajna log` and `yajna todo` write to manthan. Notebooks are found by
+      # name from yajna's own record of where it has run, so no paths here.
+      xdg.configFile."yajna/config.toml".text = ''
+        default = "manthan"
+      '';
     };
 
   # Creating home manager feature bundles
