@@ -2522,7 +2522,7 @@ automatic, mandatory for proxied records) and the tunnel `_config`
 resource takes `config.ingress` as a plain list — checked against the
 provider schema offline before writing the module.
 
-## 2026-10-29 — auto-updates: email through Postmark
+## 2026-10-29 — auto-updates: email through Postmark, bot setup guide
 
 Alert email moves from SendGrid to Postmark. `neusis-notify` now posts
 to `https://api.postmarkapp.com/email` with `X-Postmark-Server-Token:
@@ -2533,3 +2533,16 @@ hosts' notify secret will carry the same name. `vm-auto-update`'s stub
 and assertions follow the new request shape. Postmark only delivers off
 the sender's domain once the account is approved, which is now an open
 item next to the sender signature.
+
+`docs/github-bot-setup.md` walks through the M4 prerequisites: the App
+(no webhook, Contents/Issues/PRs write, Actions read, no Workflows
+permission), `APP_ID` + `APP_PRIVATE_KEY`, the `auto-update` environment
+holding `BOT_SIGNING_KEY`, the `deploy/*` and `main` rulesets (and why
+*Require signed commits* must stay off), and the Postmark checks. All of
+it is now set up: the App is "Neusis auto updates ci bot" (App id
+5529731, committing as `neusis-auto-updates-ci-bot[bot]`, user id
+349938074), and it is the only bypass actor on `deploy-branches`, which
+answers R5 (an App can bypass a ruleset on a personal-account repo). Its
+signing key joins `registry.signers.anklab` with the bot's noreply
+address as principal, because `git verify-commit` matches the
+allowed-signers principal against the committer email.

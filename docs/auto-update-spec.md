@@ -191,8 +191,9 @@ in `DEPLOY_HOLD`, or suspend comin on the host.
   for `services.comin.sshAllowedSignersPath`. CI's `git verify-commit`
   uses the same render.
 - **CI signing:** a dedicated ed25519 SSH key used only for lock-bump
-  commits. The private half is an Actions secret in a GitHub
-  **Environment** `auto-update` restricted to `main`. The public half is
+  commits. The private half is the `BOT_SIGNING_KEY` secret in a GitHub
+  **Environment** `auto-update` restricted to `main`
+  (`docs/github-bot-setup.md`). The public half is
   in the signers registry. Commits are signed with
   `git -c gpg.format=ssh -c user.signingkey=<file> commit -S`.
 - **Rotation can't be hijacked:** hosts verify with the signers file of
@@ -209,7 +210,7 @@ in `DEPLOY_HOLD`, or suspend comin on the host.
 
 ## 6. CI pipelines
 
-Every bot action authenticates as the **GitHub App** `neusis-bot` (§10).
+Every bot action authenticates as the **GitHub App** `neusis-auto-updates-ci-bot` ("Neusis auto updates ci bot", §10).
 
 ### 6.1 `update-inputs.yml`: daily lock bump
 
@@ -471,21 +472,21 @@ After a few weeks of data we decide about `upgrade` and `cleanup`.
 
 ## 10. GitHub App or a token? An App
 
-One App, `neusis-bot`, installed only on `leoank/neusis`, with
+One App, `neusis-auto-updates-ci-bot`, installed only on `leoank/neusis`, with
 Contents (write), Issues (write), Pull requests (write) and Actions
 (read).
 
 | | GitHub App | Fine-grained PAT |
 |---|---|---|
-| Identity | `neusis-bot[bot]` | acts **as you** |
+| Identity | `neusis-auto-updates-ci-bot[bot]` | acts **as you** |
 | Token life | minted per run, 1 h | long-lived, rotate by hand |
 | Triggers workflows | yes | yes |
 | Ruleset bypass | the App can be the *only* actor allowed to move `deploy/*` | bypass would mean "you", with no separation from your pushes |
 | If leaked | short-lived, one repo | until expiry, whatever it covers |
-| Setup | create the App; `APP_ID` variable + private-key secret | one token |
+| Setup | create the App; `APP_ID` variable + `APP_PRIVATE_KEY` secret (`docs/github-bot-setup.md`) | one token |
 
 Rulesets:
-- `deploy/*`: only neusis-bot creates or updates; no force pushes or
+- `deploy/*`: only the App creates or updates; no force pushes or
   deletions.
 - `main`: no force pushes or deletions, and your direct pushes keep
   working.
@@ -529,7 +530,11 @@ Phase 1:
    `leoank.me` domain), account approval so it can mail
    `leoank98@gmail.com`, and the hosts' notify secret (Ankur). The
    `POSTMARK_API_KEY` repository secret exists (2026-10-29).
-2. **The GitHub App and the bot signing key** (Ankur, at M3–M4).
+2. ~~**The GitHub App and the bot signing key**~~ Done 2026-10-29
+   (`docs/github-bot-setup.md`): the App "Neusis auto updates ci bot"
+   (`neusis-auto-updates-ci-bot[bot]`, App id 5529731), `APP_ID`,
+   `APP_PRIVATE_KEY`, `BOT_SIGNING_KEY` in `auto-update`, and the
+   rulesets. The key is in the signers registry.
 
 Phase 2:
 
@@ -652,7 +657,7 @@ cleanup.
 | R1 | Does comin's darwin module work with nix-darwin 26.05 (root-only activation, `system.primaryUser`, Homebrew activation as the primary user)? Partly answered: comin v0.14 runs `$out/activate-user` and then `$out/activate`. In 26.05, `activate-user` is a deprecated stub that warns and exits 0, so activation works today, but comin breaks once nix-darwin removes the stub (announced for after 25.11). Watch comin releases. | M5 (rogue) |
 | R2 | Can a host evaluate from comin's checkout with no master identity? | M2, M5 |
 | R3 | ~~Does rogue's closure build on a hosted macOS runner after freeing disk?~~ Yes: 96 GiB free before cleanup, built in 1917 s (§7.2). | — |
-| R5 | Can a GitHub App be a ruleset bypass actor on a personal-account repo? | M4 |
+| R5 | ~~Can a GitHub App be a ruleset bypass actor on a personal-account repo?~~ Yes: `deploy-branches` has the App (id 5529731) as its only *Always allow* bypass (2026-10-29). | — |
 | R6 | Do comin retention and `nix.gc.automatic` agree? | M5 |
 | R7 | ~~What does comin pass to the hook?~~ Answered from the v0.14.0 source: `COMIN_GIT_SHA`, `COMIN_GIT_REF`, `COMIN_GIT_MSG`, `COMIN_HOSTNAME`, `COMIN_GENERATION`, `COMIN_STATUS` (`done`/`failed`) and `COMIN_ERROR_MSG`, after deployments only (§6.4). | — |
 | R8 | Does attic keep the signatures already on pushed paths (our `nix store sign` key) in the narinfo it serves, so hosts can trust only our key? If not, trust attic's key and accept spirit's operator in the trust base (§11). | M7 |
