@@ -1,7 +1,7 @@
 # T3: auto-updates end to end. One node runs comin through
 # nixosModules.auto-update against a local bare repo on `deploy/canary`,
 # trusting the TEST-ONLY signing key. Local stub servers stand in for ntfy
-# and SendGrid. The repo flake (_auto-update-repo/) has a fake toplevel
+# and Postmark. The repo flake (_auto-update-repo/) has a fake toplevel
 # whose switch writes a marker, so each deploy is visible and cheap:
 #
 #   signed commit     → switched, logged `done`, ntfy ping, no email
@@ -80,8 +80,8 @@
 
             environment.etc."neusis-notify.env".text = ''
               NTFY_TOPIC=deploys
-              SENDGRID_API_KEY=fake-key
-              SENDGRID_URL=http://127.0.0.1:8090/v3/mail/send
+              POSTMARK_API_KEY=fake-key
+              POSTMARK_URL=http://127.0.0.1:8090/email
             '';
             environment.etc."neusis-test/signing_key" = {
               source = vm + "/signing_key";
@@ -184,7 +184,7 @@
                 machine.wait_until_succeeds("grep -q /deploys /var/log/notify-stub.jsonl", timeout=60)
                 ping = notifications()[-1]
                 assert ping["headers"]["Priority"] == "min", ping
-                assert not any(n["path"] == "/v3/mail/send" for n in notifications()), "a success must not email"
+                assert not any(n["path"] == "/email" for n in notifications()), "a success must not email"
 
             with subtest("an unsigned head is refused"):
                 v2 = push('{ marker = "v2"; switch = true; }', signed=False)
@@ -208,14 +208,15 @@
                 d = wait_for_deploy(v4, 2)
                 assert d["status"] == "failed", d
                 assert marker() == "v1"
-                machine.wait_until_succeeds("grep -q /v3/mail/send /var/log/notify-stub.jsonl", timeout=60)
+                machine.wait_until_succeeds("grep -q '\"/email\"' /var/log/notify-stub.jsonl", timeout=60)
                 sent = notifications()
-                mail = [n for n in sent if n["path"] == "/v3/mail/send"][-1]
-                assert mail["headers"]["Authorization"] == "Bearer fake-key", mail
+                mail = [n for n in sent if n["path"] == "/email"][-1]
+                assert mail["headers"]["X-Postmark-Server-Token"] == "fake-key", mail
                 body = json.loads(mail["body"])
-                assert body["from"]["email"] == "bot@example.com", body
-                assert body["personalizations"][0]["to"] == [{"email": "alice@example.com"}], body
-                assert "failed" in body["subject"], body
+                assert body["From"] == "neusis <bot@example.com>", body
+                assert body["To"] == "alice@example.com", body
+                assert body["MessageStream"] == "outbound", body
+                assert "failed" in body["Subject"], body
                 assert any(n["path"] == "/deploys" and n["headers"]["Priority"] == "high" for n in sent), sent
 
             with subtest("the next signed commit deploys again"):

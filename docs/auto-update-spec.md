@@ -270,14 +270,17 @@ fail.
   token if set. Default server: ntfy.sh with a long random topic (the
   topic is the secret). Self-hosting on ghost001 is possible later, but
   ghost001 is a deploy target, so it shouldn't be the only alert path.
-- **Email:** the **SendGrid** v3 API (`POST
-  https://api.sendgrid.com/v3/mail/send`, `Authorization: Bearer
-  $SENDGRID_API_KEY`) through `curl`, so no third-party Action is
-  involved. It sends from `ghcibot@leoank.me` to `leoank98@gmail.com`
-  by default; both addresses can be overridden (`ALERT_FROM`,
-  `ALERT_TO`). SendGrid rejects mail from a sender it hasn't verified,
-  so `ghcibot@leoank.me` (or the `leoank.me` domain) has to be verified
-  in SendGrid once.
+- **Email:** the **Postmark** API (`POST
+  https://api.postmarkapp.com/email`, `X-Postmark-Server-Token:
+  $POSTMARK_API_KEY`, the `outbound` message stream) through `curl`, so
+  no third-party Action is involved. It sends from `ghcibot@leoank.me`
+  to `leoank98@gmail.com` by default; both addresses can be overridden
+  (`ALERT_FROM`, `ALERT_TO`). Postmark rejects mail from a sender it
+  hasn't confirmed, so `ghcibot@leoank.me` needs a sender signature (or
+  the `leoank.me` domain DKIM + Return-Path records). Until Postmark
+  approves the account, it delivers only to recipients on the sender's
+  domain, so mail to `leoank98@gmail.com` also needs the account
+  approved.
 - **GitHub issue:** one rolling issue per failure kind ("input update
   failing", "promotion held: `<group>`", "unsigned head"). It is
   commented on each failure and closed on the next success, so there is
@@ -301,7 +304,7 @@ group gate (§6.3) builds the same closures first, so a host-side build
 failure means something host-specific went wrong, and it shows in
 `comin status`.
 
-On hosts, the credentials (`SENDGRID_API_KEY`, `NTFY_TOPIC`, an
+On hosts, the credentials (`POSTMARK_API_KEY`, `NTFY_TOPIC`, an
 optional `NTFY_TOKEN`) are one agenix secret holding a dotenv file,
 which `neusis-notify` reads (`--env-file`). In CI they are Actions
 secrets of the same names.
@@ -436,7 +439,7 @@ or builds as today.
 | bump cadence | the `cron` line in `update-inputs.yml` | daily 03:17 UTC |
 | inputs bumped | `UPDATE_INPUTS` variable / dispatch input | all |
 | pause / hold | `UPDATE_INPUTS_PAUSED` / `DEPLOY_HOLD` | off |
-| alert channels | `NTFY_*` / `SENDGRID_API_KEY` / `ALERT_FROM` / `ALERT_TO` (CI secrets, host agenix env file) | ntfy + email (`ghcibot@leoank.me` → `leoank98@gmail.com`) |
+| alert channels | `NTFY_*` / `POSTMARK_API_KEY` / `ALERT_FROM` / `ALERT_TO` (CI secrets, host agenix env file) | ntfy + email (`ghcibot@leoank.me` → `leoank98@gmail.com`) |
 
 ### 9.3 A deploy on a host
 
@@ -522,10 +525,10 @@ Rulesets:
 
 Phase 1:
 
-1. **SendGrid sender verification** for `ghcibot@leoank.me` (single
-   sender, or domain authentication for `leoank.me`), plus the
-   `SENDGRID_API_KEY` Actions secret and the hosts' notify secret
-   (Ankur).
+1. **Postmark:** a sender signature for `ghcibot@leoank.me` (or the
+   `leoank.me` domain), account approval so it can mail
+   `leoank98@gmail.com`, and the hosts' notify secret (Ankur). The
+   `POSTMARK_API_KEY` repository secret exists (2026-10-29).
 2. **The GitHub App and the bot signing key** (Ankur, at M3–M4).
 
 Phase 2:
@@ -537,6 +540,12 @@ Phase 2:
    `NTFY_TOPIC` secret.
 
 ## 14. Decisions
+
+2026-10-29:
+
+- **Email via Postmark instead of SendGrid.** Same sender and recipient;
+  the key is the `POSTMARK_API_KEY` repository secret (and the same
+  name in the hosts' notify secret).
 
 2026-10-25:
 
@@ -558,7 +567,7 @@ Phase 2:
   shares; ghost001 moves over.
 - **Email via SendGrid** from `ghcibot@leoank.me` to
   `leoank98@gmail.com`. The API key comes from the environment
-  (`SENDGRID_API_KEY`).
+  (`SENDGRID_API_KEY`). Superseded by Postmark on 2026-10-29.
 - **The admin agrees** to run attic on spirit.
 - **comin pinned to `v0.14.0`.** Its package comes from the comin flake,
   not nixpkgs, so the binary matches the module's config schema.
@@ -619,7 +628,7 @@ cleanup.
    `pipeline.yml` runs it through `gates.yml` on every push to main.
    Check: a dispatched bump lands and promotes canary; a deliberately
    broken bump sends the email and opens the issue.
-5. **M5 Enroll:** the notify secret (`SENDGRID_API_KEY`), then ghost001
+5. **M5 Enroll:** the notify secret (`POSTMARK_API_KEY`), then ghost001
    (canary), then rogue (stable). Check: a deploy visible in `comin
    status` and the JSONL log; a failed deploy emails.
 

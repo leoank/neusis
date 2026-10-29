@@ -174,7 +174,7 @@
             example = "/run/agenix/autoUpdateNotify";
             description = ''
               Dotenv file with the neusis-notify credentials
-              (`NTFY_TOPIC`, optional `NTFY_TOKEN`, `SENDGRID_API_KEY`),
+              (`NTFY_TOPIC`, optional `NTFY_TOKEN`, `POSTMARK_API_KEY`),
               typically an agenix secret. `null` disables notifications;
               the deploy log is still written.
             '';
@@ -187,7 +187,7 @@
           emailFrom = lib.mkOption {
             type = lib.types.nullOr lib.types.str;
             default = null;
-            description = "Sender address (verified in SendGrid). `null` sends no email.";
+            description = "Sender address (a confirmed Postmark sender signature or domain). `null` sends no email.";
           };
           emailTo = lib.mkOption {
             type = lib.types.listOf lib.types.str;

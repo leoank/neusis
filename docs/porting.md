@@ -2521,3 +2521,15 @@ like the OCI facts. The Cloudflare provider is nixpkgs' v5
 automatic, mandatory for proxied records) and the tunnel `_config`
 resource takes `config.ingress` as a plain list — checked against the
 provider schema offline before writing the module.
+
+## 2026-10-29 — auto-updates: email through Postmark
+
+Alert email moves from SendGrid to Postmark. `neusis-notify` now posts
+to `https://api.postmarkapp.com/email` with `X-Postmark-Server-Token:
+$POSTMARK_API_KEY` on the `outbound` stream (`POSTMARK_URL` overrides
+the endpoint); the sender, recipients and the rest of the interface are
+unchanged. The key is the `POSTMARK_API_KEY` repository secret, and the
+hosts' notify secret will carry the same name. `vm-auto-update`'s stub
+and assertions follow the new request shape. Postmark only delivers off
+the sender's domain once the account is approved, which is now an open
+item next to the sender signature.

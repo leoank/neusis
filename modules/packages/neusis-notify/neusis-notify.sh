@@ -1,4 +1,4 @@
-# neusis-notify — send one alert to ntfy and by email (SendGrid).
+# neusis-notify — send one alert to ntfy and by email (Postmark).
 #
 #   neusis-notify [--env-file FILE] [--title T] [--priority P] [--tags a,b]
 #                 [--no-email] MESSAGE
@@ -6,8 +6,9 @@
 # Channels are configured from the environment (or a dotenv FILE):
 #   ntfy   NTFY_TOPIC (required), NTFY_URL (default https://ntfy.sh),
 #          NTFY_TOKEN (optional bearer token)
-#   email  SENDGRID_API_KEY, ALERT_FROM, ALERT_TO (comma-separated),
-#          SENDGRID_URL (default https://api.sendgrid.com/v3/mail/send)
+#   email  POSTMARK_API_KEY (a Postmark server token), ALERT_FROM,
+#          ALERT_TO (comma-separated),
+#          POSTMARK_URL (default https://api.postmarkapp.com/email)
 # A channel whose settings are missing is skipped. Exits non-zero when
 # no channel is configured or every configured channel failed.
 
@@ -69,20 +70,22 @@ if [ -n "${NTFY_TOPIC:-}" ]; then
   fi
 fi
 
-if [ "$email" = 1 ] && [ -n "${SENDGRID_API_KEY:-}" ] && [ -n "${ALERT_FROM:-}" ] && [ -n "${ALERT_TO:-}" ]; then
+if [ "$email" = 1 ] && [ -n "${POSTMARK_API_KEY:-}" ] && [ -n "${ALERT_FROM:-}" ] && [ -n "${ALERT_TO:-}" ]; then
   tried=$((tried + 1))
   body=$(jq -n \
     --arg from "$ALERT_FROM" --arg to "$ALERT_TO" \
     --arg subject "$title" --arg text "$message" \
     '{
-      personalizations: [{ to: ($to | split(",") | map({ email: (. | gsub("^ +| +$"; "")) })) }],
-      from: { email: $from, name: "neusis" },
-      subject: $subject,
-      content: [{ type: "text/plain", value: $text }]
+      From: "neusis <\($from)>",
+      To: ($to | split(",") | map(gsub("^ +| +$"; "")) | join(", ")),
+      Subject: $subject,
+      TextBody: $text,
+      MessageStream: "outbound"
     }')
   if curl -fsS --max-time 30 -o /dev/null \
-    -H "Authorization: Bearer $SENDGRID_API_KEY" -H "Content-Type: application/json" \
-    --data-binary "$body" "${SENDGRID_URL:-https://api.sendgrid.com/v3/mail/send}"; then
+    -H "X-Postmark-Server-Token: $POSTMARK_API_KEY" \
+    -H "Accept: application/json" -H "Content-Type: application/json" \
+    --data-binary "$body" "${POSTMARK_URL:-https://api.postmarkapp.com/email}"; then
     sent=$((sent + 1))
   else
     echo "neusis-notify: email failed" >&2
@@ -90,7 +93,7 @@ if [ "$email" = 1 ] && [ -n "${SENDGRID_API_KEY:-}" ] && [ -n "${ALERT_FROM:-}" 
 fi
 
 if [ "$tried" = 0 ]; then
-  echo "neusis-notify: no channel configured (NTFY_TOPIC, or SENDGRID_API_KEY + ALERT_FROM + ALERT_TO)" >&2
+  echo "neusis-notify: no channel configured (NTFY_TOPIC, or POSTMARK_API_KEY + ALERT_FROM + ALERT_TO)" >&2
   exit 1
 fi
 [ "$sent" -gt 0 ]

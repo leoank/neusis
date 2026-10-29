@@ -1,4 +1,4 @@
-# neusis-notify — one alert to ntfy and by email (SendGrid API).
+# neusis-notify — one alert to ntfy and by email (Postmark API).
 #
 # Flake-parts module that exposes `flake.packages.<system>.neusis-notify`.
 # Shared by CI (`nix run .#neusis-notify`) and the auto-update hook on
