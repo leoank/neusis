@@ -1,6 +1,6 @@
 # Pins anklab's deploy groups (modules/registry/deploy-groups/anklab.nix):
-# canary leads, stable trails it by a day, and every member is a machine
-# the lab actually builds.
+# canary (rogue) leads, stable (ghost001) trails it by a day, and every
+# member is a machine the lab actually builds.
 { self, ... }:
 {
   perSystem =
@@ -29,14 +29,14 @@
               after = null;
               soakHours = 0;
               pollPeriod = 60;
-              machines = [ "ghost001" ];
+              machines = [ "rogue" ];
             };
             stable = {
               branch = "deploy/stable";
               after = "canary";
               soakHours = 24;
               pollPeriod = 60;
-              machines = [ "rogue" ];
+              machines = [ "ghost001" ];
             };
           };
         };
@@ -54,21 +54,21 @@
           };
           expected = [
             {
-              host = "ghost001";
-              group = "canary";
-              system = "aarch64-linux";
-              checks = [
-                "home-ank@ghost001"
-                "nixos-ghost001"
-              ];
-            }
-            {
               host = "rogue";
-              group = "stable";
+              group = "canary";
               system = "aarch64-darwin";
               checks = [
                 "darwin-rogue"
                 "home-ank@rogue"
+              ];
+            }
+            {
+              host = "ghost001";
+              group = "stable";
+              system = "aarch64-linux";
+              checks = [
+                "home-ank@ghost001"
+                "nixos-ghost001"
               ];
             }
           ];

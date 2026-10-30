@@ -66,17 +66,17 @@
     in
     {
       tests.feature-auto-update = {
-        test-ghost001-follows-canary = {
+        test-ghost001-follows-stable = {
           expr = summary (onNixos "ghost001" { });
           expected = common // {
-            branch = "deploy/canary";
+            branch = "deploy/stable";
           };
         };
 
-        test-rogue-follows-stable = {
+        test-rogue-follows-canary = {
           expr = summary (onDarwin "rogue");
           expected = common // {
-            branch = "deploy/stable";
+            branch = "deploy/canary";
           };
         };
 

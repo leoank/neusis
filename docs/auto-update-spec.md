@@ -136,13 +136,13 @@ every deploy branch is `deploy/<group>`.
 # modules/registry/deploy-groups/anklab.nix
 flake.neusis.registry.deployGroups.anklab = {
   canary = {
-    machines = [ m.ghost001 ];
+    machines = [ m.rogue ];
     after = null;        # promote from a green main
     soakHours = 0;
     pollPeriod = 60;     # seconds; comin poller period for members
   };
   stable = {
-    machines = [ m.rogue ];
+    machines = [ m.ghost001 ];
     after = "canary";    # only commits canary has run …
     soakHours = 24;      # … for at least this long
     pollPeriod = 60;
@@ -359,7 +359,7 @@ to free space. The plan:
    simulators and caches, measure the free space, then build
    `darwin-rogue` with substitution on and record the time and peak
    disk use.
-2. **If it fits:** `system/rogue` becomes a real gate for `stable`. Don't
+2. **If it fits:** `system/rogue` becomes a real gate for `canary`. Don't
    push the result to attic. Only rogue consumes it, the upload would be
    large, and rogue has to reach attic over its `shntnu.github` profile
    anyway.
@@ -570,6 +570,15 @@ Phase 2:
 
 ## 14. Decisions
 
+2026-10-30:
+
+- **rogue is the canary, ghost001 stable**, and rogue is enrolled
+  first. rogue is the machine watched most closely, so it should meet a
+  change first; the server gets only what rogue has run for 24 h. It
+  also makes enrolling rogue safe: on `stable`, its first deploy would
+  have been a commit from before its own enrollment, and deploying that
+  removes comin.
+
 2026-10-29:
 
 - **Email via Postmark instead of SendGrid.** Same sender and recipient;
@@ -612,7 +621,7 @@ Phase 2:
   comin and CI verify against one signers registry.
 - **Deploy branches `deploy/<group>`.** The first groups are `canary`
   (ghost001) and `stable` (rogue, after canary plus a 24 h soak). More
-  groups come later, as registry entries.
+  groups come later, as registry entries. Swapped on 2026-10-30.
 - **Homebrew unchanged.** Collect per-deploy data (§9.4).
 - **CI builds the full systems and images.** Linux natively on hosted
   arm64 runners. Mac on hosted macOS as an experiment, with rogue's own
@@ -658,8 +667,8 @@ cleanup.
    push to main; `gates.yml` and `tests.yml` take the commit to test as
    `ref`. Check: a dispatched bump lands and promotes canary; a
    deliberately broken bump sends the email and opens the issue.
-5. **M5 Enroll:** the notify secret (`POSTMARK_API_KEY`), then ghost001
-   (canary), then rogue (stable). Check: a deploy visible in `comin
+5. **M5 Enroll:** the notify secret (`POSTMARK_API_KEY`), then rogue
+   (canary), then ghost001 (stable). Check: a deploy visible in `comin
    status` and the JSONL log; a failed deploy emails.
 
 ### Phase 2: binary cache and ntfy
