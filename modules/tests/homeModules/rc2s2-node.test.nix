@@ -96,10 +96,15 @@
                   lib.last h.launchd.agents.rc2s2-node.config.ProgramArguments
                 else
                   lib.concatStringsSep " " (lib.toList h.systemd.user.services.rc2s2-node.Service.ExecStart);
+              # ExecStart quotes the whole command line once more for
+              # `bash -c`, so the glob's own quotes appear as '\''.
+              ignore = "--ignore-cwd '*/target/live-work-*'";
             in
             {
               hasName = lib.hasInfix "--name rogue" line;
-              hasIgnore = lib.hasInfix "--ignore-cwd '*/target/live-work-*'" line;
+              hasIgnore = lib.hasInfix (
+                if isDarwin then ignore else lib.replaceStrings [ "'" ] [ "'\\''" ] ignore
+              ) line;
               hasUsage = lib.hasInfix "--claude-usage" line;
               hasAwake = lib.hasInfix "--keep-awake" line;
               hasExtra = lib.hasInfix "--hold-secs 60" line;
