@@ -13,7 +13,7 @@
     modulesSpecialArgs = { inherit (self) inputs outputs; };
     userRegistries = [ self.neusis.registry.users.anklab ];
     module =
-      { inputs, outputs, ... }:
+      { config, inputs, outputs, ... }:
       {
         imports = [
           self.neusis.features.darwin.defaults
@@ -31,7 +31,15 @@
           # self.neusis.features.agnostic.ank_mesh
           # self.neusis.features.agnostic.cslab_mesh
           ./_homebrew.nix
+          # auto-updates: comin follows rogue's deploy group (canary),
+          # deploys signed heads only, and emails failures
+          # (docs/auto-update-spec.md).
+          inputs.comin.darwinModules.comin
+          self.darwinModules.auto-update
+          self.neusis.features.agnostic.auto-update
         ];
+        age.secrets.autoUpdateNotify.rekeyFile = ../secrets/common/auto-update-notify.age;
+        neusis.services.auto-update.notify.environmentFile = config.age.secrets.autoUpdateNotify.path;
         programs.zsh.enable = true;
         neusis.services.secrets = {
           enable = true;

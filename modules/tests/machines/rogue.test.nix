@@ -134,6 +134,36 @@
           };
         };
 
+        # Enrolled in auto-updates as the canary: comin polls this repo's
+        # deploy/canary every minute, trusts only the registry signers and
+        # emails failures through the notify secret.
+        test-auto-update = {
+          expr = {
+            inherit (cfg.services.comin) enable;
+            remotes = map (r: {
+              inherit (r) url;
+              branch = r.branches.main.name;
+              period = r.poller.period;
+            }) cfg.services.comin.remotes;
+            signers = cfg.services.comin.sshAllowedSignersPath != null;
+            notify = cfg.neusis.services.auto-update.notify.environmentFile;
+            emailTo = cfg.neusis.services.auto-update.notify.emailTo;
+          };
+          expected = {
+            enable = true;
+            remotes = [
+              {
+                url = "https://github.com/leoank/neusis.git";
+                branch = "deploy/canary";
+                period = 60;
+              }
+            ];
+            signers = true;
+            notify = "/run/agenix/autoUpdateNotify";
+            emailTo = [ "leoank98@gmail.com" ];
+          };
+        };
+
         test-no-failed-assertions = {
           expr = {
             system = t.failedAssertions cfg;

@@ -2573,3 +2573,21 @@ once.
 The App needs the Workflows permission after all: GitHub refuses an App
 push that makes a branch carry workflow changes, and fast-forwarding
 `deploy/canary` over a commit to `.github/workflows/` is one.
+
+## 2026-10-30 — auto-updates M5: rogue enrolled as the canary
+
+rogue and ghost001 swap groups: rogue, the machine watched most
+closely, is now `canary`, and ghost001 is `stable`, getting only what
+rogue has run for 24 h. Swapping also made enrolling rogue first safe.
+On `stable`, its first deploy would have been the commit stable had
+soaked into, from before rogue's own enrollment, and deploying a config
+without comin removes comin. The same rule holds for the first switch
+on canary: run `darwin-rebuild switch` only once `deploy/canary`
+contains the enrollment commit.
+
+rogue imports comin's darwin module, `darwinModules.auto-update` and
+the anklab feature, and points `notify.environmentFile` at
+`secrets/common/auto-update-notify.age`, a dotenv holding
+`POSTMARK_API_KEY` (`/run/agenix/autoUpdateNotify`, read by comin's
+hook as root). `machine-rogue.test-auto-update` pins the remote
+(`deploy/canary`, 60 s), the signers file and the notify wiring.
