@@ -1,4 +1,4 @@
-{{- /* One person. Defines the user and joins them to a lab by role. */ -}}
+{{- /* One person. Defines the user and joins them to a user registry by role. */ -}}
 { self, ... }:
 {
   flake.neusis.users.{{ .Name }}.neusisOS = {
@@ -20,7 +20,7 @@
     machineToBundlesMap = { };
   };
 
-  # Join this user to lab {{ .Lab | nixStr }} as a {{ .Role }}.
+  # Join this user to user registry {{ .Lab | nixStr }} as a {{ .Role }}.
   flake.neusis.registry.users.{{ .Lab }}.{{ .RolePlural }} = [
     self.neusis.users.{{ .Name }}.neusisOS
   ];

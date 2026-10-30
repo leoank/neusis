@@ -1,0 +1,60 @@
+{{- /* Opt-in configuration bundle. */ -}}
+# Feature {{ .Name | nixStr }} ({{ .Type }})
+{{- if .Description }}
+#
+# {{ .Description }}
+{{- end }}
+{ ... }:
+{
+{{- if eq .Type "flake" }}
+  flake.neusis.features.flake.{{ .Name }} =
+    { ... }:
+    {
+      # Flake-level feature configuration (e.g. devShells, inputs, checks)
+    };
+{{- else if or (eq .Type "hm") (eq .Type "home") }}
+  flake.neusis.features.hm.{{ .Name }} =
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
+    {
+      # home-manager feature bundle settings
+    };
+{{- else if eq .Type "darwin" }}
+  flake.neusis.features.darwin.{{ .Name }} =
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
+    {
+      # nix-darwin feature bundle settings
+    };
+{{- else if eq .Type "nixos" }}
+  flake.neusis.features.nixos.{{ .Name }} =
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
+    {
+      # NixOS feature bundle settings
+    };
+{{- else }}
+  flake.neusis.features.agnostic.{{ .Name }} =
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
+    {
+      # Cross-platform feature bundle settings
+    };
+{{- end }}
+}

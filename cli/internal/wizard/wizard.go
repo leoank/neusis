@@ -19,7 +19,8 @@ const (
 	DefaultHMRef        = "github:nix-community/home-manager/release-26.05"
 	DefaultDarwinRef    = "github:LnL7/nix-darwin/nix-darwin-26.05"
 	DefaultStateVersion = "26.05"
-	DefaultLab          = "home"
+	DefaultRegistry     = "home"
+	DefaultLab          = DefaultRegistry
 	DefaultStyle        = "dendritic"
 )
 

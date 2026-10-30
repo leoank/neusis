@@ -15,7 +15,9 @@ that imports neusis as a flake library rather than forking it.
 Core commands:
 
 - `neusis init [dir]` — create a new fleet repo (wizard or flags)
-- `neusis add machine | user | registry | secrets`
+- `neusis add machine | user | registry | module | package | feature | secrets`
+- `neusis anywhere deploy | decrypt` — nixos-anywhere deployment with age secrets
+- `neusis doctor [dir]` — diagnose repo health, convention drift, and registrations
 - `neusis update` — refresh templates/schema from the neusis repo
 - `neusis version`
 
@@ -57,7 +59,7 @@ All of these were explicit choices, most made with the user in the loop.
    ("add machines/users/registries") and how neusis actually works.
 
 2. **Self-registering atoms.** Each machine/user file both *defines*
-   itself and *joins* its lab via flake-parts list-merge:
+   itself and *joins* its machine or user registry via flake-parts list-merge:
 
    ```nix
    flake.neusis.machines.oppy = { ... };
@@ -65,8 +67,8 @@ All of these were explicit choices, most made with the user in the loop.
    ```
 
    So `add` is a **pure append** — no fragile editing of a central
-   registry file. A per-lab `registry/<lab>.nix` seeds empty lists so
-   the lab attribute always exists.
+   registry file. A per-registry `registry/<name>.nix` seeds empty lists so
+   the registry attributes (machines, users, builders) always exist.
 
 3. **Two flake styles behind a flag.** `--style dendritic` (default,
    mirrors neusis: `flake-file` generates `flake.nix`, `import-tree`
@@ -107,7 +109,7 @@ All of these were explicit choices, most made with the user in the loop.
 ```
 cli/
 ├── main.go
-├── cmd/            # cobra commands: root, init, add, update, version, common
+├── cmd/            # cobra commands: root, init, add, doctor, anywhere, update, version, common
 ├── internal/
 │   ├── tmpl/       # go:embed templates + Repo/Machine/User/Lab models
 │   │   └── files/  # {common,dendritic,plain}/*.tmpl
@@ -117,7 +119,9 @@ cli/
 │   ├── gen/        # models -> files (Repo, Machine, User, Lab, secrets)
 │   ├── scaffold/   # idempotent file writer (tracks written/skipped)
 │   ├── nix/        # nix/git detection, write-flake, git add
-│   └── wizard/     # defaults, option catalogues, validation
+│   ├── wizard/     # defaults, option catalogues, validation
+│   ├── anywhere/   # nixos-anywhere deployment & age secret decryption
+│   └── doctor/     # repo health checks & convention drift diagnosis
 ├── .goreleaser.yaml
 ├── install.sh
 └── docs/INSIDER.md
@@ -141,7 +145,7 @@ my-fleet/
 ├── modules/
 │   ├── dendritic.nix       # flake-file + import-tree wiring; imports neusis.flakeModules.default
 │   ├── systems.nix         # mkNeusisFlake -> {nixos,darwin,home}Configurations
-│   ├── registry/home.nix   # seeds lab "home" (empty lists)
+│   ├── registry/home.nix   # seeds registry "home" (empty lists: machines, users, builders)
 │   ├── machines/oppy.nix    # defines host + joins registry.machines.home.nixos
 │   └── users/ank.nix        # defines user + joins registry.users.home.admins
 └── secrets/

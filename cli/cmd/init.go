@@ -37,7 +37,7 @@ func newInitCmd() *cobra.Command {
 		Short: "Create a new neusis fleet repository",
 		Long: `Scaffold a minimal neusis fleet repository: a flake that imports
 neusis as a library plus modules/ holding your machines, users, and
-registry labs.
+registries (machines, users, builders).
 
 Run with no flags to be guided interactively, or pass flags (with
 --yes) to script it.`,
@@ -61,7 +61,7 @@ Run with no flags to be guided interactively, or pass flags (with
 				style = wizard.DefaultStyle
 			}
 			if lab == "" {
-				lab = wizard.DefaultLab
+				lab = wizard.DefaultRegistry
 			}
 
 			repo := tmpl.Repo{
@@ -106,7 +106,7 @@ Run with no flags to be guided interactively, or pass flags (with
 					return err
 				}
 			}
-			if err := gen.Lab(w, tmpl.Lab{Name: lab}); err != nil {
+			if err := gen.Registry(w, tmpl.Registry{Name: lab}); err != nil {
 				return err
 			}
 
@@ -148,7 +148,8 @@ Run with no flags to be guided interactively, or pass flags (with
 	f := cmd.Flags()
 	f.StringVar(&name, "name", "", "project/flake name (default: target dir name)")
 	f.StringVar(&style, "style", "", "flake style: dendritic (default) or plain")
-	f.StringVar(&lab, "lab", "", "name of the first registry lab (default: home)")
+	f.StringVar(&lab, "registry", "", "name of the first registry (default: home)")
+	f.StringVar(&lab, "lab", "", "alias for --registry")
 	f.BoolVar(&withDarwin, "darwin", false, "include the nix-darwin input (for macOS hosts)")
 	f.StringVar(&neusisRef, "neusis-ref", wizard.DefaultNeusisRef, "flake ref for the neusis library")
 	f.StringVar(&nixpkgsRef, "nixpkgs-ref", wizard.DefaultNixpkgsRef, "flake ref for nixpkgs")
@@ -198,8 +199,8 @@ func runInitForm(repo *tmpl.Repo, lab *string, addMachine, addUser *bool) error 
 				).
 				Value(&repo.Style),
 			huh.NewInput().
-				Title("First lab name").
-				Description("A lab groups machines and users (e.g. home, work, cslab).").
+				Title("First registry name").
+				Description("A registry groups machines, users, and builders (e.g. home, work, cslab).").
 				Value(lab).
 				Validate(wizard.ValidateIdent),
 			huh.NewConfirm().
@@ -232,6 +233,7 @@ func printInitNextSteps(cmd *cobra.Command, dir string, repo tmpl.Repo, interact
 	}
 	fmt.Fprintln(out, "  neusis add machine      # add a host")
 	fmt.Fprintln(out, "  neusis add user         # add a person")
+	fmt.Fprintln(out, "  neusis add registry     # add a registry (machine, user, builders)")
 
 	if !nix.HasNix() {
 		fmt.Fprintln(out, "\nInstall nix, then run `nix flake lock` to pin inputs.")

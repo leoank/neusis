@@ -1,9 +1,9 @@
-# Lab {{ .Name | nixStr }} — a grouping of machines and users.
+# Registry {{ .Name | nixStr }} — machine, user, and builders registries.
 #
-# Machines and users register *themselves* into these lists from their
-# own files under `modules/machines/` and `modules/users/` (module
-# lists merge across files). This file only declares the lab with empty
-# lists so the attribute always exists — even before anything joins it.
+# Machines, users, and remote builders register *themselves* into these
+# lists from their own files under `modules/` (module lists merge across
+# files). This file only declares the registry with empty lists so the
+# attributes always exist — even before anything joins them.
 { ... }:
 {
   flake.neusis.registry.machines.{{ .Name }} = {
@@ -17,4 +17,6 @@
     guests = [ ];
     locked = [ ];
   };
+
+  flake.neusis.registry.builders.{{ .Name }} = [ ];
 }

@@ -1,0 +1,90 @@
+{{- /* Reusable module. Defines options and conditional configuration. */ -}}
+# Module {{ .Name | nixStr }} ({{ .Type }})
+{{- if .Description }}
+#
+# {{ .Description }}
+{{- end }}
+{ ... }:
+{
+{{- if or (eq .Type "home") (eq .Type "hm") }}
+  flake.homeModules.{{ .Name }} =
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
+    let
+      cfg = config.neusis.{{ .Name }};
+    in
+    {
+      options.neusis.{{ .Name }} = {
+        enable = lib.mkEnableOption {{ if .Description }}{{ .Description | nixStr }}{{ else }}"{{ .Name }}"{{ end }};
+      };
+
+      config = lib.mkIf cfg.enable {
+        # home-manager configuration here
+      };
+    };
+{{- else if eq .Type "nixos" }}
+  flake.nixosModules.{{ .Name }} =
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
+    let
+      cfg = config.neusis.{{ .Name }};
+    in
+    {
+      options.neusis.{{ .Name }} = {
+        enable = lib.mkEnableOption {{ if .Description }}{{ .Description | nixStr }}{{ else }}"{{ .Name }}"{{ end }};
+      };
+
+      config = lib.mkIf cfg.enable {
+        # NixOS configuration here
+      };
+    };
+{{- else if eq .Type "darwin" }}
+  flake.darwinModules.{{ .Name }} =
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
+    let
+      cfg = config.neusis.{{ .Name }};
+    in
+    {
+      options.neusis.{{ .Name }} = {
+        enable = lib.mkEnableOption {{ if .Description }}{{ .Description | nixStr }}{{ else }}"{{ .Name }}"{{ end }};
+      };
+
+      config = lib.mkIf cfg.enable {
+        # nix-darwin configuration here
+      };
+    };
+{{- else }}
+  flake.agnosticModules.{{ .Name }} =
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
+    let
+      cfg = config.neusis.{{ .Name }};
+    in
+    {
+      options.neusis.{{ .Name }} = {
+        enable = lib.mkEnableOption {{ if .Description }}{{ .Description | nixStr }}{{ else }}"{{ .Name }}"{{ end }};
+      };
+
+      config = lib.mkIf cfg.enable {
+        # Cross-platform system configuration here
+      };
+    };
+{{- end }}
+}

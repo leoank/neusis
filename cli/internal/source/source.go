@@ -39,6 +39,9 @@ func ref() string {
 func Offline() bool { return os.Getenv("NEUSIS_OFFLINE") != "" }
 
 func cacheRoot() (string, error) {
+	if dir := os.Getenv("NEUSIS_CACHE_DIR"); dir != "" {
+		return dir, nil
+	}
 	base, err := os.UserCacheDir()
 	if err != nil {
 		return "", err

@@ -1,5 +1,5 @@
 // Package gen renders neusis repository artifacts (a whole repo, or a
-// single machine/user/lab atom) into a target directory via the
+// single machine/user/registry atom) into a target directory via the
 // scaffold writer.
 package gen
 
@@ -70,9 +70,14 @@ func MasterIdentities(w *scaffold.Writer, id tmpl.MasterIdentity) error {
 	return render(w, "secrets/master-identities.nix", "common/master-identities.nix.tmpl", id)
 }
 
-// Lab scaffolds a registry lab file.
+// Registry scaffolds a registry file (machines, users, and builders).
+func Registry(w *scaffold.Writer, r tmpl.Registry) error {
+	return render(w, "modules/registry/"+r.Name+".nix", "common/registry.nix.tmpl", r)
+}
+
+// Lab is an alias for Registry for backwards compatibility.
 func Lab(w *scaffold.Writer, l tmpl.Lab) error {
-	return render(w, "modules/registry/"+l.Name+".nix", "common/registry.nix.tmpl", l)
+	return Registry(w, l)
 }
 
 // Machine scaffolds a host file.
@@ -83,4 +88,37 @@ func Machine(w *scaffold.Writer, m tmpl.Machine) error {
 // User scaffolds a person file.
 func User(w *scaffold.Writer, u tmpl.User) error {
 	return render(w, "modules/users/"+u.Name+".nix", "common/user.nix.tmpl", u)
+}
+
+// Module scaffolds a reusable module file.
+func Module(w *scaffold.Writer, m tmpl.Module) error {
+	var dir string
+	switch m.Type {
+	case "home", "hm":
+		dir = "homeModules"
+	case "nixos":
+		dir = "nixosModules"
+	case "darwin":
+		dir = "darwinModules"
+	default:
+		dir = "agnosticModules"
+	}
+	return render(w, fmt.Sprintf("modules/%s/%s.nix", dir, m.Name), "common/module.nix.tmpl", m)
+}
+
+// Package scaffolds a package file.
+func Package(w *scaffold.Writer, p tmpl.Package) error {
+	return render(w, fmt.Sprintf("modules/packages/%s/%s.nix", p.Name, p.Name), "common/package.nix.tmpl", p)
+}
+
+// Feature scaffolds an opt-in feature bundle file.
+func Feature(w *scaffold.Writer, f tmpl.Feature) error {
+	kind := f.Type
+	if kind == "home" {
+		kind = "hm"
+	}
+	if kind == "" {
+		kind = "agnostic"
+	}
+	return render(w, fmt.Sprintf("modules/features/%s/%s.nix", kind, f.Name), "common/feature.nix.tmpl", f)
 }

@@ -34,10 +34,13 @@ type MasterIdentity struct {
 	Pubkey       string // its public key
 }
 
-// Lab describes a registry grouping (a lab / site).
-type Lab struct {
+// Registry describes a registry grouping (machine, user, and builders registries).
+type Registry struct {
 	Name string
 }
+
+// Lab is an alias for Registry for backwards compatibility.
+type Lab = Registry
 
 // Machine is one host atom.
 type Machine struct {
@@ -48,7 +51,7 @@ type Machine struct {
 	ComputerName string // darwin only, optional
 	HostPubkey   string
 	PrimaryUser  string // optional
-	Lab          string // registry lab this host joins
+	Lab          string // machine registry this host joins
 	StateVersion string // NixOS state version, e.g. "26.05"
 	Secrets      bool   // wire the agenix-rekey secrets block for this host
 }
@@ -60,8 +63,28 @@ type User struct {
 	FullName string
 	Shell    string
 	Role     string // "admin" | "regular" | "guest" | "locked"
-	Lab      string
+	Lab      string // user registry this person joins
 	KeyFile  string // relative nix path to a copied pubkey, or "" if none
+}
+
+// Module describes a reusable module atom.
+type Module struct {
+	Name        string // attribute key
+	Type        string // "agnostic" | "home" | "nixos" | "darwin"
+	Description string // option description
+}
+
+// Package describes a flake package atom.
+type Package struct {
+	Name        string // package attribute key
+	Description string // package description
+}
+
+// Feature describes an opt-in configuration bundle atom.
+type Feature struct {
+	Name        string // feature attribute key
+	Type        string // "agnostic" | "darwin" | "nixos" | "hm" | "flake"
+	Description string // feature description
 }
 
 // RolePlural maps a role to its registry list key (the userRegistryType
@@ -157,4 +180,11 @@ func Specs() []source.Spec {
 		})
 	}
 	return out
+}
+
+// ResetCache drops the in-memory parsed template cache.
+func ResetCache() {
+	parseMu.Lock()
+	defer parseMu.Unlock()
+	parsed = map[string]*template.Template{}
 }
