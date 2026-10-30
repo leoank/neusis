@@ -231,14 +231,17 @@
               cfg = harness { tools.antigravity.enable = true; };
             in
             {
-              settings = cfg.home.file.".gemini/antigravity-cli/settings.json".text;
+              # agy owns settings.json; with nothing declared it is untouched.
+              linked = cfg.home.file ? ".gemini/antigravity-cli/settings.json";
+              merged = cfg.home.activation ? antigravitySettings;
               skills = src cfg ".gemini/config/skills";
               geminiMd = src cfg ".gemini/GEMINI.md";
               geminiOff = cfg.programs.antigravity-cli.enable;
               failed = t.failedAssertions cfg;
             };
           expected = {
-            settings = "{}";
+            linked = false;
+            merged = false;
             skills = "skills";
             geminiMd = "AGENTS.md";
             geminiOff = false;
@@ -254,14 +257,24 @@
                 tools.antigravity.settings.foo = 1;
                 tools.gemini.enable = true;
               };
+              script = cfg.home.activation.antigravitySettings;
+              data = builtins.unsafeDiscardStringContext script.data;
             in
             {
-              settings = builtins.fromJSON cfg.home.file.".gemini/antigravity-cli/settings.json".text;
+              # Declared settings are merged into agy's live file, not linked.
+              linked = cfg.home.file ? ".gemini/antigravity-cli/settings.json";
+              after = script.after;
+              mergesDeclared =
+                lib.hasInfix "-antigravity-settings.json" data
+                && lib.hasInfix "'.[0] * .[1]'" data
+                && lib.hasInfix "/.gemini/antigravity-cli/settings.json" data;
               geminiMd = cfg.home.file ? ".gemini/GEMINI.md";
               failed = t.failedAssertions cfg;
             };
           expected = {
-            settings.foo = 1;
+            linked = false;
+            after = [ "linkGeneration" ];
+            mergesDeclared = true;
             geminiMd = true;
             failed = [ ];
           };

@@ -422,13 +422,38 @@
         # settings.json + skills dir, matching what the HM module does when
         # `useLegacyGeminiConfig = false`. Context (`~/.gemini/GEMINI.md`) is
         # shared with gemini-cli; only written here if gemini is off.
+        #
+        # settings.json is agy's own state (it rewrites the file to record
+        # `trustedWorkspaces`), so it is not linked: a link would be
+        # replaced by agy and then clobber the previous `.bak` on the next
+        # switch. The declared settings are merged into the live file
+        # instead, declared keys winning; with none declared it is left alone.
         (lib.mkIf cfg.tools.antigravity.enable {
           home.packages = [ antigravityPkg ];
           home.file = {
-            ".gemini/antigravity-cli/settings.json".text = builtins.toJSON cfg.tools.antigravity.settings;
             ".gemini/config/skills".source = cfg.skillsDir;
             ".gemini/GEMINI.md" = lib.mkIf (!cfg.tools.gemini.enable) { source = cfg.agentsMd; };
           };
+          home.activation.antigravitySettings = lib.mkIf (cfg.tools.antigravity.settings != { }) (
+            let
+              declared = pkgs.writeText "antigravity-settings.json" (
+                builtins.toJSON cfg.tools.antigravity.settings
+              );
+              target = "${config.home.homeDirectory}/.gemini/antigravity-cli/settings.json";
+            in
+            lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+              target=${lib.escapeShellArg target}
+              merged=$(mktemp)
+              if [ -s "$target" ]; then
+                ${lib.getExe pkgs.jq} -s '.[0] * .[1]' "$target" ${declared} > "$merged"
+              else
+                cat ${declared} > "$merged"
+              fi
+              run rm -f $VERBOSE_ARG "$target"
+              run ${pkgs.coreutils}/bin/install -Dm600 $VERBOSE_ARG "$merged" "$target"
+              rm -f "$merged"
+            ''
+          );
         })
 
         # pi agent (jailed package + settings.json / models.json).
