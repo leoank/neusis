@@ -26,10 +26,14 @@ Overrides for the install script: `NEUSIS_VERSION`, `NEUSIS_INSTALL_DIR`.
 neusis init [dir]        # create a new fleet repo (wizard)
 neusis add machine       # add a host
 neusis add user          # add a person
-neusis add registry      # add a lab (grouping)
+neusis add registry      # add a registry (machine, user, builders)
+neusis add module        # add a reusable module (agnostic, home, nixos, darwin)
+neusis add package       # add a flake package
+neusis add feature       # add an opt-in feature bundle
 neusis add secrets       # set up agenix-rekey secrets
 neusis anywhere deploy   # deploy with nixos-anywhere and decrypted age secrets
 neusis anywhere decrypt  # decrypt age files into a root directory for inspection
+neusis doctor [dir]      # inspect fleet repo health, conventions, and registrations
 ```
 
 Every command runs as a wizard when invoked interactively, and accepts

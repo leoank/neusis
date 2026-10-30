@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/charmbracelet/huh"
 	"github.com/leoank/neusis/cli/internal/gen"
@@ -19,9 +20,17 @@ import (
 func newAddCmd() *cobra.Command {
 	add := &cobra.Command{
 		Use:   "add",
-		Short: "Add a machine, user, or registry to the current repository",
+		Short: "Add a machine, user, registry, module, package, or feature to the current repository",
 	}
-	add.AddCommand(newAddMachineCmd(), newAddUserCmd(), newAddRegistryCmd(), newAddSecretsCmd())
+	add.AddCommand(
+		newAddMachineCmd(),
+		newAddUserCmd(),
+		newAddRegistryCmd(),
+		newAddModuleCmd(),
+		newAddPackageCmd(),
+		newAddFeatureCmd(),
+		newAddSecretsCmd(),
+	)
 	return add
 }
 
@@ -99,7 +108,7 @@ func newAddMachineCmd() *cobra.Command {
 			if err := gen.Machine(w, m); err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "Added machine %q to lab %q:\n", m.Name, m.Lab)
+			fmt.Fprintf(cmd.OutOrStdout(), "Added machine %q to machine registry %q:\n", m.Name, m.Lab)
 			finish(cmd, w, root)
 			if m.IsDarwin() && !hasDarwinInput(root) {
 				warnMissingDarwinInput(cmd, root)
@@ -112,7 +121,8 @@ func newAddMachineCmd() *cobra.Command {
 	f.StringVar(&hostname, "hostname", "", "hostname (default: name)")
 	f.StringVar(&pubkey, "host-pubkey", "", "SSH host public key")
 	f.StringVar(&primaryUser, "primary-user", "", "primary user (darwin)")
-	f.StringVar(&lab, "lab", "", "registry lab to join (default: home)")
+	f.StringVar(&lab, "registry", "", "machine registry to join (default: home)")
+	f.StringVar(&lab, "lab", "", "alias for --registry")
 	f.BoolVar(&force, "force", false, "overwrite an existing file")
 	f.BoolVar(&yes, "yes", false, "non-interactive: use flags and defaults")
 	return cmd
@@ -143,6 +153,9 @@ func runMachineForm(m *tmpl.Machine) error {
 	if m.System == "" {
 		m.System = wizard.Systems[0].System
 	}
+	if m.Lab == "" {
+		m.Lab = wizard.DefaultRegistry
+	}
 	sysOpts := make([]huh.Option[string], 0, len(wizard.Systems))
 	for _, s := range wizard.Systems {
 		sysOpts = append(sysOpts, huh.NewOption(s.Label, s.System))
@@ -159,6 +172,11 @@ func runMachineForm(m *tmpl.Machine) error {
 				Description(schema.HelpOr("machine", "system", "Target architecture. Sets nixpkgs.hostPlatform and picks the builder (NixOS vs nix-darwin).")).
 				Options(sysOpts...).
 				Value(&m.System),
+			huh.NewInput().
+				Title("Machine registry").
+				Description("Machine registry this host joins (e.g. home, work).").
+				Value(&m.Lab).
+				Validate(wizard.ValidateIdent),
 			huh.NewInput().
 				Title("SSH host public key").
 				Description(schema.HelpOr("machine", "hostPubkey", "Used by agenix-rekey to encrypt per-host secrets. Leave blank to fill in later.")).
@@ -249,7 +267,7 @@ func newAddUserCmd() *cobra.Command {
 			if err := gen.User(w, u); err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "Added user %q (%s) to lab %q:\n", u.Name, u.Role, u.Lab)
+			fmt.Fprintf(cmd.OutOrStdout(), "Added user %q (%s) to user registry %q:\n", u.Name, u.Role, u.Lab)
 			finish(cmd, w, root)
 			return nil
 		},
@@ -258,7 +276,8 @@ func newAddUserCmd() *cobra.Command {
 	f.StringVar(&fullName, "full-name", "", "human-readable full name")
 	f.StringVar(&shell, "shell", "", "login shell (default: zsh)")
 	f.StringVar(&role, "role", "", "admin|regular|guest|locked (default: admin)")
-	f.StringVar(&lab, "lab", "", "registry lab to join (default: home)")
+	f.StringVar(&lab, "registry", "", "user registry to join (default: home)")
+	f.StringVar(&lab, "lab", "", "alias for --registry")
 	f.StringVar(&keyPath, "ssh-key", "", "path to a public SSH key to copy in")
 	f.BoolVar(&force, "force", false, "overwrite an existing file")
 	f.BoolVar(&yes, "yes", false, "non-interactive: use flags and defaults")
@@ -266,6 +285,9 @@ func newAddUserCmd() *cobra.Command {
 }
 
 func runUserForm(w *scaffold.Writer, u *tmpl.User) error {
+	if u.Lab == "" {
+		u.Lab = wizard.DefaultRegistry
+	}
 	roleOpts := make([]huh.Option[string], 0, len(wizard.Roles))
 	for _, r := range wizard.Roles {
 		roleOpts = append(roleOpts, huh.NewOption(r.Role+" — "+r.Help, r.Role))
@@ -291,6 +313,11 @@ func runUserForm(w *scaffold.Writer, u *tmpl.User) error {
 				Description("Determines privileges and which registry list the user joins.").
 				Options(roleOpts...).
 				Value(&u.Role),
+			huh.NewInput().
+				Title("User registry").
+				Description("User registry this person joins (e.g. home, work).").
+				Value(&u.Lab).
+				Validate(wizard.ValidateIdent),
 			huh.NewInput().
 				Title("Public SSH key path").
 				Description(schema.HelpOr("user", "sshKeys", "Public SSH key files authorized for this user.")+" Copied into modules/users/keys/; blank to add later.").
@@ -335,45 +362,49 @@ func normalizeUser(u *tmpl.User) {
 // ---- add registry ----
 
 func newAddRegistryCmd() *cobra.Command {
-	var force bool
+	var (
+		force bool
+		yes   bool
+	)
 	cmd := &cobra.Command{
 		Use:     "registry [name]",
 		Aliases: []string{"lab"},
-		Short:   "Add a registry lab (grouping of machines and users)",
+		Short:   "Add a registry (machine, user, and builders registries)",
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			w, root, err := openRepo(force)
 			if err != nil {
 				return err
 			}
-			lab := tmpl.Lab{}
+			reg := tmpl.Registry{}
 			if len(args) == 1 {
-				lab.Name = args[0]
+				reg.Name = args[0]
 			}
-			if lab.Name == "" && isTTY() {
+			if reg.Name == "" && !yes && isTTY() {
 				form := huh.NewForm(huh.NewGroup(
 					huh.NewInput().
-						Title("Lab name").
-						Description("A grouping of machines and users (e.g. home, work).").
-						Value(&lab.Name).
+						Title("Registry name").
+						Description("Creates machine, user, and builders registries under modules/registry/ (e.g. home, work).").
+						Value(&reg.Name).
 						Validate(wizard.ValidateIdent),
 				))
 				if err := form.Run(); err != nil {
 					return err
 				}
 			}
-			if err := wizard.ValidateIdent(lab.Name); err != nil {
-				return fmt.Errorf("lab name: %w", err)
+			if err := wizard.ValidateIdent(reg.Name); err != nil {
+				return fmt.Errorf("registry name: %w", err)
 			}
-			if err := gen.Lab(w, lab); err != nil {
+			if err := gen.Registry(w, reg); err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "Added registry lab %q:\n", lab.Name)
+			fmt.Fprintf(cmd.OutOrStdout(), "Added registry %q (machine, user, builders):\n", reg.Name)
 			finish(cmd, w, root)
 			return nil
 		},
 	}
 	cmd.Flags().BoolVar(&force, "force", false, "overwrite an existing file")
+	cmd.Flags().BoolVar(&yes, "yes", false, "non-interactive: use flags and defaults")
 	return cmd
 }
 
@@ -451,4 +482,287 @@ func printSecretWorkflow(cmd *cobra.Command, name string) {
 	fmt.Fprintf(out, "       age.secrets.%s.rekeyFile = ../../secrets/common/%s.age;\n", name, name)
 	fmt.Fprintln(out, "  3. Rekey for every host:  agenix rekey")
 	fmt.Fprintln(out, "  4. git add secrets/ && commit")
+}
+
+// ---- add module ----
+
+func newAddModuleCmd() *cobra.Command {
+	var (
+		modType     string
+		description string
+		force       bool
+		yes         bool
+	)
+	cmd := &cobra.Command{
+		Use:   "module [name]",
+		Short: "Add a reusable module (agnostic, home, nixos, darwin)",
+		Args:  cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			w, root, err := openRepo(force)
+			if err != nil {
+				return err
+			}
+			m := tmpl.Module{
+				Type:        modType,
+				Description: description,
+			}
+			if len(args) == 1 {
+				m.Name = args[0]
+			}
+			if m.Type == "" {
+				m.Type = "agnostic"
+			}
+			interactive := !yes && isTTY()
+			if interactive {
+				if err := runModuleForm(&m); err != nil {
+					return err
+				}
+			}
+			m.Type = normalizeModuleType(m.Type)
+			if err := validateModule(m); err != nil {
+				return err
+			}
+			if err := gen.Module(w, m); err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "Added %s module %q:\n", m.Type, m.Name)
+			finish(cmd, w, root)
+			return nil
+		},
+	}
+	f := cmd.Flags()
+	f.StringVarP(&modType, "type", "t", "agnostic", "module type: agnostic, home, nixos, darwin")
+	f.StringVar(&modType, "kind", "agnostic", "alias for --type")
+	f.StringVarP(&description, "description", "d", "", "description for options documentation")
+	f.BoolVar(&force, "force", false, "overwrite an existing file")
+	f.BoolVar(&yes, "yes", false, "non-interactive: use flags and defaults")
+	return cmd
+}
+
+func runModuleForm(m *tmpl.Module) error {
+	typeOpts := []huh.Option[string]{
+		huh.NewOption("agnostic — Cross-platform system module (NixOS + Darwin)", "agnostic"),
+		huh.NewOption("home — Home-manager module (user configuration)", "home"),
+		huh.NewOption("nixos — NixOS-only system module", "nixos"),
+		huh.NewOption("darwin — nix-darwin-only system module", "darwin"),
+	}
+	form := huh.NewForm(
+		huh.NewGroup(
+			huh.NewInput().
+				Title("Module name").
+				Description("Attribute name for the module (e.g. wireguard, backup).").
+				Value(&m.Name).
+				Validate(wizard.ValidateIdent),
+			huh.NewSelect[string]().
+				Title("Module type").
+				Description("Scope and platform target for this module.").
+				Options(typeOpts...).
+				Value(&m.Type),
+			huh.NewInput().
+				Title("Description").
+				Description("Short summary for option documentation (optional).").
+				Value(&m.Description),
+		),
+	)
+	return form.Run()
+}
+
+func normalizeModuleType(t string) string {
+	switch strings.ToLower(strings.TrimSpace(t)) {
+	case "hm", "home", "homemanager", "home-manager":
+		return "home"
+	case "nixos":
+		return "nixos"
+	case "darwin", "nix-darwin":
+		return "darwin"
+	default:
+		return "agnostic"
+	}
+}
+
+func validateModule(m tmpl.Module) error {
+	if err := wizard.ValidateIdent(m.Name); err != nil {
+		return fmt.Errorf("module name: %w", err)
+	}
+	switch m.Type {
+	case "agnostic", "home", "nixos", "darwin":
+		return nil
+	default:
+		return fmt.Errorf("invalid module type %q; must be agnostic, home, nixos, or darwin", m.Type)
+	}
+}
+
+// ---- add package ----
+
+func newAddPackageCmd() *cobra.Command {
+	var (
+		description string
+		force       bool
+		yes         bool
+	)
+	cmd := &cobra.Command{
+		Use:   "package [name]",
+		Short: "Add a flake package",
+		Args:  cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			w, root, err := openRepo(force)
+			if err != nil {
+				return err
+			}
+			p := tmpl.Package{
+				Description: description,
+			}
+			if len(args) == 1 {
+				p.Name = args[0]
+			}
+			interactive := !yes && isTTY()
+			if interactive {
+				if err := runPackageForm(&p); err != nil {
+					return err
+				}
+			}
+			if err := wizard.ValidateIdent(p.Name); err != nil {
+				return fmt.Errorf("package name: %w", err)
+			}
+			if err := gen.Package(w, p); err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "Added package %q:\n", p.Name)
+			finish(cmd, w, root)
+			return nil
+		},
+	}
+	f := cmd.Flags()
+	f.StringVarP(&description, "description", "d", "", "package description")
+	f.BoolVar(&force, "force", false, "overwrite an existing file")
+	f.BoolVar(&yes, "yes", false, "non-interactive: use flags and defaults")
+	return cmd
+}
+
+func runPackageForm(p *tmpl.Package) error {
+	form := huh.NewForm(
+		huh.NewGroup(
+			huh.NewInput().
+				Title("Package name").
+				Description("Attribute name for the package (e.g. mytool).").
+				Value(&p.Name).
+				Validate(wizard.ValidateIdent),
+			huh.NewInput().
+				Title("Description").
+				Description("Short summary of what this package does (optional).").
+				Value(&p.Description),
+		),
+	)
+	return form.Run()
+}
+
+// ---- add feature ----
+
+func newAddFeatureCmd() *cobra.Command {
+	var (
+		featType    string
+		description string
+		force       bool
+		yes         bool
+	)
+	cmd := &cobra.Command{
+		Use:   "feature [name]",
+		Short: "Add an opt-in feature bundle (agnostic, darwin, nixos, hm, flake)",
+		Args:  cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			w, root, err := openRepo(force)
+			if err != nil {
+				return err
+			}
+			f := tmpl.Feature{
+				Type:        featType,
+				Description: description,
+			}
+			if len(args) == 1 {
+				f.Name = args[0]
+			}
+			if f.Type == "" {
+				f.Type = "agnostic"
+			}
+			interactive := !yes && isTTY()
+			if interactive {
+				if err := runFeatureForm(&f); err != nil {
+					return err
+				}
+			}
+			f.Type = normalizeFeatureType(f.Type)
+			if err := validateFeature(f); err != nil {
+				return err
+			}
+			if err := gen.Feature(w, f); err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "Added %s feature %q:\n", f.Type, f.Name)
+			finish(cmd, w, root)
+			return nil
+		},
+	}
+	flags := cmd.Flags()
+	flags.StringVarP(&featType, "type", "t", "agnostic", "feature type: agnostic, darwin, nixos, hm, flake")
+	flags.StringVar(&featType, "kind", "agnostic", "alias for --type")
+	flags.StringVarP(&description, "description", "d", "", "feature description")
+	flags.BoolVar(&force, "force", false, "overwrite an existing file")
+	flags.BoolVar(&yes, "yes", false, "non-interactive: use flags and defaults")
+	return cmd
+}
+
+func runFeatureForm(f *tmpl.Feature) error {
+	typeOpts := []huh.Option[string]{
+		huh.NewOption("agnostic — Cross-platform settings bundle (NixOS + Darwin)", "agnostic"),
+		huh.NewOption("darwin — nix-darwin settings bundle", "darwin"),
+		huh.NewOption("nixos — NixOS settings bundle", "nixos"),
+		huh.NewOption("hm — Home-manager user settings bundle", "hm"),
+		huh.NewOption("flake — Flake-level wiring (devShells, inputs, checks)", "flake"),
+	}
+	form := huh.NewForm(
+		huh.NewGroup(
+			huh.NewInput().
+				Title("Feature name").
+				Description("Identifier for the feature bundle (e.g. dev-tools, theme).").
+				Value(&f.Name).
+				Validate(wizard.ValidateIdent),
+			huh.NewSelect[string]().
+				Title("Feature type").
+				Description("Target category for this opt-in bundle.").
+				Options(typeOpts...).
+				Value(&f.Type),
+			huh.NewInput().
+				Title("Description").
+				Description("Short summary of this feature bundle (optional).").
+				Value(&f.Description),
+		),
+	)
+	return form.Run()
+}
+
+func normalizeFeatureType(t string) string {
+	switch strings.ToLower(strings.TrimSpace(t)) {
+	case "home", "hm", "homemanager", "home-manager":
+		return "hm"
+	case "darwin", "nix-darwin":
+		return "darwin"
+	case "nixos":
+		return "nixos"
+	case "flake", "flake-parts":
+		return "flake"
+	default:
+		return "agnostic"
+	}
+}
+
+func validateFeature(f tmpl.Feature) error {
+	if err := wizard.ValidateIdent(f.Name); err != nil {
+		return fmt.Errorf("feature name: %w", err)
+	}
+	switch f.Type {
+	case "agnostic", "darwin", "nixos", "hm", "flake":
+		return nil
+	default:
+		return fmt.Errorf("invalid feature type %q; must be agnostic, darwin, nixos, hm, or flake", f.Type)
+	}
 }

@@ -12,7 +12,7 @@ modules/
   dendritic.nix      # flake-file + import-tree wiring; declares inputs
 {{- end }}
   systems.nix        # turns the machine registry into flake outputs
-  registry/          # labs (groupings of machines and users)
+  registry/          # registries (machine, user, and builders registries)
   machines/          # one file per host
   users/             # one file per person
 secrets/             # agenix-rekey secrets{{ if .Secrets }} (enabled){{ end }}
@@ -28,7 +28,10 @@ secrets/             # agenix-rekey secrets{{ if .Secrets }} (enabled){{ end }}
 ```bash
 neusis add machine       # add a host (wizard)
 neusis add user          # add a person (wizard)
-neusis add registry      # add a lab
+neusis add registry      # add a registry (machine, user, builders)
+neusis add module        # add a reusable module
+neusis add package       # add a flake package
+neusis add feature       # add an opt-in feature bundle
 neusis add secrets       # set up / scaffold agenix-rekey secrets
 ```
 

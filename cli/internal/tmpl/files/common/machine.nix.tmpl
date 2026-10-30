@@ -1,4 +1,4 @@
-{{- /* One host. Defines the machine and joins it to its lab. */ -}}
+{{- /* One host. Defines the machine and joins it to its machine registry. */ -}}
 { self, ... }:
 {
   flake.neusis.machines.{{ .Name }} = {
@@ -15,7 +15,7 @@
     # (`cat /etc/ssh/ssh_host_ed25519_key.pub`).
     hostPubkey = {{ .HostPubkey | nixStr }};
 
-    # User registries installed on this host. Users in these labs get
+    # User registries installed on this host. Users in these user registries get
     # system accounts and home-manager wiring here.
     userRegistries = [ self.neusis.registry.users.{{ .Lab }} ];
 {{- if and (not .IsDarwin) .Secrets }}
@@ -81,7 +81,7 @@
       };
   };
 
-  # Join this host to its lab.
+  # Join this host to its machine registry.
   flake.neusis.registry.machines.{{ .Lab }}.{{ if .IsDarwin }}darwin{{ else }}nixos{{ end }} = [
     self.neusis.machines.{{ .Name }}
   ];

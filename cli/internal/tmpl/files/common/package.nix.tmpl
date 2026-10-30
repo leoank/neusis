@@ -1,0 +1,31 @@
+{{- /* Per-system package derivation. */ -}}
+# Package {{ .Name | nixStr }}
+{{- if .Description }}
+#
+# {{ .Description }}
+{{- end }}
+{ ... }:
+{
+  perSystem =
+    { pkgs, ... }:
+    {
+      packages.{{ .Name }} = pkgs.writeShellApplication {
+        name = {{ .Name | nixStr }};
+        text = ''
+          echo "Hello from {{ .Name }}!"
+        '';
+{{- if .Description }}
+        meta = {
+          description = {{ .Description | nixStr }};
+        };
+{{- end }}
+      };
+
+      # Or replace with stdenv.mkDerivation, buildGoModule, etc.:
+      # packages.{{ .Name }} = pkgs.stdenv.mkDerivation {
+      #   pname = {{ .Name | nixStr }};
+      #   version = "0.1.0";
+      #   src = ./.;
+      # };
+    };
+}
