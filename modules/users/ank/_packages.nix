@@ -50,7 +50,8 @@
       # instead of homebrew casks. See features/flake/fresh-apps.nix.
       inputs.fresh-apps.packages.${pkgs.stdenv.hostPlatform.system}.signal-desktop
       inputs.fresh-apps.packages.${pkgs.stdenv.hostPlatform.system}.whatsapp
-      spotify
+      # spotify: dropped 2026-10-30 — its DMG no longer matches the hash
+      # nixpkgs pins, which blocked the input bump; restore once fixed.
       #kicad-unstable
       pkgs.unstable.obsidian
       # broken right now. uncomment later
