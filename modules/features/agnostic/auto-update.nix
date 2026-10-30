@@ -40,6 +40,11 @@
         }
       ];
 
+      # The commit this system was built from, which the switch check
+      # compares with the deploy branch (null for an unknown tree). It also
+      # gives every commit its own generation, even one that only touches docs.
+      system.configurationRevision = lib.mkDefault (self.rev or self.dirtyRev or null);
+
       neusis.services.auto-update = {
         enable = true;
         url = "https://github.com/leoank/neusis.git";

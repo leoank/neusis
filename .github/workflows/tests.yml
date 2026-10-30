@@ -115,7 +115,7 @@ jobs:
         with:
           extra-conf: |
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
-      - run: nix build --no-link .#checks.x86_64-linux.pkg-neusis .#checks.x86_64-linux.pkg-gclb .#checks.x86_64-linux.neusis-promote-cases
+      - run: nix build --no-link .#checks.x86_64-linux.pkg-neusis .#checks.x86_64-linux.pkg-gclb .#checks.x86_64-linux.neusis-promote-cases .#checks.x86_64-linux.neusis-switch-check-cases
 
   vm-tests:
     name: T3 VM ${{ matrix.test }}

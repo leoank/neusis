@@ -159,6 +159,32 @@
           };
         };
 
+        # A GitHub url gets the switch check: a pre-switch check on NixOS,
+        # the first preActivation step on darwin. Other remotes get none.
+        test-switch-check-on-github = {
+          expr =
+            let
+              github.neusis.services.auto-update.url = lib.mkForce "https://github.com/o/r.git";
+              n = nixos github;
+              d = darwin github;
+              check = lib.hasInfix "neusis-auto-update-switch-check";
+            in
+            {
+              nixos = check (n.system.preSwitchChecks.neusis-auto-update or "");
+              darwin =
+                lib.hasPrefix "/nix/store/" d.system.activationScripts.preActivation.text
+                && check (lib.head (lib.splitString "\n" d.system.activationScripts.preActivation.text));
+              nixosOtherRemote = (nixos { }).system.preSwitchChecks ? neusis-auto-update;
+              darwinOtherRemote = check (darwin { }).system.activationScripts.preActivation.text;
+            };
+          expected = {
+            nixos = true;
+            darwin = true;
+            nixosOtherRemote = false;
+            darwinOtherRemote = false;
+          };
+        };
+
         test-disabled-leaves-comin-off = {
           expr = (nixos { neusis.services.auto-update.enable = lib.mkForce false; }).services.comin.enable;
           expected = false;

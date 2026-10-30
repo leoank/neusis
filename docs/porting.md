@@ -2591,3 +2591,25 @@ the anklab feature, and points `notify.environmentFile` at
 `POSTMARK_API_KEY` (`/run/agenix/autoUpdateNotify`, read by comin's
 hook as root). `machine-rogue.test-auto-update` pins the remote
 (`deploy/canary`, 60 s), the signers file and the notify wiring.
+
+## 2026-10-30 — auto-updates: guards against comin removing itself
+
+comin uninstalls itself when it deploys a commit in which its host isn't
+enrolled, and it would do so silently: on a first enrollment switched
+before the group's branch contains it, or after a commit that drops the
+comin import is promoted. Two guards (spec §9.5). `neusis-promote` now
+evaluates each member (the registry's `members`, passed by promote.yml)
+at the group's head and at the candidate, and holds the group when a
+member enrolled at the head would not be at the candidate; deliberate
+unenrollment takes the host out of the group first.
+`neusis-switch-check` runs before a manual activation, as a NixOS
+`system.preSwitchChecks` entry and the first darwin `preActivation` step
+(nix-darwin's `activate` is `set -e`, so failing there stops it before
+anything changes). It refuses a commit that neither `deploy/<group>` nor
+`testing-<host>` contains, using GitHub's compare API, and resets the
+system profile the rebuild tools had already moved, since nix-darwin's
+boot-time activation follows the profile. It needs the build's revision,
+so the anklab feature sets `system.configurationRevision` from
+`self.rev`/`self.dirtyRev`. `neusis-promote-cases` gains the
+unenroll/re-enroll cases; `neusis-switch-check-cases` (Linux: it needs a
+loopback stub of the API) covers the check.

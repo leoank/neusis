@@ -23,6 +23,13 @@
 # with the Homebrew delta) and, when `notify.environmentFile` is set,
 # alerts through neusis-notify. The anklab policy (branch from the deploy
 # group, signers, addresses) is `features.agnostic.auto-update`.
+#
+# A manual switch first runs neusis-switch-check (a NixOS pre-switch
+# check, a darwin preActivation step): it refuses a commit that no branch
+# comin follows contains yet, since comin would deploy that branch's head
+# over it, which on a first enrollment can remove comin. It needs
+# `system.configurationRevision` and a GitHub `url`; otherwise it only
+# warns.
 { self, inputs, ... }:
 {
   flake-file.inputs.comin = {
@@ -45,6 +52,34 @@
       # Homebrew's owner on darwin hosts that manage it: `brew` refuses to
       # run as root, and comin (and so the hook) runs as root.
       brewUser = if options ? homebrew && config.homebrew.enable then config.system.primaryUser else null;
+
+      # owner/repo when `url` is a GitHub https remote, for the switch check.
+      githubRepo =
+        let
+          m = builtins.match "https://github.com/([^/]+/[^/]+)" cfg.url;
+        in
+        if m == null then null else lib.removeSuffix ".git" (lib.head m);
+
+      switchCheck = pkgs.writeShellScript "neusis-auto-update-switch-check" ''
+        if ! ${lib.getExe self.packages.${system}.neusis-switch-check} ${
+          lib.escapeShellArgs [
+            (toString config.system.configurationRevision)
+            githubRepo
+            cfg.branch
+            (lib.head config.services.comin.remotes).branches.testing.name
+          ]
+        }; then
+          # The rebuild tools point the system profile at the new generation
+          # before activating it; point it back, or the next boot would
+          # activate what was just refused.
+          profile=/nix/var/nix/profiles/system
+          current=$(${pkgs.coreutils}/bin/readlink -f /run/current-system)
+          if [ "$(${pkgs.coreutils}/bin/readlink -f "$profile")" != "$current" ]; then
+            ${config.nix.package}/bin/nix-env -p "$profile" --set "$current"
+          fi
+          exit 1
+        fi
+      '';
 
       allowedSignersFile = pkgs.writeText "neusis-allowed-signers" (
         self.neusis.lib.autoUpdate.allowedSigners cfg.signers
@@ -202,29 +237,39 @@
         };
       };
 
-      config = lib.mkIf cfg.enable {
-        warnings = lib.optional (cfg.signers == [ ]) ''
-          neusis.services.auto-update: no signers, so comin deploys any
-          commit on ${cfg.branch}. Set `signers` to require signed heads.
-        '';
+      config = lib.mkIf cfg.enable (
+        {
+          warnings = lib.optional (cfg.signers == [ ]) ''
+            neusis.services.auto-update: no signers, so comin deploys any
+            commit on ${cfg.branch}. Set `signers` to require signed heads.
+          '';
 
-        services.comin = {
-          enable = true;
-          # comin's own module prefers `pkgs.comin` (mkDefault); pin the
-          # binary to the flake the module comes from so the two agree on
-          # the config schema even once nixpkgs carries an older comin.
-          package = inputs.comin.packages.${system}.comin;
-          remotes = [
-            {
-              name = "origin";
-              inherit (cfg) url;
-              branches.main.name = cfg.branch;
-              poller.period = cfg.pollPeriod;
-            }
-          ];
-          sshAllowedSignersPath = lib.mkIf (cfg.signers != [ ]) "${allowedSignersFile}";
-          postDeploymentCommand = lib.getExe hook;
-        };
-      };
+          services.comin = {
+            enable = true;
+            # comin's own module prefers `pkgs.comin` (mkDefault); pin the
+            # binary to the flake the module comes from so the two agree on
+            # the config schema even once nixpkgs carries an older comin.
+            package = inputs.comin.packages.${system}.comin;
+            remotes = [
+              {
+                name = "origin";
+                inherit (cfg) url;
+                branches.main.name = cfg.branch;
+                poller.period = cfg.pollPeriod;
+              }
+            ];
+            sshAllowedSignersPath = lib.mkIf (cfg.signers != [ ]) "${allowedSignersFile}";
+            postDeploymentCommand = lib.getExe hook;
+          };
+        }
+        // lib.optionalAttrs (options ? system.preSwitchChecks) {
+          system.preSwitchChecks.neusis-auto-update = lib.mkIf (githubRepo != null) "${switchCheck}";
+        }
+        // lib.optionalAttrs (options ? launchd) {
+          system.activationScripts.preActivation.text = lib.mkIf (githubRepo != null) (
+            lib.mkBefore "${switchCheck}\n"
+          );
+        }
+      );
     };
 }

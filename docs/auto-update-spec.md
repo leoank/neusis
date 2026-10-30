@@ -495,6 +495,35 @@ Homebrew stays as it is. The post-deployment command:
 
 After a few weeks of data we decide about `upgrade` and `cleanup`.
 
+### 9.5 Enrollment safety
+
+comin removes itself when it deploys a commit in which its host isn't
+enrolled: the config it switches to has no comin. Two guards stop that
+(added 2026-10-30):
+
+- **Promotion (CI):** `neusis-promote` evaluates every group member at
+  the group's head and at the candidate. A member that runs comin on the
+  group's branch at the head but not at the candidate holds the group
+  ("would unenroll"). To unenroll a host deliberately, take it out of the
+  group first; the registry then no longer lists it as a member.
+- **Manual switch (host):** `neusis-switch-check` runs before
+  activation: a NixOS pre-switch check, and the first `preActivation`
+  step on darwin. It asks GitHub's compare API whether the branches comin
+  follows (`deploy/<group>`, then `testing-<host>`) already contain the
+  commit being switched to (`system.configurationRevision`, which the
+  anklab feature sets from the flake). If not, it refuses: comin would
+  deploy the branch head over the switch, and on a first enrollment that
+  head may not run comin at all. It points the system profile back at the
+  running system, because the rebuild tools have already moved it and a
+  reboot would otherwise activate the refused generation. A dirty tree,
+  an unknown revision or an unreachable GitHub only warn.
+  `sudo touch /var/lib/neusis-auto-update/force-switch` skips it once.
+
+comin's own deploys pass the check, since they deploy a branch head. The
+cost is one GitHub API call per switch (unauthenticated: 60 an hour), and
+setting `configurationRevision` gives every commit its own generation,
+even a docs-only one.
+
 ## 10. GitHub App or a token? An App
 
 One App, `neusis-auto-updates-ci-bot`, installed only on `leoank/neusis`, with
