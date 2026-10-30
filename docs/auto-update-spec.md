@@ -5,7 +5,8 @@ are in §13 and are external dependencies, not design choices. The build
 plan is §15, in two phases: **phase 1** is signed, gated, pull-based
 updates with email alerts; **phase 2** adds the attic binary cache and
 ntfy. Work that lands is logged in `docs/porting.md`. Companion doc for
-the lab admin (phase 2): `docs/attic-cache-setup.md`.
+the lab admin (phase 2): `docs/attic-cache-setup.md`. Day-to-day use
+(trying changes, pausing, alerts, enrolling): `docs/auto-update-guide.md`.
 
 Goal: keep the fleet current without anyone running `nix flake update`
 or `*-rebuild switch` by hand.
