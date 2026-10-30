@@ -4,13 +4,17 @@
 #   neusis-promote --groups FILE [--candidate SHA --gated true|false]
 #                  [--report FILE] [--remote NAME] [--push]
 #
-# FILE is `{ <group>: { branch, after, soakHours } }`, the lab's
-# registry.deployGroups. A group without `after` moves to the candidate
+# FILE is `{ <group>: { branch, after, soakHours, members } }`, the lab's
+# registry.deployGroups with `members` a list of `{ host, kind }` (kind
+# nixos or darwin). A group without `after` moves to the candidate
 # (a commit on main whose gates ran; `--gated` says whether they passed)
 # and is left alone when there is none. A group with `after` moves to the
 # newest commit its `after` group reached at least `soakHours` ago. A
-# move must fast-forward, and the commit must be signed by a key in the
-# allowed signers of the group's current head (what its hosts check).
+# move must fast-forward, the commit must be signed by a key in the
+# allowed signers of the group's current head (what its hosts check), and
+# no member that runs comin on the group's branch at the head may stop
+# doing so at the commit: comin would deploy that and remove itself. To
+# unenroll a host, take it out of the group first.
 #
 # Promotions are recorded as git notes on refs/notes/neusis-deploy, one
 # "<group> <epoch>" line each; soak times are read from them.
@@ -20,6 +24,8 @@
 #   NOW          current time in epoch seconds (default: now)
 #   SIGNERS_CMD  executable printing the allowed_signers of revision $1
 #                (default: render registry.signers.anklab with nix eval)
+#   ENROLLED_CMD executable printing true or false: does host $3 (kind $2)
+#                run comin on branch $4 at revision $1 (default: nix eval)
 #
 # Without --push nothing leaves the clone. The report (default stdout) is
 # a JSON array of { group, action, from, to, reason }, action one of
@@ -72,6 +78,32 @@ signers() {
       let f = builtins.getFlake \"git+file://$top?rev=$1\";
       in f.neusis.lib.autoUpdate.allowedSigners f.neusis.registry.signers.anklab"
   fi
+}
+
+enrolled() {
+  if [ -n "${ENROLLED_CMD:-}" ]; then
+    "$ENROLLED_CMD" "$@"
+  else
+    nix eval --raw --impure --expr "
+      let
+        f = builtins.getFlake \"git+file://$top?rev=$1\";
+        hosts = f.$2Configurations or { };
+        comin = if hosts ? \"$3\" then hosts.\"$3\".config.services.comin or null else null;
+      in
+      if comin != null && comin.enable && builtins.any (r: r.branches.main.name == \"$4\") comin.remotes
+      then \"true\" else \"false\""
+  fi
+}
+
+# Members enrolled on branch $2 at revision $1 that are not at $3.
+unenrolled() {
+  local kind host
+  while read -r kind host; do
+    if [ "$(enrolled "$1" "$kind" "$host" "$2")" = true ] &&
+      [ "$(enrolled "$3" "$kind" "$host" "$2")" != true ]; then
+      echo "$host"
+    fi
+  done < <(jq -r --arg g "$g" '.[$g].members[]? | "\(.kind) \(.host)"' "$groups")
 }
 
 record() {
@@ -143,6 +175,13 @@ for g in $order; do
   if ! git -c gpg.ssh.allowedSignersFile="$tmp/allowed_signers" verify-commit "$cand" 2>/dev/null; then
     record "$g" held "$head" "$cand" "$cand is not signed by an allowed signer"
     continue
+  fi
+  if [ -n "$head" ]; then
+    gone=$(unenrolled "$head" "$branch" "$cand" | paste -sd, -)
+    if [ -n "$gone" ]; then
+      record "$g" held "$head" "$cand" "$cand would unenroll $gone (comin off or not on $branch there); take a host out of the group before dropping comin"
+      continue
+    fi
   fi
 
   if [ "$push" = 1 ]; then

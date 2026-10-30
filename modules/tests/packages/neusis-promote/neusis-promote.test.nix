@@ -2,7 +2,9 @@
 # "origin", in the build sandbox. Groups: canary (from main), fast (after
 # canary, no soak) and stable (after canary, 24 h). Time is driven through
 # NOW; the trusted key is the TEST-ONLY fixture key, and a second key made
-# here plays an untrusted signer.
+# here plays an untrusted signer. Each commit lists the hosts it enrolls
+# in a file `enrolled`, which a stub ENROLLED_CMD reads instead of
+# evaluating the flake; canary's member is rogue.
 #
 #   c1 signed, gated          → canary and fast promoted, stable waiting
 #   c2 signed, gates failed   → canary held
@@ -13,6 +15,8 @@
 #   +24.5 h                   → stable promoted to c1 (c5 has not soaked yet)
 #   +25 h                     → stable promoted to c5
 #   c6 with canary in DEPLOY_HOLD → paused
+#   c7 drops rogue's enrollment → held, would unenroll rogue
+#   c8 enrolls rogue again    → canary promoted
 #   d branched off c1         → held, not a fast-forward
 { ... }:
 {
@@ -45,10 +49,17 @@
             printf '#!/bin/sh\ncat %s\n' $TMPDIR/allowed > $TMPDIR/signers
             chmod +x $TMPDIR/signers
             export SIGNERS_CMD=$TMPDIR/signers
+            cat > $TMPDIR/enrolled <<'EOF'
+            #!/bin/sh
+            if git show "$1:enrolled" 2>/dev/null | grep -qx "$3"; then echo true; else echo false; fi
+            EOF
+            chmod +x $TMPDIR/enrolled
+            export ENROLLED_CMD=$TMPDIR/enrolled
 
             cat > $TMPDIR/groups.json <<'EOF'
             {
-              "canary": { "branch": "deploy/canary", "after": null, "soakHours": 0 },
+              "canary": { "branch": "deploy/canary", "after": null, "soakHours": 0,
+                          "members": [ { "host": "rogue", "kind": "darwin" } ] },
               "fast": { "branch": "deploy/fast", "after": "canary", "soakHours": 0 },
               "stable": { "branch": "deploy/stable", "after": "canary", "soakHours": 24 }
             }
@@ -59,9 +70,11 @@
             cd $TMPDIR/work
 
             T0=1800000000
+            hosts=rogue
             commit() { # name key|-
               echo "$1" > state
-              git add state
+              echo "$hosts" > enrolled
+              git add state enrolled
               if [ "$2" = - ]; then
                 git commit -q --no-gpg-sign -m "$1"
               else
@@ -137,11 +150,24 @@
             expect "hold canary" "$(action canary)" paused
             expect "hold canary ref" "$(at canary)" $c5
 
+            hosts=""
+            c7=$(commit c7 $TMPDIR/trusted)
+            promote $((T0 + 26 * 3600 + 600)) --candidate $c7 --gated true
+            expect "unenroll canary" "$(action canary)" held
+            expect "unenroll reason" "$(reason canary)" "$c7 would unenroll rogue (comin off or not on deploy/canary there); take a host out of the group before dropping comin"
+            expect "unenroll canary ref" "$(at canary)" $c5
+
+            hosts=rogue
+            c8=$(commit c8 $TMPDIR/trusted)
+            promote $((T0 + 26 * 3600 + 1200)) --candidate $c8 --gated true
+            expect "re-enroll canary" "$(action canary)" promoted
+            expect "re-enroll canary ref" "$(at canary)" $c8
+
             git checkout -q -b side $c1
             d=$(echo d > state && git add state && git -c user.signingkey=$TMPDIR/trusted commit -q -S -m d && git rev-parse HEAD)
             promote $((T0 + 27 * 3600)) --candidate $d --gated true
             expect "side canary" "$(action canary)" held
-            expect "side reason" "$(reason canary)" "deploy/canary does not fast-forward from $c5 to $d"
+            expect "side reason" "$(reason canary)" "deploy/canary does not fast-forward from $c8 to $d"
 
             touch $out
           '';

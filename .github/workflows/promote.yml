@@ -62,8 +62,11 @@ jobs:
         run: |
           nix eval --json --impure --expr '
             let f = builtins.getFlake (toString ./.);
-            in builtins.mapAttrs (_: g: { inherit (g) branch after soakHours; })
-              f.neusis.registry.deployGroups.anklab' > "$RUNNER_TEMP/groups.json"
+              kind = m: if builtins.match ".*-darwin" m.system != null then "darwin" else "nixos";
+            in builtins.mapAttrs (_: g: {
+              inherit (g) branch after soakHours;
+              members = map (m: { host = m.hostname; kind = kind m; }) g.machines;
+            }) f.neusis.registry.deployGroups.anklab' > "$RUNNER_TEMP/groups.json"
           git fetch -q origin "${CANDIDATE:-main}"
           nix run .#neusis-promote -- --groups "$RUNNER_TEMP/groups.json" \
             ${CANDIDATE:+--candidate "$CANDIDATE" --gated "$GATED"} \
