@@ -10,11 +10,10 @@
 # image is not built here: make-disk-image needs KVM, which the hosted
 # arm64 runners lack, and the image gates no deploy group.
 #
-# Mac members are an experiment (§7.2): rogue's closure (~28 GiB) is
+# Mac members gate like the rest (§7.2). rogue's closure (~28 GiB) is
 # larger than a hosted macOS runner's guaranteed free disk, so the job
-# deletes the preinstalled Xcodes and simulators it does not need,
-# records disk and timings in the job summary, and does not fail the
-# gates while the experiment runs (continue-on-error).
+# deletes the preinstalled Xcodes and simulators it does not need, and
+# it records disk and timings in the job summary.
 name: gates
 
 on:
@@ -65,8 +64,7 @@ jobs:
                 "aarch64-linux": "ubuntu-24.04-arm",
                 "x86_64-linux": "ubuntu-latest",
                 "aarch64-darwin": "macos-latest"
-              }[.system],
-              experimental: (.system | endswith("darwin"))
+              }[.system]
             }]')
           echo "machines=$machines" >> "$GITHUB_OUTPUT"
           echo "$machines" | jq .
@@ -75,7 +73,6 @@ jobs:
     name: system ${{ matrix.host }} (${{ matrix.group }})
     needs: plan
     runs-on: ${{ matrix.runner }}
-    continue-on-error: ${{ matrix.experimental }}
     strategy:
       fail-fast: false
       matrix:

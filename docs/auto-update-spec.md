@@ -265,8 +265,7 @@ re-runs quickly, because the Linux closures substitute from attic.
 The system matrix comes from the registry (`nix eval --json` over the
 deploy groups), so enrolling a machine needs no YAML change. Promotion
 reads the overall result: one red gate holds every group that follows
-`main`. The Mac job is `continue-on-error` while it is an experiment
-(§7.2), so it informs but doesn't block.
+`main`. The Mac job gates too (since 2026-10-30, §7.2).
 
 ### 6.4 Alerts: email and a GitHub issue; ntfy in phase 2
 
@@ -375,6 +374,13 @@ to free space. The plan:
 `home-ank@rogue` built in 1917 s with no binary cache of our own. So it
 fits; the job stays `continue-on-error` until a few more runs are green,
 then becomes the real gate for `stable` (step 2).
+
+**Required since 2026-10-30.** rogue became the canary, and the fifth
+run caught a real break: a bump whose Spotify download no longer matched
+its pinned hash. Non-blocking, that bump would have landed and reached
+rogue, where comin would fail to build it silently (comin v0.14 has no
+build hook). A runner-side failure, such as a full disk, now blocks
+too; re-run the job.
 
 Building on rogue over the tailnet from CI was considered and dropped.
 rogue is a laptop, often asleep or on the other tailnet profile, so the
