@@ -1,0 +1,136 @@
+# Daily flake input bump (docs/auto-update-spec.md §6.1): update the lock,
+# commit it signed by the bot to auto/update-inputs, run the gates on it,
+# and fast-forward main when they pass. Landing on main starts
+# pipeline.yml, which gates the commit again and promotes the deploy
+# groups. A red gate or a bump that cannot land opens the issue
+# "auto-update: input update failing" and sends the email.
+#
+# Knobs: the cron line below is the cadence; the repo variables
+# UPDATE_INPUTS (a space-separated subset, empty for all) and
+# UPDATE_INPUTS_PAUSED (`true` skips the run).
+name: update-inputs
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+    inputs:
+      inputs:
+        description: Inputs to update, space-separated (default UPDATE_INPUTS, or all)
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: update-inputs
+  cancel-in-progress: false
+
+jobs:
+  bump:
+    if: vars.UPDATE_INPUTS_PAUSED != 'true'
+    runs-on: ubuntu-latest
+    environment: auto-update
+    outputs:
+      sha: ${{ steps.commit.outputs.sha }}
+    steps:
+      - id: app
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ steps.app.outputs.token }}
+      - uses: DeterminateSystems/nix-installer-action@v16
+        with:
+          extra-conf: |
+            access-tokens = github.com=${{ steps.app.outputs.token }}
+      - uses: ./.github/actions/bot-git
+        with:
+          app-slug: ${{ steps.app.outputs.app-slug }}
+          token: ${{ steps.app.outputs.token }}
+          signing-key: ${{ secrets.BOT_SIGNING_KEY }}
+      - id: commit
+        env:
+          INPUTS: ${{ inputs.inputs || vars.UPDATE_INPUTS }}
+        run: |
+          # shellcheck disable=SC2086 # INPUTS is a word list
+          nix flake update $INPUTS 2> update.log || { cat update.log; exit 1; }
+          cat update.log
+          if git diff --quiet flake.lock; then
+            echo "Nothing to update."
+            exit 0
+          fi
+          body=$(sed -n '/^•/,$p' update.log | grep -v '^warning:')
+          git commit -q -m "build(flake): update inputs" -m "$body" flake.lock
+          git push -q -f origin HEAD:refs/heads/auto/update-inputs
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  gates:
+    needs: bump
+    if: needs.bump.outputs.sha != ''
+    uses: ./.github/workflows/gates.yml
+    with:
+      ref: ${{ needs.bump.outputs.sha }}
+
+  land:
+    needs: [bump, gates]
+    runs-on: ubuntu-latest
+    environment: auto-update
+    steps:
+      - id: app
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ steps.app.outputs.token }}
+      - uses: ./.github/actions/bot-git
+        with:
+          app-slug: ${{ steps.app.outputs.app-slug }}
+          token: ${{ steps.app.outputs.token }}
+          signing-key: ${{ secrets.BOT_SIGNING_KEY }}
+      # If main moved since the bump, replay the bump on it (re-signed);
+      # pipeline.yml gates the result before any group sees it.
+      - env:
+          SHA: ${{ needs.bump.outputs.sha }}
+        run: |
+          git fetch -q origin auto/update-inputs
+          if [ "$(git rev-parse HEAD)" = "$(git rev-parse "$SHA^")" ]; then
+            git merge -q --ff-only "$SHA"
+          else
+            git cherry-pick "$SHA"
+          fi
+          git push -q origin HEAD:main
+
+  alert:
+    needs: [bump, gates, land]
+    if: always() && needs.bump.result != 'skipped'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@v16
+        with:
+          extra-conf: |
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          POSTMARK_API_KEY: ${{ secrets.POSTMARK_API_KEY }}
+          ALERT_FROM: ghcibot@leoank.me
+          ALERT_TO: leoank98@gmail.com
+          STATE: ${{ contains(needs.*.result, 'failure') && 'failed' || 'ok' }}
+          BODY: >-
+            Input update ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}:
+            bump ${{ needs.bump.result }}, gates ${{ needs.gates.result }}, land ${{ needs.land.result }}.
+        run: |
+          .github/scripts/alert.sh "$STATE" "auto-update: input update failing" "$BODY"

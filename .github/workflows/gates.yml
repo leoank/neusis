@@ -1,8 +1,8 @@
 # Gates a commit must pass before any deploy group moves to it
 # (docs/auto-update-spec.md §6.3): the test ladder (tests.yml, VM tests
 # included) plus a full build of every deploy-group member's system and
-# homes. The input-bump and main pipelines call it (M4); dispatch it by
-# hand to gate any ref.
+# homes. update-inputs.yml and pipeline.yml call it with the commit to
+# gate (`ref`); dispatch it by hand to gate any ref.
 #
 # The members come from the registry (lib.autoUpdate.ciMatrix), so a
 # machine added to a group is built without editing this file. Linux
@@ -19,7 +19,17 @@ name: gates
 
 on:
   workflow_call:
+    inputs:
+      ref:
+        description: Commit to gate (default the triggering one).
+        type: string
+        default: ""
   workflow_dispatch:
+    inputs:
+      ref:
+        description: Commit to gate (default the selected branch).
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -27,6 +37,8 @@ permissions:
 jobs:
   tests:
     uses: ./.github/workflows/tests.yml
+    with:
+      ref: ${{ inputs.ref }}
 
   plan:
     name: deploy-group build matrix
@@ -35,6 +47,8 @@ jobs:
       machines: ${{ steps.plan.outputs.machines }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
       - uses: DeterminateSystems/nix-installer-action@v16
         with:
           extra-conf: |
@@ -71,6 +85,8 @@ jobs:
       CHECKS: ${{ toJSON(matrix.checks) }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
 
       - name: Free disk
         run: |

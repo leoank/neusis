@@ -1,0 +1,35 @@
+# Make git commit as the auto-update App's bot user and, given its key,
+# sign with it (docs/auto-update-spec.md §5). The committer address is the
+# bot's noreply address, which is its principal in the signers registry.
+name: bot-git
+description: Commit as the auto-update bot, optionally signing with its SSH key.
+inputs:
+  app-slug:
+    description: The App's slug (actions/create-github-app-token's `app-slug` output).
+    required: true
+  token:
+    description: A token that can read the bot user.
+    required: true
+  signing-key:
+    description: The bot's SSH signing key (BOT_SIGNING_KEY); empty to commit unsigned.
+    required: false
+    default: ""
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        SLUG: ${{ inputs.app-slug }}
+        GH_TOKEN: ${{ inputs.token }}
+        KEY: ${{ inputs.signing-key }}
+      run: |
+        id=$(gh api "/users/${SLUG}%5Bbot%5D" --jq .id)
+        git config --global user.name "${SLUG}[bot]"
+        git config --global user.email "${id}+${SLUG}[bot]@users.noreply.github.com"
+        if [ -n "$KEY" ]; then
+          key="$RUNNER_TEMP/bot_signing"
+          (umask 077 && printf '%s\n' "$KEY" > "$key")
+          git config --global gpg.format ssh
+          git config --global user.signingkey "$key"
+          git config --global commit.gpgsign true
+        fi

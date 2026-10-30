@@ -182,6 +182,18 @@ A group that fails a gate stays at its last good commit and alerts
 CI never moves a deploy branch backwards. Emergency stop: put the group
 in `DEPLOY_HOLD`, or suspend comin on the host.
 
+**Implementation (M4):** `neusis-promote` (`modules/packages/`) applies
+these rules for every group, `after` chains first, so a group with no
+soak follows its `after` group in the same run. It verifies with the
+signers of the group's *current* head (what its hosts will check), or
+of the candidate when the branch doesn't exist yet. Each promotion is
+recorded as a git note on `refs/notes/neusis-deploy` (`<group>
+<epoch>`), which is where soak times come from: a group with `after`
+moves to the newest commit its `after` group reached at least
+`soakHours` ago. Keeping the clock in git makes the rules testable
+offline (`checks.<sys>.neusis-promote-cases`). A group in `DEPLOY_HOLD`
+is reported as paused and doesn't alert.
+
 ## 5. Commit signing (humans and CI)
 
 - **Trust root:** `modules/registry/signers/anklab.nix`, a list of
@@ -228,8 +240,9 @@ Every bot action authenticates as the **GitHub App** `neusis-auto-updates-ci-bot
   4. Force-push `auto/update-inputs`.
 - **`gates`:** `gates.yml` (§6.3) on that commit.
 - **`land`** (all gates green): fast-forward `main` to the commit. If
-  `main` moved meanwhile, rebase, re-sign and push. The `main` pipeline
-  then gates it again before any group sees it.
+  `main` moved meanwhile, cherry-pick it onto `main` (re-signed) and
+  push; a conflict fails `land` and alerts. The `main` pipeline then
+  gates it again before any group sees it.
 - **`alert`** (any gate red): §6.4.
 
 ### 6.2 `pipeline.yml`: every push to `main`
@@ -250,8 +263,10 @@ re-runs quickly, because the Linux closures substitute from attic.
 | **system/rogue** | `macos-latest` (experiment, §7.2) | `darwin-rogue`, `home-ank@rogue` |
 
 The system matrix comes from the registry (`nix eval --json` over the
-deploy groups), so enrolling a machine needs no YAML change. Each system
-job reports a per-machine status that promotion reads.
+deploy groups), so enrolling a machine needs no YAML change. Promotion
+reads the overall result: one red gate holds every group that follows
+`main`. The Mac job is `continue-on-error` while it is an experiment
+(§7.2), so it informs but doesn't block.
 
 ### 6.4 Alerts: email and a GitHub issue; ntfy in phase 2
 
@@ -282,17 +297,21 @@ fail.
   approves the account, it delivers only to recipients on the sender's
   domain, so mail to `leoank98@gmail.com` also needs the account
   approved.
-- **GitHub issue:** one rolling issue per failure kind ("input update
-  failing", "promotion held: `<group>`", "unsigned head"). It is
-  commented on each failure and closed on the next success, so there is
-  a durable record of what ntfy and email announced.
+- **GitHub issue:** one rolling issue per failure kind, labelled
+  `auto-update`: "auto-update: input update failing", "auto-update:
+  `<group>` held" (red gates, unsigned or untrusted head, no
+  fast-forward; the reason is in the comment) and "auto-update:
+  promotion failing" (the promote job itself broke). The email goes out
+  when the issue **opens**; later failures only comment, so a failure
+  that persists mails once, not every hour. The next success closes it
+  (`.github/scripts/alert.sh`).
 
 Sources:
 
 | Event | Sent from | Channels |
 |---|---|---|
-| bump gates failed | `update-inputs.yml` | ntfy + email + issue |
-| group held (gate red, unsigned head) | `pipeline.yml` / `promote.yml` | ntfy + email + issue |
+| bump gates failed, or the bump can't land | `update-inputs.yml` | ntfy + email + issue |
+| group held (gate red, unsigned head, no fast-forward) | `promote.yml` (also via `pipeline.yml`) | ntfy + email + issue |
 | a fixed failure recovered | same | ntfy (low priority) + closes the issue |
 | host switch failed | comin `postDeploymentCommand` on the host | ntfy + email |
 | host deployed successfully | same | ntfy (min priority; muteable) |
@@ -473,8 +492,11 @@ After a few weeks of data we decide about `upgrade` and `cleanup`.
 ## 10. GitHub App or a token? An App
 
 One App, `neusis-auto-updates-ci-bot`, installed only on `leoank/neusis`, with
-Contents (write), Issues (write), Pull requests (write) and Actions
-(read).
+Contents (write), Issues (write), Pull requests (write), Actions
+(read) and Workflows (write). The bot never edits a workflow, but
+GitHub refuses any App push that makes a branch carry workflow changes,
+and every fast-forward of `deploy/*` over a commit to
+`.github/workflows/` is such a push.
 
 | | GitHub App | Fine-grained PAT |
 |---|---|---|
@@ -526,15 +548,17 @@ Rulesets:
 
 Phase 1:
 
-1. **Postmark:** a sender signature for `ghcibot@leoank.me` (or the
-   `leoank.me` domain), account approval so it can mail
-   `leoank98@gmail.com`, and the hosts' notify secret (Ankur). The
-   `POSTMARK_API_KEY` repository secret exists (2026-10-29).
+1. **Postmark:** the account is approved and `POSTMARK_API_KEY` is a
+   repository secret (2026-10-29). Left: the hosts' notify secret
+   (Ankur, at M5).
 2. ~~**The GitHub App and the bot signing key**~~ Done 2026-10-29
    (`docs/github-bot-setup.md`): the App "Neusis auto updates ci bot"
    (`neusis-auto-updates-ci-bot[bot]`, App id 5529731), `APP_ID`,
    `APP_PRIVATE_KEY`, `BOT_SIGNING_KEY` in `auto-update`, and the
    rulesets. The key is in the signers registry.
+3. **The App's Workflows permission** (read and write; §10), added
+   after the guide first said to leave it off. Accept the changed
+   permissions on the installation too.
 
 Phase 2:
 
@@ -628,11 +652,12 @@ cleanup.
    experiment is recorded either way. Done: run 40138344573 built
    ghost001 and rogue; the OCI image was dropped (§7.1).
 4. **M4 Pipelines:** the App, the bot signing key, `update-inputs.yml`,
-   `pipeline.yml`, `promote.yml`, email + issue alerts, and the
-   rulesets. `tests.yml` drops its own `push: main` trigger then, since
-   `pipeline.yml` runs it through `gates.yml` on every push to main.
-   Check: a dispatched bump lands and promotes canary; a deliberately
-   broken bump sends the email and opens the issue.
+   `pipeline.yml`, `promote.yml` with `neusis-promote`, email + issue
+   alerts, and the rulesets. `tests.yml` drops its own `push: main`
+   trigger, since `pipeline.yml` runs it through `gates.yml` on every
+   push to main; `gates.yml` and `tests.yml` take the commit to test as
+   `ref`. Check: a dispatched bump lands and promotes canary; a
+   deliberately broken bump sends the email and opens the issue.
 5. **M5 Enroll:** the notify secret (`POSTMARK_API_KEY`), then ghost001
    (canary), then rogue (stable). Check: a deploy visible in `comin
    status` and the JSONL log; a failed deploy emails.

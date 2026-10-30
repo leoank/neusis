@@ -1,0 +1,105 @@
+# Move the deploy/<group> branches (docs/auto-update-spec.md §4.3) with
+# neusis-promote, as the bot. pipeline.yml calls it with each gated main
+# head; the hourly run has no candidate and only moves the groups that
+# follow another group, once their soak time has passed.
+#
+# Each held group keeps the issue "auto-update: <group> held" open (one
+# email when it opens); a later promotion closes it. DEPLOY_HOLD (repo
+# variable, group names) leaves groups where they are without alerting.
+name: promote
+
+on:
+  schedule:
+    - cron: "41 * * * *"
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      candidate:
+        description: A main commit whose gates ran.
+        type: string
+        default: ""
+      gated:
+        description: Whether the candidate passed its gates.
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: promote
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - id: app
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ steps.app.outputs.token }}
+      - uses: DeterminateSystems/nix-installer-action@v16
+        with:
+          extra-conf: |
+            access-tokens = github.com=${{ steps.app.outputs.token }}
+      - uses: ./.github/actions/bot-git
+        with:
+          app-slug: ${{ steps.app.outputs.app-slug }}
+          token: ${{ steps.app.outputs.token }}
+
+      - id: promote
+        env:
+          CANDIDATE: ${{ inputs.candidate }}
+          GATED: ${{ inputs.gated }}
+          DEPLOY_HOLD: ${{ vars.DEPLOY_HOLD }}
+        run: |
+          nix eval --json --impure --expr '
+            let f = builtins.getFlake (toString ./.);
+            in builtins.mapAttrs (_: g: { inherit (g) branch after soakHours; })
+              f.neusis.registry.deployGroups.anklab' > "$RUNNER_TEMP/groups.json"
+          git fetch -q origin "${CANDIDATE:-main}"
+          nix run .#neusis-promote -- --groups "$RUNNER_TEMP/groups.json" \
+            ${CANDIDATE:+--candidate "$CANDIDATE" --gated "$GATED"} \
+            --report report.json --push
+          {
+            echo "| group | action | from | to | reason |"
+            echo "|---|---|---|---|---|"
+            jq -r '.[] | "| \(.group) | \(.action) | \(.from[0:7]) | \(.to[0:7]) | \(.reason) |"' report.json
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Alerts
+        if: always() && steps.promote.outcome != 'skipped'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          POSTMARK_API_KEY: ${{ secrets.POSTMARK_API_KEY }}
+          ALERT_FROM: ghcibot@leoank.me
+          ALERT_TO: leoank98@gmail.com
+          OUTCOME: ${{ steps.promote.outcome }}
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ "$OUTCOME" != success ]; then
+            .github/scripts/alert.sh failed "auto-update: promotion failing" "The promote run failed: $RUN"
+            exit 0
+          fi
+          .github/scripts/alert.sh ok "auto-update: promotion failing" "Promotion ran: $RUN"
+          jq -c '.[]' report.json | while read -r e; do
+            group=$(jq -r .group <<<"$e")
+            case $(jq -r .action <<<"$e") in
+              held)
+                .github/scripts/alert.sh failed "auto-update: $group held" \
+                  "$(jq -r '"deploy/\(.group) stays at \(if .from == "" then "nothing" else .from end): \(.reason)."' <<<"$e") $RUN"
+                ;;
+              promoted | unchanged)
+                .github/scripts/alert.sh ok "auto-update: $group held" \
+                  "deploy/$group is at $(jq -r .to <<<"$e"). $RUN"
+                ;;
+            esac
+          done

@@ -1,0 +1,36 @@
+# Every push to main (docs/auto-update-spec.md §6.2): the gates on the new
+# head, then promotion. Red gates are passed on as `gated: false`, so the
+# groups that follow main hold at their last good commit and alert. A
+# newer push cancels an older run; promotion then happens for the newer
+# head.
+name: pipeline
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pipeline-main
+  cancel-in-progress: true
+
+jobs:
+  gates:
+    uses: ./.github/workflows/gates.yml
+    with:
+      ref: ${{ github.sha }}
+
+  promote:
+    needs: gates
+    if: ${{ !cancelled() }}
+    uses: ./.github/workflows/promote.yml
+    permissions:
+      contents: read
+      issues: write
+    with:
+      candidate: ${{ github.sha }}
+      gated: ${{ needs.gates.result == 'success' }}
+    secrets: inherit

@@ -2546,3 +2546,30 @@ answers R5 (an App can bypass a ruleset on a personal-account repo). Its
 signing key joins `registry.signers.anklab` with the bot's noreply
 address as principal, because `git verify-commit` matches the
 allowed-signers principal against the committer email.
+
+## 2026-10-29 — auto-updates M4: the update and promotion pipelines
+
+`update-inputs.yml` bumps the lock daily (03:17 UTC) as the App, commits
+it signed by the bot key to `auto/update-inputs`, runs `gates.yml` on it
+and fast-forwards `main` (cherry-picking, re-signed, when `main` moved).
+`pipeline.yml` runs the gates on every push to `main` and hands the
+result to `promote.yml`, which also runs hourly for soak. `tests.yml`
+lost its `push: main` trigger — the pipeline covers it — and it and
+`gates.yml` take the commit to test as `ref`, since a reusable workflow
+otherwise checks out the caller's commit.
+
+The promotion rules live in a package, `neusis-promote`, not in YAML,
+so they can be tested: `checks.<sys>.neusis-promote-cases` runs them
+against a local bare origin in the sandbox (gated, red, unsigned,
+untrusted, soak at 24.5 h and 25 h, `DEPLOY_HOLD`, a non-fast-forward).
+Promotion times are git notes on `refs/notes/neusis-deploy` rather than
+GitHub's activity API, for the same reason. It checks the signature with
+the signers of the group's current head, rendered by `nix eval` at that
+revision, because that is the list the group's hosts run. Alerts are one
+rolling issue per kind (`.github/scripts/alert.sh`); the email goes out
+only when an issue opens, so an hourly re-check of a held group mails
+once.
+
+The App needs the Workflows permission after all: GitHub refuses an App
+push that makes a branch carry workflow changes, and fast-forwarding
+`deploy/canary` over a commit to `.github/workflows/` is one.

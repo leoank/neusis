@@ -53,11 +53,14 @@ Developer settings → GitHub Apps → New GitHub App).
   | Issues | Read and write | the rolling failure issues (spec §6.4) |
   | Pull requests | Read and write | reserved for bump PRs if `main` ever requires them |
   | Actions | Read-only | read gate results when promoting |
+  | Workflows | Read and write | move `deploy/*` past commits that change `.github/workflows/` |
   | Metadata | Read-only | mandatory, set automatically |
 
-  Leave **Workflows** at *No access*. A push that changes
-  `.github/workflows/` then fails, so a stolen App token can't rewrite
-  the pipelines. Lock bumps never touch them.
+  **Workflows** is needed although the bot never edits a workflow:
+  GitHub refuses any App push that makes a branch carry workflow
+  changes, including a fast-forward of `deploy/canary` over your own
+  commits to `.github/workflows/`. Its tokens are minted only inside the
+  pipelines and expire after an hour.
 - **Organization and account permissions:** none.
 - **Subscribe to events:** none.
 - **Where can this GitHub App be installed?** *Only on this account.*
