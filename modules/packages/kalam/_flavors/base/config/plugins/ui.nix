@@ -10,7 +10,9 @@
       enable = true;
       settings = {
         options = {
-          theme = "catppuccin";
+          # catppuccin/nvim renamed its lualine theme when Neovim 0.12 began
+          # shipping a `catppuccin` colorscheme of its own.
+          theme = "catppuccin-nvim";
           globalstatus = true;
           section_separators = { left = ""; right = ""; };
           component_separators = { left = ""; right = ""; };
