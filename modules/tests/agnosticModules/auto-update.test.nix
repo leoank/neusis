@@ -185,6 +185,34 @@
           };
         };
 
+        # Without comin's module the module still evaluates (the docs site
+        # loads every darwinModule together, comin not among them), and
+        # enabling it names the missing import.
+        test-without-comin = {
+          expr =
+            let
+              bare =
+                extra:
+                t.evalDarwin {
+                  modules = [
+                    self.darwinModules.auto-update
+                    { networking.hostName = "fixture-darwin"; }
+                    extra
+                  ];
+                };
+            in
+            {
+              disabled = t.failedAssertions (bare { });
+              enabled = t.failedAssertions (bare { neusis.services.auto-update = settings; });
+            };
+          expected = {
+            disabled = [ ];
+            enabled = [
+              "neusis.services.auto-update needs comin's module: import inputs.comin.darwinModules.comin next to it."
+            ];
+          };
+        };
+
         test-disabled-leaves-comin-off = {
           expr = (nixos { neusis.services.auto-update.enable = lib.mkForce false; }).services.comin.enable;
           expected = false;

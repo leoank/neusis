@@ -237,39 +237,55 @@
         };
       };
 
+      # Everything comin-related is defined only when comin's module is
+      # imported: a definition of an undeclared option fails even under a
+      # false mkIf, which would break evaluating this module alone (the
+      # docs site does). Enabling it without comin fails an assertion.
       config = lib.mkIf cfg.enable (
         {
-          warnings = lib.optional (cfg.signers == [ ]) ''
-            neusis.services.auto-update: no signers, so comin deploys any
-            commit on ${cfg.branch}. Set `signers` to require signed heads.
-          '';
+          assertions = [
+            {
+              assertion = options ? services.comin;
+              message = "neusis.services.auto-update needs comin's module: import inputs.comin.${
+                if options ? launchd then "darwinModules" else "nixosModules"
+              }.comin next to it.";
+            }
+          ];
+        }
+        // lib.optionalAttrs (options ? services.comin) (
+          {
+            warnings = lib.optional (cfg.signers == [ ]) ''
+              neusis.services.auto-update: no signers, so comin deploys any
+              commit on ${cfg.branch}. Set `signers` to require signed heads.
+            '';
 
-          services.comin = {
-            enable = true;
-            # comin's own module prefers `pkgs.comin` (mkDefault); pin the
-            # binary to the flake the module comes from so the two agree on
-            # the config schema even once nixpkgs carries an older comin.
-            package = inputs.comin.packages.${system}.comin;
-            remotes = [
-              {
-                name = "origin";
-                inherit (cfg) url;
-                branches.main.name = cfg.branch;
-                poller.period = cfg.pollPeriod;
-              }
-            ];
-            sshAllowedSignersPath = lib.mkIf (cfg.signers != [ ]) "${allowedSignersFile}";
-            postDeploymentCommand = lib.getExe hook;
-          };
-        }
-        // lib.optionalAttrs (options ? system.preSwitchChecks) {
-          system.preSwitchChecks.neusis-auto-update = lib.mkIf (githubRepo != null) "${switchCheck}";
-        }
-        // lib.optionalAttrs (options ? launchd) {
-          system.activationScripts.preActivation.text = lib.mkIf (githubRepo != null) (
-            lib.mkBefore "${switchCheck}\n"
-          );
-        }
+            services.comin = {
+              enable = true;
+              # comin's own module prefers `pkgs.comin` (mkDefault); pin the
+              # binary to the flake the module comes from so the two agree on
+              # the config schema even once nixpkgs carries an older comin.
+              package = inputs.comin.packages.${system}.comin;
+              remotes = [
+                {
+                  name = "origin";
+                  inherit (cfg) url;
+                  branches.main.name = cfg.branch;
+                  poller.period = cfg.pollPeriod;
+                }
+              ];
+              sshAllowedSignersPath = lib.mkIf (cfg.signers != [ ]) "${allowedSignersFile}";
+              postDeploymentCommand = lib.getExe hook;
+            };
+          }
+          // lib.optionalAttrs (options ? system.preSwitchChecks) {
+            system.preSwitchChecks.neusis-auto-update = lib.mkIf (githubRepo != null) "${switchCheck}";
+          }
+          // lib.optionalAttrs (options ? launchd) {
+            system.activationScripts.preActivation.text = lib.mkIf (githubRepo != null) (
+              lib.mkBefore "${switchCheck}\n"
+            );
+          }
+        )
       );
     };
 }
