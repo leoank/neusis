@@ -45,8 +45,10 @@ jobs:
           ref: main
           fetch-depth: 0
           token: ${{ steps.app.outputs.token }}
-      - uses: DeterminateSystems/nix-installer-action@v16
+      - uses: DeterminateSystems/nix-installer-action@v23
         with:
+          determinate: false
+          diagnostic-endpoint: ""
           extra-conf: |
             access-tokens = github.com=${{ steps.app.outputs.token }}
       - uses: ./.github/actions/bot-git

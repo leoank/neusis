@@ -44,8 +44,10 @@ jobs:
         with:
           ref: main
           token: ${{ steps.app.outputs.token }}
-      - uses: DeterminateSystems/nix-installer-action@v16
+      - uses: DeterminateSystems/nix-installer-action@v23
         with:
+          determinate: false
+          diagnostic-endpoint: ""
           extra-conf: |
             access-tokens = github.com=${{ steps.app.outputs.token }}
       - uses: ./.github/actions/bot-git
@@ -118,8 +120,10 @@ jobs:
       issues: write
     steps:
       - uses: actions/checkout@v4
-      - uses: DeterminateSystems/nix-installer-action@v16
+      - uses: DeterminateSystems/nix-installer-action@v23
         with:
+          determinate: false
+          diagnostic-endpoint: ""
           extra-conf: |
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
       - env:

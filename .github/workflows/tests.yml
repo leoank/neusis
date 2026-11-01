@@ -45,8 +45,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref }}
-      - uses: DeterminateSystems/nix-installer-action@v16
+      - uses: DeterminateSystems/nix-installer-action@v23
         with:
+          determinate: false
+          diagnostic-endpoint: ""
           extra-conf: |
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
       - name: nix-unit
@@ -61,8 +63,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref }}
-      - uses: DeterminateSystems/nix-installer-action@v16
+      - uses: DeterminateSystems/nix-installer-action@v23
         with:
+          determinate: false
+          diagnostic-endpoint: ""
           extra-conf: |
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
       # `nix flake check` validates `darwinConfigurations.<host>.system` on
@@ -86,8 +90,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref }}
-      - uses: DeterminateSystems/nix-installer-action@v16
+      - uses: DeterminateSystems/nix-installer-action@v23
         with:
+          determinate: false
+          diagnostic-endpoint: ""
           extra-conf: |
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
       - name: T0 nix-unit (aarch64-darwin, natively)
@@ -111,8 +117,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref }}
-      - uses: DeterminateSystems/nix-installer-action@v16
+      - uses: DeterminateSystems/nix-installer-action@v23
         with:
+          determinate: false
+          diagnostic-endpoint: ""
           extra-conf: |
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
       - run: nix build --no-link .#checks.x86_64-linux.pkg-neusis .#checks.x86_64-linux.pkg-gclb .#checks.x86_64-linux.neusis-promote-cases .#checks.x86_64-linux.neusis-switch-check-cases
@@ -135,8 +143,10 @@ jobs:
             | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      - uses: DeterminateSystems/nix-installer-action@v16
+      - uses: DeterminateSystems/nix-installer-action@v23
         with:
+          determinate: false
+          diagnostic-endpoint: ""
           extra-conf: |
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
             system-features = nixos-test benchmark big-parallel kvm

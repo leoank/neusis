@@ -2613,3 +2613,23 @@ so the anklab feature sets `system.configurationRevision` from
 `self.rev`/`self.dirtyRev`. `neusis-promote-cases` gains the
 unenroll/re-enroll cases; `neusis-switch-check-cases` (Linux: it needs a
 loopback stub of the API) covers the check.
+
+## 2026-11-01 — auto-updates: two CI failures outside the tests
+
+The docs site failed on every push since the guards landed: it
+evaluates all `darwinModules` together with the upstream modules a
+machine imports, comin not among them, and a definition of an
+undeclared option (`services.comin`) is an error even under a false
+`mkIf`. The auto-update module now defines its comin settings only when
+comin's module is imported, and enabling it without comin fails an
+assertion naming the import (`test-without-comin`).
+
+The 2026-10-31 input bump failed with every test green: the post-job
+step of `DeterminateSystems/nix-installer-action@v16` uploads
+diagnostics, the upload timed out, and the action's bundled HTTP client
+then crashed node ("The `onCancel` handler was attached after the promise
+rejected"); v16 also targets Node 20, which the runners now force onto
+Node 24. Every workflow moves to v23 (Node 24, a different HTTP client)
+with `diagnostic-endpoint: ""`, so nothing is uploaded, and with
+`determinate: false` pinned, since v23 switched the default to
+Determinate Nix with a FlakeHub login.
