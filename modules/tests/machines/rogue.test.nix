@@ -148,6 +148,8 @@
             signers = cfg.services.comin.sshAllowedSignersPath != null;
             notify = cfg.neusis.services.auto-update.notify.environmentFile;
             emailTo = cfg.neusis.services.auto-update.notify.emailTo;
+            # comin's daemon has no App Management permission (2026-11-01).
+            appManagementCheck = cfg.home-manager.users.ank.targets.darwin.copyApps.enableChecks;
           };
           expected = {
             enable = true;
@@ -161,6 +163,7 @@
             signers = true;
             notify = "/run/agenix/autoUpdateNotify";
             emailTo = [ "leoank98@gmail.com" ];
+            appManagementCheck = false;
           };
         };
 

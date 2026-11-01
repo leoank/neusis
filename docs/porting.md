@@ -2633,3 +2633,24 @@ Node 24. Every workflow moves to v23 (Node 24, a different HTTP client)
 with `diagnostic-endpoint: ""`, so nothing is uploaded, and with
 `determinate: false` pinned, since v23 switched the default to
 Determinate Nix with a FlakeHub login.
+
+## 2026-11-01 — auto-updates on rogue: the first unattended deploys failed in activation
+
+rogue was switched onto canary on 10-30, and every comin deploy since
+failed with `activate` exiting 1 (`/var/log/comin.log`). On 10-30 it was
+home-manager's `checkAppManagementPermission`: copying apps into
+`~/Applications/Home Manager Apps` needs macOS's App Management
+permission, which a terminal has and comin's root daemon doesn't. The
+anklab auto-update feature now sets
+`targets.darwin.copyApps.enableChecks = false` for every home on an
+enrolled darwin host. Whether macOS then lets the copy itself through is
+to be seen on the next deploy; the fallback is granting comin's binary
+App Management, though that grant follows a store path that changes with
+nixpkgs bumps.
+
+On 11-01 it was Homebrew: `onActivation.upgrade = true` upgrades casks on
+every activation, a Fiji upgrade failed (a rename inside Homebrew's
+unpack directory), and `brew bundle` failing aborts the activation.
+Homebrew stays as it is (spec §9.4: collect data first); this is the
+first data point that in-activation upgrades and unattended deploys
+interact.

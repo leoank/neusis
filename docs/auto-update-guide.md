@@ -107,11 +107,19 @@ The next success closes it.
 A failed **build** on the host isn't alerted (comin v0.14 has no hook for
 it); the CI gate builds the same closure first, so it is rare.
 
+A failed **activation** is alerted, and its output is in
+`/var/log/comin.log`. On rogue, two causes have been seen: Homebrew
+failing to upgrade a cask (`onActivation.upgrade`; upgrade it by hand
+and let comin retry on the next commit), and home-manager's App
+Management check, now turned off for enrolled darwin hosts. A manual
+`darwin-rebuild switch` from a terminal gets past both.
+
 ## Looking at a machine
 
 ```
 sudo comin status                          # what comin fetched, built and deployed
 sudo comin fetch                           # poll now instead of within the minute
+less /var/log/comin.log                    # comin's own log: builds and activation output
 tail /var/log/neusis/auto-update.jsonl     # one line per deploy (darwin: with the Homebrew delta)
 darwin-version --configuration-revision    # the commit the running system was built from
 ```
