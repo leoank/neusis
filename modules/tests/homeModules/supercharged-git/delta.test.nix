@@ -42,7 +42,7 @@
           expected = {
             on = true;
             gitIntegration = true;
-            theme = "dracula";
+            theme = "Dracula";
             navigate = true;
             off = false;
             failed = [ ];

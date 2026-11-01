@@ -24,7 +24,8 @@
           type = lib.types.attrs;
           default = {
             features = "side-by-side line-numbers decorations navigate";
-            syntax-theme = "dracula";
+            # bat's theme names are case-sensitive; "dracula" falls back to the default.
+            syntax-theme = "Dracula";
             navigate = true;
             decorations = {
               commit-decoration-style = "bold yellow box ul";
