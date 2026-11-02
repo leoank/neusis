@@ -62,6 +62,17 @@ Push a signed commit there and rogue deploys it within a minute, with no
 gates: only the signature is checked. When it works, push it to `main`;
 the next `deploy/canary` commit replaces the test deploy.
 
+A testing deploy lasts **until reboot**. comin runs it with its `test`
+operation, which activates the system without adding it to the system
+profile (`comin status` shows `Operation test` and an empty
+`ProfilePath`), and nix-darwin activates the profile at boot, so a
+reboot brings back the last generation deployed from `deploy/canary`
+or switched by hand. The change sticks once it reaches canary: comin
+then deploys the same output again with `switch`. Push to `main` as well
+whenever you push to `testing-rogue`, and before a reboot check that
+`readlink -f /nix/var/nix/profiles/system` matches
+`readlink -f /run/current-system`.
+
 **What the switch check refuses.** A manual switch to a *committed*
 revision that neither `deploy/canary` nor `testing-rogue` contains, for
 example a local commit you haven't pushed. comin would replace it within
@@ -117,12 +128,21 @@ Management check, now turned off for enrolled darwin hosts. A manual
 ## Looking at a machine
 
 ```
-sudo comin status                          # what comin fetched, built and deployed
+sudo comin status                          # what comin fetched, built and deployed (see below)
 sudo comin fetch                           # poll now instead of within the minute
 less /var/log/comin.log                    # comin's own log: builds and activation output
 tail /var/log/neusis/auto-update.jsonl     # one line per deploy (darwin: with the Homebrew delta)
 darwin-version --configuration-revision    # the commit the running system was built from
 ```
+
+Reading `comin status`: **Fetcher** shows only the commit comin chose
+(the head of `testing-<host>` when it is ahead of the deploy branch,
+otherwise the deploy branch's) and whether its signature checks out, not
+every branch. **Builder** can show a newer generation than **Deployer**
+for the same commit: when a deploy changes comin's own config, comin
+restarts, evaluates the commit again (instantly, it is already built)
+and then skips the deploy as already done. **Deployer**'s `Operation` is
+`switch` for the deploy branch and `test` for the testing branch.
 
 ## Enrolling a machine
 
