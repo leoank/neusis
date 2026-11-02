@@ -8,6 +8,7 @@
 #                  popup; navigate, pick a file, return to nvim
 #                  with that file open. Bound to `<leader>e`,
 #                  replacing snacks.explorer.
+{ lib, pkgs, ... }:
 {
   plugins = {
     oil = {
@@ -52,6 +53,10 @@
         keymaps = {
           show_help = "<f1>";
         };
+
+        # yazi.nvim resolves relative paths with GNU realpath, which it
+        # calls `grealpath` on macOS, where it usually isn't installed.
+        integrations.resolve_relative_path_application = lib.getExe' pkgs.coreutils "realpath";
       };
     };
   };
