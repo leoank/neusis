@@ -1,7 +1,9 @@
 # supercharged-shell: yazi module.
 # Enables `programs.yazi` (TUI file manager) with shell integration,
-# hidden-file visibility, large image previews, and the bundled
-# `max-preview` plugin (Tab `T` to maximize/restore the preview pane).
+# hidden-file visibility, large image previews, and the upstream
+# `toggle-pane` plugin (`T` maximizes/restores the preview pane). It
+# replaces a bundled `max-preview` plugin written for an older plugin
+# API (`ya.app_emit`, deprecated in yazi 25.5).
 { ... }:
 {
   flake.homeModules.supercharged-shell-yazi =
@@ -38,21 +40,20 @@
             mgr.prepend_keymap = [
               {
                 on = [ "T" ];
-                run = "plugin max-preview";
+                run = "plugin toggle-pane max-preview";
                 desc = "Maximize or restore preview";
               }
             ];
           };
           settings = {
             mgr.show_hidden = true;
-            plugin.preloaders = [ ];
             preview = {
               max_width = 2000;
               max_height = 2000;
             };
           };
           plugins = {
-            max-preview = ./yazi_img_max;
+            toggle-pane = pkgs.yaziPlugins.toggle-pane;
           };
         };
       };

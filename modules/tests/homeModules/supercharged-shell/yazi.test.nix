@@ -26,7 +26,7 @@
     in
     {
       tests.hm-supercharged-shell-yazi = {
-        test-enables-yazi-with-yy-wrapper-and-max-preview = {
+        test-enables-yazi-with-yy-wrapper-and-toggle-pane = {
           expr = {
             on = home.programs.yazi.enable;
             wrapper = home.programs.yazi.shellWrapperName;
@@ -36,7 +36,7 @@
             previewMax = home.programs.yazi.settings.preview.max_width;
             keymap = map (k: k.run) home.programs.yazi.keymap.mgr.prepend_keymap;
             # plugins.<name> is a { package; settings; setup; } submodule
-            plugin = baseNameOf (toString home.programs.yazi.plugins.max-preview.package);
+            plugin = lib.getName home.programs.yazi.plugins.toggle-pane.package;
             off = off.programs.yazi.enable;
             failed = t.failedAssertions home;
           };
@@ -47,8 +47,8 @@
             bash = true;
             hidden = true;
             previewMax = 2000;
-            keymap = [ "plugin max-preview" ];
-            plugin = "yazi_img_max";
+            keymap = [ "plugin toggle-pane max-preview" ];
+            plugin = "toggle-pane.yazi";
             off = false;
             failed = [ ];
           };
