@@ -19,6 +19,7 @@
     ./editor.nix
     ./dap.nix
     ./ui.nix
+    ./markdown.nix
     ./yajna.nix
   ];
 }
