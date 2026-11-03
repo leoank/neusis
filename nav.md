@@ -71,6 +71,7 @@
   - [ADR-0014: attic binary cache](upstream/decisions/ADR-0014-attic-cache-on-spirit.md)
   - [ADR-0015: Design records on this site](upstream/decisions/ADR-0015-site-publishes-design-records.md)
   - [ADR-0016: kalam-zero](upstream/decisions/ADR-0016-kalam-zero.md)
+  - [ADR-0017: Plugins inlined into kalam-zero](upstream/decisions/ADR-0017-kalam-zero-inlines-pure-lua-plugins.md)
 - [Testing](upstream/testing.md)
 - [Porting log (frozen)](upstream/porting.md)
 - [Future considerations](upstream/future-considerations.md)
