@@ -58,6 +58,22 @@
             keepsDecorations = true;
           };
         };
+
+        test-keybindings-reach-kitty-conf = {
+          expr =
+            let
+              cfg = withTool { keybindings."kitty_mod+space" = "select_tab"; };
+              conf = cfg.xdg.configFile."kitty/kitty.conf".text;
+            in
+            {
+              none = home.programs.kitty.keybindings;
+              mapped = lib.hasInfix "map kitty_mod+space select_tab" conf;
+            };
+          expected = {
+            none = { };
+            mapped = true;
+          };
+        };
       };
     };
 }

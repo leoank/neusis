@@ -81,6 +81,18 @@ neusis.terminal-velocity.tools.kitty.extraSettings = {
 };
 ```
 
+Add shortcuts via `keybindings` (key → kitty action; empty by
+default). kitty has a built-in tab picker, `select_tab`, with no
+default key; it lists the tabs in an overlay and you press the hint
+next to one:
+
+```nix
+neusis.terminal-velocity.tools.kitty.keybindings = {
+  "kitty_mod+space" = "select_tab";   # ctrl+shift+space: pick a tab
+  "kitty_mod+a" = "goto_tab -1";      # back to the previous tab
+};
+```
+
 ---
 
 ## 3. `zellij`

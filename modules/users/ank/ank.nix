@@ -167,7 +167,14 @@
       neusis.terminal-velocity = {
         tools = {
           wezterm.enable = true;
-          kitty.enable = true;
+          kitty = {
+            enable = true;
+            # kitty_mod is ctrl+shift; select_tab is kitty's built-in tab picker
+            keybindings = {
+              "kitty_mod+space" = "select_tab";
+              "kitty_mod+a" = "goto_tab -1";
+            };
+          };
           tmux.enable = true;
         };
       };
