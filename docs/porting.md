@@ -2654,3 +2654,16 @@ unpack directory), and `brew bundle` failing aborts the activation.
 Homebrew stays as it is (spec §9.4: collect data first); this is the
 first data point that in-activation upgrades and unattended deploys
 interact.
+
+## 2026-11-03 — beads and its dolt data removed entirely
+
+The 10-06 entry dropped the beads integration but left the `beads` /
+`beads-viewer` packages in the agent-harness extras bundle; they are gone
+now, with their test and doc mentions. The beads issue database lived on
+GitHub as `refs/dolt/data` plus a `__dolt_remote_info__` marker branch;
+both are deleted, and the data ref is kept as a git bundle in the
+untracked `scratch/` folder beside the worktrees
+(`dolt-data-beads-2026-11-03.bundle`; `git fetch <bundle>
+refs/dolt/data:refs/dolt/data` restores it). The bare repo's
+`core.hookspath` still pointed at a missing `.beads/hooks`, which had
+silently disabled git hooks; it is unset.

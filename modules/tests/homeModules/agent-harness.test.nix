@@ -38,7 +38,7 @@
             claude = off.programs.claude-code.enable;
             opencode = off.programs.opencode.enable;
             gemini = off.programs.antigravity-cli.enable;
-            beads = t.hasPkg (lib.getName llmPkgs.beads) off.home.packages;
+            spec-kit = t.hasPkg (lib.getName llmPkgs.spec-kit) off.home.packages;
           };
           expected = {
             enable = false;
@@ -53,7 +53,7 @@
             claude = false;
             opencode = false;
             gemini = false;
-            beads = false;
+            spec-kit = false;
           };
         };
 
@@ -66,8 +66,6 @@
               extras = lib.all (p: t.hasPkg (lib.getName p) cfg.home.packages) (
                 with llmPkgs;
                 [
-                  beads
-                  beads-viewer
                   spec-kit
                   skills
                   qmd

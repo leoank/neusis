@@ -309,7 +309,7 @@ A reasonable workflow:
 | `gh`, `gh-dash`, `lazygit`, `delta`, `pre-commit`, `commitizen`, `jujutsu`, `act`, `mergiraf`, `gitleaks`, `multi-account`, `bootstrap-repos`, `gclb` | supercharged-git |
 | `direnv`, `zoxide`, `fzf`, `tv`, `nix-search-tv`, `nix-your-shell`, `nix-init`, `yazi`, `atuin` | supercharged-shell |
 | `wezterm`, `kitty`, `zellij`, `tmux`, `sesh`, `mosh`, `eternal-terminal` | terminal-velocity (this umbrella) |
-| `claude-code`, `opencode`, `gemini-cli`, `pi`, `hermes`, `agent-deck`, `beads`, `beads-viewer`, `spec-kit`, `skills`, `qmd` | agent-harness |
+| `claude-code`, `opencode`, `gemini-cli`, `pi`, `hermes`, `agent-deck`, `spec-kit`, `skills`, `qmd` | agent-harness |
 | `paperwm`, `activespace` (macOS-only window tiling) | hammerspoon |
 
 ---

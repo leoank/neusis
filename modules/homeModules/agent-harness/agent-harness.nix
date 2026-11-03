@@ -2,12 +2,12 @@
 # Ports `homes/ank/configs/agent_harness/` into a single opt-in
 # umbrella. Wires up several LLM CLIs (claude-code, opencode,
 # gemini-cli, antigravity-cli, pi, hermes) and a curated bundle of related tooling
-# (agent-deck, beads, beads-viewer, spec-kit, skills, qmd).
+# (agent-deck, spec-kit, skills, qmd).
 #
 # Layout:
 #
 #   neusis.agent-harness.enable     → install the always-on extras
-#                                      (agent-deck, beads, …) +
+#                                      (agent-deck, spec-kit, …) +
 #                                      shared AGENTS.md / skills /
 #                                      commands / agents dirs.
 #   neusis.agent-harness.tools.<x>.enable
@@ -123,8 +123,8 @@
     {
       options.neusis.agent-harness = {
         enable = lib.mkEnableOption ''
-          neusis-curated agent-harness extras (agent-deck, beads,
-          beads-viewer, spec-kit, skills, qmd) plus the shared
+          neusis-curated agent-harness extras (agent-deck, spec-kit,
+          skills, qmd) plus the shared
           AGENTS.md / skills / commands / agents directories used by
           every enabled agent. Independent of the per-agent
           `tools.<x>.enable` flags — both layers are opt-in
@@ -337,8 +337,6 @@
         (lib.mkIf cfg.enable {
           home.packages = with llmPkgs; [
             #agent-deck
-            beads
-            beads-viewer
             spec-kit
             skills
             qmd

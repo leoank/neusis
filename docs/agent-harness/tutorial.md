@@ -5,8 +5,8 @@ home-manager bundle for the LLM-CLI ecosystem from
 [`llm-agents.nix`](https://github.com/numtide/llm-agents.nix).
 
 Wires up five CLI agents (Claude Code, Opencode, Gemini CLI, pi,
-hermes) and a set of always-on extras (agent-deck, beads,
-beads-viewer, spec-kit, skills, qmd). On Linux every agent CLI is
+hermes) and a set of always-on extras (agent-deck, spec-kit,
+skills, qmd). On Linux every agent CLI is
 **jailed** via
 [`jail-nix`](https://sr.ht/~alexdavid/jail.nix) so it can only
 read/write its own config dir plus the current working tree. On
@@ -34,9 +34,6 @@ Installs the always-on bundle into `home.packages`, regardless of
 which agents you enable:
 
 - **`agent-deck`** — TUI launcher / multiplexer for agent sessions.
-- **`beads` + `beads-viewer`** — issue tracker designed for
-  agent-assisted workflows (used by this very project, see
-  `AGENTS.md`).
 - **`spec-kit`** — spec-first agent tooling.
 - **`skills`** — runtime support library used by skill-creator.
 - **`qmd`** — markdown indexer (paired with `qmd-reindex`
@@ -262,7 +259,6 @@ claude                           # Claude Code with jailed config
 opencode                         # Opencode
 gemini                           # Gemini CLI in vim mode
 
-bd ready                         # beads — find available work
 qmd update && qmd embed          # re-index notes for retrieval
 ```
 
@@ -305,7 +301,7 @@ keep that in mind when granting them filesystem-level tools.
 | `gh`, `gh-dash`, `lazygit`, `delta`, `pre-commit`, `commitizen`, `jujutsu`, `act`, `mergiraf`, `gitleaks`, `multi-account`, `bootstrap-repos`, `gclb` | supercharged-git |
 | `direnv`, `zoxide`, `fzf`, `tv`, `nix-search-tv`, `nix-your-shell`, `nix-init`, `yazi`, `atuin` | supercharged-shell |
 | `wezterm`, `kitty`, `zellij`, `tmux`, `sesh`, `mosh`, `eternal-terminal` | terminal-velocity |
-| `claude-code`, `opencode`, `gemini-cli`, `pi`, `hermes`, `agent-deck`, `beads`, `beads-viewer`, `spec-kit`, `skills`, `qmd` | agent-harness (this umbrella) |
+| `claude-code`, `opencode`, `gemini-cli`, `pi`, `hermes`, `agent-deck`, `spec-kit`, `skills`, `qmd` | agent-harness (this umbrella) |
 | `paperwm`, `activespace` (macOS-only window tiling) | hammerspoon |
 
 ---
