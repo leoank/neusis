@@ -135,6 +135,44 @@
           };
         };
 
+        # tools.claude.rc2s2: claude at a terminal runs under `rc2s2 run`,
+        # claude without one runs directly; off by default.
+        test-claude-under-rc2s2-run = {
+          expr =
+            let
+              rc2s2 = testPkgs.writeShellScriptBin "rc2s2" "";
+              on = (harness {
+                tools.claude = {
+                  enable = true;
+                  rc2s2 = {
+                    enable = true;
+                    package = rc2s2;
+                  };
+                };
+              }).programs.claude-code.package;
+              off = (harness { tools.claude.enable = true; }).programs.claude-code.package;
+              plain = v: builtins.unsafeDiscardStringContext (toString v);
+              text = plain (on.text or "");
+            in
+            {
+              offWrapped = lib.hasInfix "rc2s2" (plain (off.text or ""));
+              name = on.name;
+              atTerminal = lib.hasInfix "[ -t 0 ] && [ -t 1 ]" text;
+              runsRc2s2 = lib.hasInfix (plain "${rc2s2}/bin/rc2s2 run --command ") text;
+              # every argument after `--`, and claude itself without a terminal
+              forwardsArgs = lib.hasInfix "/bin/claude -- \"$@\"" text;
+              directOtherwise = lib.hasInfix "fi\nexec " text;
+            };
+          expected = {
+            offWrapped = false;
+            name = "claude";
+            atTerminal = true;
+            runsRc2s2 = true;
+            forwardsArgs = true;
+            directOtherwise = true;
+          };
+        };
+
         test-claude-forwards-mcp-servers = {
           expr =
             let

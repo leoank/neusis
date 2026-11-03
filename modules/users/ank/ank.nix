@@ -64,7 +64,12 @@
       ];
     };
   flake.neusis.users.ank.hmBundles.agent-harness =
-    { lib, pkgs, ... }:
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
     {
       imports = [
         #self.homeModules.msgvault-sync
@@ -80,6 +85,10 @@
         tools = {
           claude = {
             enable = true;
+            # `claude` at a terminal runs under `rc2s2 run`, so the session can
+            # be interrupted and killed from the phone, wherever this home also
+            # runs the rc2s2 node daemon (the rc2s2-node bundle: rogue today).
+            rc2s2.enable = config.neusis.services.rc2s2-node.enable or false;
             # `settings` replaces the module default wholesale, so the
             # defaults are restated here. The yajna repo is a plugin
             # marketplace: its plugin brings the lab-notebook skill and

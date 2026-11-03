@@ -60,6 +60,8 @@
             yajnaConfig = home.xdg.configFile."yajna/config.toml".text;
             # yajna's zsh completion is sourced in ank's zsh
             yajnaCompletion = lib.hasInfix "yajna-zsh-completion" home.programs.zsh.initContent;
+            # claude runs under `rc2s2 run` where the rc2s2 node daemon runs
+            claudeUnderRc2s2 = home.neusis.agent-harness.tools.claude.rc2s2.enable;
           };
           expected = {
             hmUsers = [ "ank" ];
@@ -70,6 +72,7 @@
             kalam = true;
             neusisCli = true;
             yajnaCompletion = true;
+            claudeUnderRc2s2 = true;
             yajnaConfig = ''
               default = "manthan"
 
