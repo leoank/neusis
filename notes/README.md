@@ -41,7 +41,7 @@ open items with the rest.
 - [x] kalam-zero 2: built-in fallbacks for the plugin shortcuts (pickers, grep, netrw, sessions, diagnostics, LSP, OSC 52, statusline), each exercised headless (since c7b40fa)
 - [x] kalam-zero 3: CI runs the headless test on Neovim 0.8, 0.9, 0.10 and 0.11 release builds ([[EXP-20261103-g9kpxs]]) (since a47b91b)
 - [x] kalam-zero 4: inline mini's editing set, mini.pick and mini.clue into init.lua, active on 0.10+ (ADR-0018, replaces the bundle) (since 84ac318)
-- [ ] kalam-zero 5: the rolling `kalam-zero` GitHub release and `docs/kalam/zero.md` (since f5e33ee)
+- [x] kalam-zero 5: the rolling `kalam-zero` GitHub release and `docs/kalam/zero.md` (since f5e33ee)
 
 ## Open questions
 - Does comin's darwin module survive nix-darwin removing the `activate-user` stub? (auto-update spec R1)
