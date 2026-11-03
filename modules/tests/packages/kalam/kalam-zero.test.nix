@@ -37,6 +37,8 @@
             nativeBuildInputs = [
               nvim
               pkgs.git
+              # the server the user's lua/50-lsp.lua starts (REV-20261103-hv2prm T6)
+              pkgs.lua-language-server
             ]
             ++ lib.optional withRg pkgs.ripgrep;
           }
@@ -52,6 +54,16 @@
             echo 'vim.g.kalam_zero_user = { require("kalamtest").answer }' > $u/10-first.lua
             echo 'error("on purpose")' > $u/20-broken.lua
             echo 'local t = vim.g.kalam_zero_user; table.insert(t, "second"); vim.g.kalam_zero_user = t' > $u/30-second.lua
+            # an LSP server set up the way docs/kalam/zero.md §6 shows, with
+            # vim.lsp.start so it works back to 0.8
+            cat > $u/50-lsp.lua <<'LUA'
+            vim.api.nvim_create_autocmd("FileType", {
+              pattern = "lua",
+              callback = function(ev)
+                vim.lsp.start({ name = "lua_ls", cmd = { "lua-language-server" }, root_dir = vim.fn.getcwd() })
+              end,
+            })
+            LUA
 
             mkdir -p $TMPDIR/repo/src && cd $TMPDIR/repo
             echo "a needle in here" > needle.txt

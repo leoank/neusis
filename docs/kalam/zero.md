@@ -147,7 +147,7 @@ saved, whose first line is `" kalam-zero session`.
 ## 4. Different from kalam
 
 - No LSP servers, formatters or treesitter parsers are installed. LSP shortcuts appear
-  only when a server attaches, and folds use indentation.
+  when a server attaches; start one from your own Lua (§6). Folds use indentation.
 - No DAP, Neogit, diffview, Octo, leap or LaTeX. `<leader>gdd` closes the diff here,
   where kalam toggles diffview.
 - `exrc` is off: on 0.8 it would run a project's `.nvim.lua` without asking, and a
@@ -192,6 +192,24 @@ vim.g.kalam_zero_session_autoload = true      -- load this folder's session at s
 vim.o.relativenumber = false
 vim.keymap.set("n", "<leader>m", "<cmd>make<cr>", { desc = "make" })
 ```
+
+**An LSP server** the machine has installed is started the same way. This works on every
+supported Neovim, and zero's LSP shortcuts (`gd`, `gr`, `K`, `<leader>ca`, `<leader>cr`, …)
+appear when it attaches:
+
+```lua
+-- ~/.config/kalam/lua/50-lsp.lua
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "lua",
+  callback = function()
+    vim.lsp.start({ name = "lua_ls", cmd = { "lua-language-server" }, root_dir = vim.fn.getcwd() })
+  end,
+})
+```
+
+On Neovim 0.11+ the shorter form is `vim.lsp.config("lua_ls", { cmd = {
+"lua-language-server" }, filetypes = { "lua" } })` followed by `vim.lsp.enable("lua_ls")`.
+The headless test runs the file above with lua-language-server on every Neovim from 0.8.
 
 Modules go in a subfolder and load with `require`: `lua/mytools/init.lua` is
 `require("mytools")`, also when the file was started with `-u`. A file that errors is

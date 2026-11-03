@@ -223,6 +223,36 @@ local function run()
     ok(vim.fn.filereadable("src/renamed.lua") == 1 and vim.fn.filereadable("src/other.lua") == 0, "rename_file")
   end)
 
+  -- LSP from the user's lua/50-lsp.lua (lua-language-server): zero's
+  -- shortcuts appear on attach, and definition, diagnostics and rename work
+  try("lsp", function()
+    local clients = vim.lsp.get_clients or vim.lsp.get_active_clients
+    vim.fn.writefile({ "local function greet() return 1 end", "greet()", "undefined_thing()" }, "src/lsp_test.lua")
+    vim.cmd("edit src/lsp_test.lua")
+    local buf = vim.api.nvim_get_current_buf()
+    ok(vim.wait(30000, function() return #clients({ bufnr = buf }) > 0 end, 100), "lua_ls attached")
+    for _, k in ipairs({ { "n", "gd" }, { "n", "gr" }, { "n", "K" }, { "n", "<leader>ca" }, { "n", "<leader>cr" }, { "n", "<leader>ss" } }) do
+      ok(vim.fn.maparg(k[2], k[1], false, true).buffer == 1, "LSP shortcut " .. k[2] .. " on attach")
+    end
+    ok(vim.wait(30000, function()
+      for _, d in ipairs(vim.diagnostic.get(buf)) do
+        if d.message:match("undefined_thing") then return true end
+      end
+    end, 100), "lua_ls reports undefined_thing")
+    ok(Z.statusline():match(" [EW]%d"), "statusline counts the diagnostics: " .. Z.statusline())
+    vim.api.nvim_win_set_cursor(0, { 2, 1 })
+    vim.fn.maparg("gd", "n", false, true).callback()
+    ok(vim.wait(15000, function() return vim.api.nvim_win_get_cursor(0)[1] == 1 end, 100), "gd jumps to greet's definition")
+    vim.api.nvim_win_set_cursor(0, { 2, 1 })
+    vim.lsp.buf.rename("hello")
+    ok(vim.wait(15000, function()
+      local l = vim.api.nvim_buf_get_lines(buf, 0, 2, false)
+      return l[1]:match("hello") and l[2]:match("^hello")
+    end, 100), "rename renames both uses: " .. table.concat(vim.api.nvim_buf_get_lines(buf, 0, 2, false), " | "))
+    for _, c in ipairs(clients({ bufnr = buf })) do c:stop(true) end
+    vim.cmd("silent! write | enew")
+  end)
+
   -- the rest just has to run
   try("statusline", function() ok(type(Z.statusline()) == "string", "statusline renders") end)
   try("format", function() vim.cmd("edit needle.txt"); Z.format() end)
