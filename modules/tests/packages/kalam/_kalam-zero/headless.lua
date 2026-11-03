@@ -165,8 +165,20 @@ local function run()
     local chansend = vim.fn.chansend
     vim.fn.chansend = function(_, data) sent = data end
     Z.osc52_copy({ "hello", "world" })
-    vim.fn.chansend = chansend
     ok(sent and sent:find("aGVsbG8Kd29ybGQ=", 1, true), "osc52 base64: " .. tostring(sent))
+    -- the 0.8/0.9 encoder agrees with vim.base64 where both exist
+    local sample = "kalam-zero \0\1\255 é\n" .. string.rep("xyz", 100)
+    ok(vim.base64 == nil or Z.b64(sample) == vim.base64.encode(sample), "fallback base64 matches vim.base64")
+    ok(Z.encode == (vim.base64 and vim.base64.encode or Z.b64), "uses vim.base64 when present")
+    -- too large: nothing sent, a warning instead
+    sent = nil
+    local warned
+    local notify_ = vim.notify
+    vim.notify = function(msg) warned = msg end
+    Z.osc52_copy({ string.rep("a", 80000) })
+    vim.notify = notify_
+    vim.fn.chansend = chansend
+    ok(sent == nil and warned and warned:match("too large for OSC 52"), "oversized copy warns: " .. tostring(warned))
   end)
 
   -- git: blame and diff against the index

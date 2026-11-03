@@ -79,7 +79,7 @@ end
 -- usual case on a remote box. Paste returns the unnamed register, since
 -- few terminals answer OSC 52 paste requests.
 local b64chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-local function b64(data) -- vim.base64 is 0.10+
+local function b64(data) -- for 0.8/0.9; 0.10+ uses vim.base64
   return ((data:gsub(".", function(x)
     local r, byte = "", x:byte()
     for i = 8, 1, -1 do r = r .. (byte % 2 ^ i - byte % 2 ^ (i - 1) > 0 and "1" or "0") end
@@ -91,8 +91,18 @@ local function b64(data) -- vim.base64 is 0.10+
     return b64chars:sub(c + 1, c + 1)
   end) .. ({ "", "==", "=" })[#data % 3 + 1])
 end
+Z.b64 = b64
+Z.encode = vim.base64 and vim.base64.encode or b64
+-- Terminals drop OSC 52 payloads past a size (often ~100 KB encoded);
+-- warn rather than leave a silently truncated clipboard.
+Z.osc52_limit = 100000
 function Z.osc52_copy(lines)
-  local seq = "\027]52;c;" .. b64(table.concat(lines, "\n")) .. "\007"
+  local data = Z.encode(table.concat(lines, "\n"))
+  if #data > Z.osc52_limit then
+    return notify(string.format("copy of %d KB is too large for OSC 52 (limit ~%d KB); it stays in Neovim's registers",
+      math.floor(#data * 3 / 4 / 1024), math.floor(Z.osc52_limit * 3 / 4 / 1024)), vim.log.levels.WARN)
+  end
+  local seq = "\027]52;c;" .. data .. "\007"
   if vim.env.TMUX then seq = "\027Ptmux;" .. seq:gsub("\027", "\027\027") .. "\027\\" end
   vim.fn.chansend(vim.v.stderr, seq)
 end
