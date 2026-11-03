@@ -44,6 +44,14 @@
             export HOME=$TMPDIR/home NVIM_APPNAME=kalam
             export XDG_CONFIG_HOME=$HOME/.config XDG_STATE_HOME=$HOME/.local/state XDG_DATA_HOME=$HOME/.local/share
             install -Dm644 ${init}/init.lua $XDG_CONFIG_HOME/kalam/init.lua
+            # your own Lua next to init.lua (REV-20261103-hv2prm T12): two files
+            # in name order, a module they require, and one that errors
+            u=$XDG_CONFIG_HOME/kalam/lua
+            mkdir -p $u/kalamtest
+            echo 'return { answer = 42 }' > $u/kalamtest/init.lua
+            echo 'vim.g.kalam_zero_user = { require("kalamtest").answer }' > $u/10-first.lua
+            echo 'error("on purpose")' > $u/20-broken.lua
+            echo 'local t = vim.g.kalam_zero_user; table.insert(t, "second"); vim.g.kalam_zero_user = t' > $u/30-second.lua
 
             mkdir -p $TMPDIR/repo/src && cd $TMPDIR/repo
             echo "a needle in here" > needle.txt

@@ -20,10 +20,18 @@ local function run()
   ok(Z ~= nil, "zero.lua loaded (_G.KalamZero); startup said: " .. vim.v.errmsg .. " " .. vim.fn.execute("messages"))
   if not Z then return end
 
-  -- startup was silent
+  -- your own Lua ran in name order, a module loaded, the broken file was
+  -- reported, and nothing else stopped
   local msgs = vim.fn.execute("messages")
+  local user = vim.g.kalam_zero_user or {}
+  ok(user[1] == 42, "lua/10-first.lua ran and required lua/kalamtest: " .. vim.inspect(user))
+  ok(user[2] == "second", "lua/30-second.lua ran after the broken one: " .. vim.inspect(user))
+  ok(msgs:match("error in [^\n]*20%-broken%.lua"), "the broken file was reported")
+  msgs = msgs:gsub("[^\n]*20%-broken%.lua[^\n]*", "")
+
+  -- startup was otherwise silent
   ok(not msgs:match("E%d+:") and not msgs:match("[Ee]rror"), "no startup errors: " .. msgs)
-  ok(vim.v.errmsg == "", "v:errmsg empty: " .. vim.v.errmsg)
+  ok(vim.v.errmsg == "" or vim.v.errmsg:match("20%-broken%.lua"), "v:errmsg empty but for the broken file: " .. vim.v.errmsg)
 
   -- every zero shortcut, and base's plain ones, are mapped
   local expected = {

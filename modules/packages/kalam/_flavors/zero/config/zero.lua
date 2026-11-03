@@ -605,3 +605,22 @@ map("n", "<leader>ud", Z.diag_toggle, "diagnostics")
 if has("0.12") then map("n", "<leader>uu", function() vim.cmd("packadd nvim.undotree"); vim.cmd("Undotree") end, "undo tree") end
 map("n", "<leader>S", Z.scratch, "scratch buffer")
 map("n", "<leader>n", "<cmd>messages<cr>", "message history")
+
+---------------------------------------------------------------- your own Lua
+-- Every `lua/*.lua` next to init.lua (~/.config/kalam/lua/, or beside the
+-- file given to -u) runs last, in name order, so it can change anything
+-- above, set vim.g.kalam_zero_session_autoload, or add shortcuts. Modules
+-- go in subdirectories (lua/mymod/init.lua) and load with require(). A
+-- file that errors is reported; the rest still run (REV-20261103-hv2prm T12).
+do
+  local src = debug.getinfo(1, "S").source
+  local dir = src:sub(1, 1) == "@" and vim.fn.fnamemodify(src:sub(2), ":p:h") or vim.fn.stdpath("config")
+  Z.user_lua = dir .. "/lua"
+  package.path = Z.user_lua .. "/?.lua;" .. Z.user_lua .. "/?/init.lua;" .. package.path
+  local files = vim.fn.glob(Z.user_lua .. "/*.lua", false, true)
+  table.sort(files)
+  for _, f in ipairs(files) do
+    local good, err = pcall(dofile, f)
+    if not good then notify("error in " .. vim.fn.fnamemodify(f, ":~") .. ": " .. tostring(err), vim.log.levels.ERROR) end
+  end
+end

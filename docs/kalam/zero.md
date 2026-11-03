@@ -114,7 +114,7 @@ The keys are kalam's. `<leader>` is space.
 use. Loading is manual (`<leader>ql`): a session file is Vimscript, and on a machine you
 ssh into the folder may be someone else's. A loaded session is saved again on exit. To
 have a bare `nvim` load the folder's session, set `vim.g.kalam_zero_session_autoload =
-true` before Neovim finishes starting; even then it only loads a session you own that zero
+true` in your own Lua (§6); even then it only loads a session you own that zero
 saved, whose first line is `" kalam-zero session`.
 
 ---
@@ -142,3 +142,24 @@ saved, whose first line is `" kalam-zero session`.
   current folder; start `nvim` at the project root.
 - **Something looks wrong.** `<leader>n` shows the messages. `:lua print(vim.inspect(KalamZero.mini))`
   shows which mini modules loaded.
+
+---
+
+## 6. Your own Lua
+
+Every `lua/*.lua` file next to `init.lua` runs after zero's config, in name order:
+`~/.config/kalam/lua/` for the usual install, or the `lua/` folder beside the file you
+pass to `-u`. It can change any option or shortcut zero sets, or add your own:
+
+```lua
+-- ~/.config/kalam/lua/10-local.lua
+vim.g.kalam_zero_session_autoload = true      -- load this folder's session at startup
+vim.o.relativenumber = false
+vim.keymap.set("n", "<leader>m", "<cmd>make<cr>", { desc = "make" })
+```
+
+Modules go in a subfolder and load with `require`: `lua/mytools/init.lua` is
+`require("mytools")`, also when the file was started with `-u`. A file that errors is
+reported at startup (`<leader>n` shows it again), and the others still run. The release
+never touches `lua/`, so updating `init.lua` keeps your files.
+
