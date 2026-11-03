@@ -20,6 +20,7 @@ and never renumbered. ADR-0002 to ADR-0014 were backfilled on 2026-11-03 from
 | [ADR-0012](ADR-0012-comin-signed-deploy-branches.md) | comin deploys signed commits from deploy/<group> branches that CI fast-forwards | accepted |
 | [ADR-0013](ADR-0013-github-app-bot.md) | CI acts as a GitHub App, the only actor on deploy/* | accepted |
 | [ADR-0014](ADR-0014-attic-cache-on-spirit.md) | Binary cache: attic on spirit over the tailnet, paths signed with a neusis key | accepted (not yet built) |
+| [ADR-0015](ADR-0015-site-publishes-design-records.md) | The docs site publishes the architecture and every ADR, and links notebook IDs to GitHub | accepted |
 
 Each record:
 
