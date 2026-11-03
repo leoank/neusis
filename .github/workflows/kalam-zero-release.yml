@@ -22,9 +22,11 @@ on:
 permissions:
   contents: write
 
+# A run that has started publishing finishes; a newer push waits for it
+# (REV-20261103-hv2prm T2).
 concurrency:
   group: kalam-zero-release
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   release:
@@ -56,7 +58,7 @@ jobs:
           sha256sum init.lua > init.lua.sha256
           cat init.lua.sha256
 
-      - name: Move the kalam-zero tag and replace the release's files
+      - name: Replace the release's files, then move the kalam-zero tag
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -74,11 +76,14 @@ jobs:
 
           SHA-256: \`$(cut -d' ' -f1 init.lua.sha256)\`. Guide: docs/kalam/zero.md.
           EOF
-          git tag -f kalam-zero HEAD
-          git push -f origin refs/tags/kalam-zero
+          # Files first, tag last: whatever stops this step, the tag never
+          # names a commit whose init.lua isn't the one published.
           if gh release view kalam-zero > /dev/null 2>&1; then
+            gh release upload kalam-zero init.lua init.lua.sha256 --clobber
             gh release edit kalam-zero --notes-file notes.md
           else
-            gh release create kalam-zero --title "kalam-zero" --notes-file notes.md --latest=false
+            gh release create kalam-zero --target "$GITHUB_SHA" --title "kalam-zero" \
+              --notes-file notes.md --latest=false init.lua init.lua.sha256
           fi
-          gh release upload kalam-zero init.lua init.lua.sha256 --clobber
+          git tag -f kalam-zero HEAD
+          git push -f origin refs/tags/kalam-zero
