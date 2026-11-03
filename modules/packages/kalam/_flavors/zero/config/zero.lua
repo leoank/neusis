@@ -167,12 +167,39 @@ vim.api.nvim_create_autocmd("BufWritePre", {
 })
 
 ---------------------------------------------------------------- sessions
--- Same file as kalam's mini.sessions setup: `.nvim.session` in cwd, read
--- by a bare `nvim` in that folder and written back on exit.
+-- Same file as kalam's mini.sessions setup: `.nvim.session` in cwd. A
+-- session file is Vimscript, and a machine you ssh into may hold someone
+-- else's folders, so loading is manual (<leader>ql) by default. With
+-- `vim.g.kalam_zero_session_autoload = true` (e.g. in lua/*.lua next to
+-- init.lua), a bare `nvim` loads the folder's session, but only one you
+-- own that zero wrote (its first line is the marker below). A loaded
+-- session is written back on exit.
 
 Z.session_file = ".nvim.session"
+Z.session_marker = '" kalam-zero session'
+local uv = vim.uv or vim.loop
+
+local function session_write(path)
+  vim.cmd("mksession! " .. vim.fn.fnameescape(path))
+  local lines = vim.fn.readfile(path)
+  if lines[1] ~= Z.session_marker then
+    table.insert(lines, 1, Z.session_marker)
+    vim.fn.writefile(lines, path)
+  end
+end
+
+-- Owned by the current user (where uids exist) and written by zero.
+function Z.session_trusted(path)
+  if vim.fn.filereadable(path) == 0 then return false end
+  if uv.getuid then
+    local st = uv.fs_stat(path)
+    if not st or st.uid ~= uv.getuid() then return false end
+  end
+  return vim.fn.readfile(path, "", 1)[1] == Z.session_marker
+end
+
 function Z.session_save()
-  vim.cmd("mksession! " .. vim.fn.fnameescape(Z.session_file))
+  session_write(Z.session_file)
   notify("session saved to " .. Z.session_file)
 end
 function Z.session_load()
@@ -187,14 +214,16 @@ vim.api.nvim_create_autocmd("VimEnter", {
   group = aug,
   nested = true,
   callback = function()
-    if vim.fn.argc() == 0 and vim.fn.filereadable(Z.session_file) == 1 then Z.session_load() end
+    if vim.g.kalam_zero_session_autoload and vim.fn.argc() == 0 and Z.session_trusted(Z.session_file) then
+      Z.session_load()
+    end
   end,
 })
 vim.api.nvim_create_autocmd("VimLeavePre", {
   group = aug,
   callback = function()
     if vim.v.this_session ~= "" and vim.fn.filereadable(vim.v.this_session) == 1 then
-      vim.cmd("mksession! " .. vim.fn.fnameescape(vim.v.this_session))
+      session_write(vim.v.this_session)
     end
   end,
 })

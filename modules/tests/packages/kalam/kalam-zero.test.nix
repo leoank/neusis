@@ -49,6 +49,9 @@
             echo "a needle in here" > needle.txt
             echo "return 1" > src/other.lua
             git init -q && git add . && git -c user.name=t -c user.email=t@t commit -qm init
+            # a session zero would trust (marked, ours): with autoload off by
+            # default, a bare nvim must not run it (REV-20261103-hv2prm T1)
+            printf '%s\n' '" kalam-zero session' 'let g:kalam_zero_session_ran = 1' > .nvim.session
 
             export KALAM_ZERO_EXPECT_RG=${if withRg then "1" else "0"}
             if ! nvim ${lib.optionalString (!appname) "-u $XDG_CONFIG_HOME/kalam/init.lua"} --headless -c "luafile ${./_kalam-zero/headless.lua}" > $TMPDIR/out 2>&1; then

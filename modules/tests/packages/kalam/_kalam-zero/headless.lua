@@ -141,9 +141,15 @@ local function run()
     vim.cmd("close")
   end)
 
-  -- sessions
+  -- sessions: never loaded unasked, and only zero's own when asked
+  ok(vim.g.kalam_zero_session_ran == nil and vim.v.this_session == "", "session not autoloaded by default")
+  ok(Z.session_trusted(".nvim.session"), "a marked session we own is trusted")
+  vim.fn.writefile({ "let g:kalam_zero_session_ran = 1" }, "unmarked.session")
+  ok(not Z.session_trusted("unmarked.session"), "an unmarked session is not trusted")
+  vim.fn.delete("unmarked.session")
   try("sessions", function()
     Z.session_save()
+    ok(vim.fn.readfile(".nvim.session", "", 1)[1] == Z.session_marker, "saved session carries the marker")
     ok(vim.fn.filereadable(".nvim.session") == 1, "session written")
     Z.session_load()
     ok(vim.v.this_session:match("%.nvim%.session$"), "session loaded")

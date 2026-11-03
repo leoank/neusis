@@ -111,7 +111,11 @@ The keys are kalam's. `<leader>` is space.
 | `<leader>S`, `<leader>n` | scratch buffer, message history |
 
 **Sessions** use `.nvim.session` in the current folder, the same file kalam's sessions
-use. A bare `nvim` in a folder that has one loads it, and it's saved again on exit.
+use. Loading is manual (`<leader>ql`): a session file is Vimscript, and on a machine you
+ssh into the folder may be someone else's. A loaded session is saved again on exit. To
+have a bare `nvim` load the folder's session, set `vim.g.kalam_zero_session_autoload =
+true` before Neovim finishes starting; even then it only loads a session you own that zero
+saved, whose first line is `" kalam-zero session`.
 
 ---
 
