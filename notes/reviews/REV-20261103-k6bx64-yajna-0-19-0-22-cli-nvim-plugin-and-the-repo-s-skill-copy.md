@@ -33,3 +33,4 @@ Not done: the new skill asks runs to record the full commit SHA, host, env and o
 
 ### T1 (open) general
 - 2026-11-03 17:55 agent:claude: Round 2, as requested (b6a31de): yajna 0.22.1 → 0.23.0 (2c665ad shell completion, 742f1fc run … --on <host>), skill copy regenerated (one new line). T0 319/319; kalam builds; ank@rogue, rogue's system and ank@ghost001 evaluate; yajna validate passes on all 18 pages. Not wired: completion in ank's zsh. It would be one line in the yajna home bundle (modules/users/ank/ank.nix): programs.zsh.initContent with source <(COMPLETE=zsh yajna). Say if you want it.
+- 2026-11-03 17:58 ank: add the zsh completion to ank's zsh
