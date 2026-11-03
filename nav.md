@@ -70,6 +70,7 @@
   - [ADR-0013: GitHub App bot](upstream/decisions/ADR-0013-github-app-bot.md)
   - [ADR-0014: attic binary cache](upstream/decisions/ADR-0014-attic-cache-on-spirit.md)
   - [ADR-0015: Design records on this site](upstream/decisions/ADR-0015-site-publishes-design-records.md)
+  - [ADR-0016: kalam-zero](upstream/decisions/ADR-0016-kalam-zero.md)
 - [Testing](upstream/testing.md)
 - [Porting log (frozen)](upstream/porting.md)
 - [Future considerations](upstream/future-considerations.md)
