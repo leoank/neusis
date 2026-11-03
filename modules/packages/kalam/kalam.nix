@@ -76,6 +76,9 @@
     {
       packages = variants // {
         kalam-zero-init = pkgs.runCommand "kalam-zero-init" { } ''
+          # file order (find | sort, the syntax glob) must not depend on the
+          # builder's locale: every system builds the same bytes
+          export LC_ALL=C
           : > init.lua
           ${inlinePlugin {
             name = "oil";

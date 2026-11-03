@@ -72,6 +72,19 @@
           withRg = false;
         };
       }
+      # The published init.lua is built on x86_64-linux; the same commit must
+      # give the same bytes everywhere, so a local build can be checked
+      # against the release's sha256 (REV-20261103-hv2prm T7). Needs an
+      # x86_64-linux builder (a Mac uses /etc/nix/machines).
+      // lib.optionalAttrs (system != "x86_64-linux") {
+        kalam-zero-init-matches-x86_64-linux = pkgs.runCommand "kalam-zero-init-matches-x86_64-linux" { } ''
+          if ! cmp ${init}/init.lua ${self.packages.x86_64-linux.kalam-zero-init}/init.lua; then
+            diff ${init}/init.lua ${self.packages.x86_64-linux.kalam-zero-init}/init.lua | head -20 >&2
+            exit 1
+          fi
+          sha256sum ${init}/init.lua > $out
+        '';
+      }
       // lib.optionalAttrs (system == "x86_64-linux") (
         lib.mapAttrs' (
           v: nvim:
