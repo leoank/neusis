@@ -1,0 +1,6 @@
+kalam-zero-headless-nvim-0_8     kalam-zero: ok 97 checks (NVIM v0.8.3)
+kalam-zero-headless-nvim-0_9     kalam-zero: ok 97 checks (NVIM v0.9.5)
+kalam-zero-headless-nvim-0_10    kalam-zero: ok 97 checks (NVIM v0.10.4)
+kalam-zero-headless-nvim-0_11    kalam-zero: ok 97 checks (NVIM v0.11.7)
+kalam-zero-headless              kalam-zero: ok 97 checks (NVIM v0.12.4)
+kalam-zero-headless-no-rg        kalam-zero: ok 97 checks (NVIM v0.12.4)

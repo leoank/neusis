@@ -17,7 +17,7 @@ end
 
 local function run()
   local Z = _G.KalamZero
-  ok(Z ~= nil, "zero.lua loaded (_G.KalamZero)")
+  ok(Z ~= nil, "zero.lua loaded (_G.KalamZero); startup said: " .. vim.v.errmsg .. " " .. vim.fn.execute("messages"))
   if not Z then return end
 
   -- startup was silent

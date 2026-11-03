@@ -38,7 +38,8 @@ edit, and loads without error with its keymaps set on every supported Neovim.
 ## Runs
 One line per run after its link, what was tried and what it showed; `yajna validate`
 rejects a bare link here. Metric runs also land in results.tsv.
-- [[RUN-20261103-g9nmnp]] defaults leak 2 store paths and 2 runtimepath edits; five options remove them, and the result loads cleanly in nvim 0.12.4 (older versions still to test)
+- [[RUN-20261103-g9nmnp]] defaults leak 2 store paths and 2 runtimepath edits; five options remove them, and the result loads cleanly in nvim 0.12.4
+- [[RUN-20261103-h3sjsx]] the generated file, oil inlined, passes all 97 headless checks on 0.8.3, 0.9.5, 0.10.4, 0.11.7 and 0.12.4 (0.8 started with `-u`)
 
 ## Conclusion
 Written once, by a human, when status becomes `concluded`.

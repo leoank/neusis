@@ -39,7 +39,7 @@ open items with the rest.
 - [ ] Auto-updates M8: ntfy alerts
 - [x] kalam-zero 1: `_flavors/zero`, `packages.kalam-zero` and the portable `kalam-zero-init`, checked for store paths and loaded headless (ADR-0016) (since c7b40fa)
 - [x] kalam-zero 2: built-in fallbacks for the plugin shortcuts (pickers, grep, netrw, sessions, diagnostics, LSP, OSC 52, statusline), each exercised headless (since c7b40fa)
-- [ ] kalam-zero 3: CI runs the headless test on Neovim 0.8, 0.9, 0.10 and 0.11 release builds ([[EXP-20261103-g9kpxs]])
+- [x] kalam-zero 3: CI runs the headless test on Neovim 0.8, 0.9, 0.10 and 0.11 release builds ([[EXP-20261103-g9kpxs]]) (since a47b91b)
 - [ ] kalam-zero 4: `kalam-zero-bundle`, the tarball with vendored pure-Lua plugins that init.lua picks up
 - [ ] kalam-zero 5: the rolling `kalam-zero` GitHub release and `docs/kalam/zero.md`
 
@@ -70,4 +70,4 @@ What was tried and dropped, and why, so nobody tries it again.
 ## Experiments
 One line per experiment after its link, what it asks and what came of it; `yajna validate`
 rejects a bare link here. Newest last.
-- [[EXP-20261103-g9kpxs]] can nixvim emit kalam-zero's init.lua? On 0.12.4 yes, with five options (wrapRc, impureRtp, luaLoader, providers); 0.8–0.11 untested
+- [[EXP-20261103-g9kpxs]] can nixvim emit kalam-zero's init.lua? Yes, with five options; the file passes the headless test on 0.8.3–0.12.4 (conclusion pending ank)

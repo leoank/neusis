@@ -188,6 +188,7 @@ bools and lists (`pkgNames`, `config.home.file."x".text`,
 | `packages/*` | T2 | `checks.<sys>.pkg-<name>` for kalam, kalam-full, gclb, neusis (`buildGoModule` runs `go test` in its check phase, so the CLI is covered by its build) |
 | `packages/neusis-promote` | T2 | `checks.<sys>.neusis-promote-cases`: the promotion rules against a local bare origin in the sandbox — gated candidate, red gates, unsigned and untrusted heads, fast-forward, soak, `DEPLOY_HOLD`, a commit that would unenroll a member |
 | `packages/neusis-switch-check` | T2 | `checks.<linux>.neusis-switch-check-cases`: the pre-switch check against a stub of GitHub's compare API — contained, behind, ahead, the testing branch, dirty and unknown revisions, GitHub down, `force-switch` |
+| `packages/kalam` (kalam-zero) | T0 + T2 | `pkg-kalam-zero.*`: the flavour's overrides of base and its one plugin; `checks.<sys>.kalam-zero-headless{,-no-rg}` install `kalam-zero-init`'s `init.lua` as a user would and run every fallback headless, with and without ripgrep; on x86_64-linux `kalam-zero-headless-nvim-0_{8,9,10,11}` repeat it on the official Neovim release builds (ADR-0016) |
 | `flakeModules.*` | T0 consumer smoke | a nested `mkFlake` importing `self.flakeModules.default` the way `examples/flake-parts-consumer` does; asserts `flake.neusis.lib.neusisOS.mkNeusisFlake` exists and a one-machine registry produces `nixosConfigurations.fixture` |
 
 ### 3.6 Conventions

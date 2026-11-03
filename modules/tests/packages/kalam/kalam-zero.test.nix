@@ -6,7 +6,10 @@
 # a user would (NVIM_APPNAME=kalam) and run `_kalam-zero/headless.lua`
 # against it in a scratch git repo: startup is silent, every shortcut is
 # mapped, oil (inlined) works, and each fallback runs. The second variant
-# has no ripgrep on PATH, so grep and :find use their fallbacks.
+# has no ripgrep on PATH, so grep and :find use their fallbacks. On
+# x86_64-linux, `kalam-zero-headless-nvim-0_{8,9,10,11}` run the same test
+# on the official release builds (`_kalam-zero/neovim-releases.nix`), the
+# versions nixpkgs doesn't carry.
 { self, ... }:
 {
   perSystem =
@@ -21,11 +24,18 @@
       init = self.packages.${system}.kalam-zero-init;
 
       headless =
-        withRg:
-        pkgs.runCommand "kalam-zero-headless${lib.optionalString (!withRg) "-no-rg"}"
+        {
+          name,
+          nvim ? pkgs.neovim-unwrapped,
+          withRg ? true,
+          # NVIM_APPNAME arrived in 0.9; on 0.8 the file is passed with -u,
+          # as the install instructions say (ADR-0016)
+          appname ? true,
+        }:
+        pkgs.runCommand name
           {
             nativeBuildInputs = [
-              pkgs.neovim-unwrapped
+              nvim
               pkgs.git
             ]
             ++ lib.optional withRg pkgs.ripgrep;
@@ -41,19 +51,38 @@
             git init -q && git add . && git -c user.name=t -c user.email=t@t commit -qm init
 
             export KALAM_ZERO_EXPECT_RG=${if withRg then "1" else "0"}
-            if ! nvim --headless -c "luafile ${./_kalam-zero/headless.lua}" > $TMPDIR/out 2>&1; then
+            if ! nvim ${lib.optionalString (!appname) "-u $XDG_CONFIG_HOME/kalam/init.lua"} --headless -c "luafile ${./_kalam-zero/headless.lua}" > $TMPDIR/out 2>&1; then
               cat $TMPDIR/out >&2
               exit 1
             fi
             cat $TMPDIR/out
             cp $TMPDIR/out $out
           '';
+
+      releases = import ./_kalam-zero/neovim-releases.nix pkgs;
     in
     {
       checks = {
-        kalam-zero-headless = headless true;
-        kalam-zero-headless-no-rg = headless false;
-      };
+        kalam-zero-headless = headless { name = "kalam-zero-headless"; };
+        kalam-zero-headless-no-rg = headless {
+          name = "kalam-zero-headless-no-rg";
+          withRg = false;
+        };
+      }
+      // lib.optionalAttrs (system == "x86_64-linux") (
+        lib.mapAttrs' (
+          v: nvim:
+          let
+            name = "kalam-zero-headless-nvim-${lib.replaceStrings [ "." ] [ "_" ] v}";
+          in
+          lib.nameValuePair name (
+            headless {
+              inherit name nvim;
+              appname = v != "0.8";
+            }
+          )
+        ) releases
+      );
 
       tests.pkg-kalam-zero = {
         test-overrides-base-where-it-must = {

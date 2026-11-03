@@ -6,7 +6,8 @@
 #       for the runner's system + `nix eval` of every system's checks,
 #       which tolerates the import-from-derivation stylix needs)
 #   T2  build the cheap package checks (the Go CLI runs `go test` in its
-#       check phase)
+#       check phase), and kalam-zero's headless test on every Neovim it
+#       supports, 0.8 to 0.12 (ADR-0016)
 #
 #   T3  NixOS VM tests (checks.x86_64-linux.vm-*) under KVM, on everything
 #       but pull requests — they are the slow tier
@@ -124,6 +125,15 @@ jobs:
           extra-conf: |
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
       - run: nix build --no-link .#checks.x86_64-linux.pkg-neusis .#checks.x86_64-linux.pkg-gclb .#checks.x86_64-linux.neusis-promote-cases .#checks.x86_64-linux.neusis-switch-check-cases
+      - name: kalam-zero on Neovim 0.8, 0.9, 0.10, 0.11 and 0.12
+        run: >-
+          nix build --no-link -L
+          .#checks.x86_64-linux.kalam-zero-headless
+          .#checks.x86_64-linux.kalam-zero-headless-no-rg
+          .#checks.x86_64-linux.kalam-zero-headless-nvim-0_8
+          .#checks.x86_64-linux.kalam-zero-headless-nvim-0_9
+          .#checks.x86_64-linux.kalam-zero-headless-nvim-0_10
+          .#checks.x86_64-linux.kalam-zero-headless-nvim-0_11
 
   vm-tests:
     name: T3 VM ${{ matrix.test }}
