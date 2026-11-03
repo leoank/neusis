@@ -1,0 +1,84 @@
+# Publish kalam-zero's init.lua on the rolling `kalam-zero` release
+# (ADR-0016). Runs on pushes to main that can change the file (kalam, its
+# tests, the lock: the daily input bump refreshes oil and mini) and by hand.
+# The file is published only after the headless test passes on every
+# Neovim it supports (0.8 to 0.12); then the `kalam-zero` tag moves to the
+# commit and the release's files are replaced, so the download URL never
+# changes:
+#   https://github.com/leoank/neusis/releases/download/kalam-zero/init.lua
+name: kalam-zero-release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "modules/packages/kalam/**"
+      - "modules/lib/kalam.nix"
+      - "modules/tests/packages/kalam/**"
+      - "flake.lock"
+      - ".github/workflows/kalam-zero-release.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: kalam-zero-release
+  cancel-in-progress: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: DeterminateSystems/nix-installer-action@v23
+        with:
+          determinate: false
+          diagnostic-endpoint: ""
+          extra-conf: |
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+
+      - name: Headless test on Neovim 0.8, 0.9, 0.10, 0.11 and 0.12
+        run: >-
+          nix build --no-link -L
+          .#checks.x86_64-linux.kalam-zero-headless
+          .#checks.x86_64-linux.kalam-zero-headless-no-rg
+          .#checks.x86_64-linux.kalam-zero-headless-nvim-0_8
+          .#checks.x86_64-linux.kalam-zero-headless-nvim-0_9
+          .#checks.x86_64-linux.kalam-zero-headless-nvim-0_10
+          .#checks.x86_64-linux.kalam-zero-headless-nvim-0_11
+
+      - name: Build init.lua
+        run: |
+          nix build .#packages.x86_64-linux.kalam-zero-init
+          install -m644 result/init.lua init.lua
+          sha256sum init.lua > init.lua.sha256
+          cat init.lua.sha256
+
+      - name: Move the kalam-zero tag and replace the release's files
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          short=$(git rev-parse --short HEAD)
+          cat > notes.md <<EOF
+          kalam for machines without Nix: one \`init.lua\` for Neovim 0.8+, rebuilt from
+          [\`$short\`](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
+          after its headless test passed on Neovim 0.8.3, 0.9.5, 0.10.4, 0.11.7 and 0.12.
+
+          \`\`\`sh
+          curl -fsSL https://github.com/${{ github.repository }}/releases/download/kalam-zero/init.lua \\
+            --create-dirs -o ~/.config/kalam/init.lua
+          NVIM_APPNAME=kalam nvim        # Neovim 0.8: nvim -u ~/.config/kalam/init.lua
+          \`\`\`
+
+          SHA-256: \`$(cut -d' ' -f1 init.lua.sha256)\`. Guide: docs/kalam/zero.md.
+          EOF
+          git tag -f kalam-zero HEAD
+          git push -f origin refs/tags/kalam-zero
+          if gh release view kalam-zero > /dev/null 2>&1; then
+            gh release edit kalam-zero --notes-file notes.md
+          else
+            gh release create kalam-zero --title "kalam-zero" --notes-file notes.md --latest=false
+          fi
+          gh release upload kalam-zero init.lua init.lua.sha256 --clobber

@@ -7,6 +7,9 @@ top-to-bottom on day one, or skim the table-of-contents and jump.
 The full plugin list and file layout lives in
 [`base/README.md`](../../modules/packages/kalam/_flavors/base/README.md).
 
+On a machine without Nix, [kalam-zero](zero.md) brings the same shortcuts in one
+downloadable `init.lua`.
+
 ---
 
 ## 0. The pitch

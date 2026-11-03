@@ -57,10 +57,13 @@ flowchart LR
 - `.github/workflows/`: `tests.yml` and `gates.yml` build and test, `update-inputs.yml`
   bumps inputs, `pipeline.yml` / `promote.yml` move commits to the `deploy/*` branches
   that comin on each enrolled host follows (`auto-update-spec.md`).
+  `kalam-zero-release.yml` republishes kalam-zero's `init.lua` on the rolling
+  `kalam-zero` release after its headless test passes (ADR-0016).
 - `modules/infra/` + `modules/terranixModules/`: OpenTofu stacks for the OCI base image,
   the hosts, and Cloudflare tunnels (`cloud/tutorial.md`).
 - `cli/`: the Go `neusis` CLI (scaffolding, `cloud bootstrap`, `cloud deploy`).
-- `modules/packages/`: kalam (nixvim flavours), gclb, neusis-cli.
+- `modules/packages/`: kalam (nixvim flavours, including kalam-zero for machines without
+  Nix), gclb, neusis-cli.
 
 ## Stack
 - Nix flakes with flake-parts, the dendritic pattern via import-tree, and flake-file for
