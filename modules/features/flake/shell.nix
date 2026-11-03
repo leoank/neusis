@@ -3,6 +3,7 @@
   perSystem =
     {
       config,
+      inputs',
       pkgs,
       ...
     }:
@@ -15,6 +16,9 @@
           # nixos-rebuild switches the instance (works from Darwin).
           pkgs.age
           pkgs.nixos-rebuild
+          # the notebook CLI (notes/, yajna.toml; ADR-0001); the input is
+          # declared in modules/users/ank/ank.nix
+          inputs'.yajna.packages.yajna
         ];
 
         # Automatically adds rekeyed secrets to git without

@@ -1,5 +1,5 @@
 # Tests for the flake-level features: agenix-rekey (dev shell with the
-# `agenix` CLI, rekey wiring) and the fresh-apps input.
+# `agenix` CLI, rekey wiring, yajna) and the fresh-apps input.
 { self, inputs, ... }:
 {
   perSystem =
@@ -17,6 +17,8 @@
             # neusis cloud bootstrap needs these on PATH
             age = shellTools "age";
             nixosRebuild = shellTools "nixos-rebuild";
+            # notes/ is a yajna notebook (docs/decisions/ADR-0001)
+            yajna = shellTools "yajna";
             addToGit = shell.AGENIX_REKEY_ADD_TO_GIT or null;
           };
           expected = {
@@ -24,6 +26,7 @@
             agenix = true;
             age = true;
             nixosRebuild = true;
+            yajna = true;
             addToGit = true;
           };
         };
