@@ -473,6 +473,9 @@ if has("0.10") then
     end
     Z.mini.clue = pcall(clue.setup, { triggers = triggers, clues = clues, window = { delay = 300 } }) or nil
   end
+  -- default.nix's 800 ms makes up for having no key hints; with mini.clue
+  -- showing them, go back to base's 300 (REV-20261103-hv2prm T3)
+  if Z.mini.clue then vim.o.timeoutlen = 300 end
 end
 
 -- Picker shortcuts: mini.pick when loaded, the built-in versions otherwise.

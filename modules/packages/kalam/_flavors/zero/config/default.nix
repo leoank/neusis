@@ -31,8 +31,9 @@
     exrc = lib.mkForce false;
     # Set in zero.lua only when the terminal advertises truecolor.
     termguicolors = lib.mkForce false;
-    # base's 300 ms is tuned for which-key's popup; without it, three-key
-    # leader sequences need more time.
+    # base's 300 ms is tuned for which-key's popup; without one, three-key
+    # leader sequences need more time. zero.lua sets 300 again on 0.10+,
+    # where mini.clue shows the next keys.
     timeoutlen = lib.mkForce 800;
   };
 

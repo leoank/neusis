@@ -80,6 +80,8 @@ local function run()
     end)
   end
 
+  ok(vim.o.timeoutlen == (new and 300 or 800), "timeoutlen " .. vim.o.timeoutlen .. (new and " (mini.clue)" or ""))
+
   -- options that differ from base
   ok(vim.o.foldmethod == "indent", "foldmethod indent")
   ok(vim.o.exrc == false, "exrc off")
