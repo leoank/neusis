@@ -36,6 +36,7 @@ yajna new experiment "<question>" --project PRJ-xxxx      # curated; fill Questi
 yajna new run --experiment EXP-xxxx --kind compute --script notes/projects/PRJ-xxxx-*/runs/RUN-<id>/run.sh
 yajna result --experiment EXP-xxxx run.log --script <path>   # metric runs: ===RESULT=== line -> RUN page + results.tsv
 yajna run record RUN-… --env <VAR>… --outputs <file>…      # commit, host, env and output hashes on a run from `new run`
+yajna run record RUN-… --host oppy --env VAR=<value there>  # a run that ran on another machine
 yajna run shell RUN-… [-c <cmd>] | run reproduce RUN-… | run diff RUN-a RUN-b   # at the run's commit; again and compared
 yajna run shell|reproduce|clean … --on <host>                # on the machine with the data, driven from here over ssh
 yajna log "<what you did and learned, with [[IDs]]>"       # your own file for the day
