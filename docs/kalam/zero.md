@@ -144,6 +144,10 @@ saved, whose first line is `" kalam-zero session`.
   terminal's paste (Cmd-V, Ctrl-Shift-V) in insert mode.
 - **A copy says it is too large for OSC 52.** Terminals drop payloads past about 100 KB,
   so zero keeps copies over ~73 KB in Neovim's registers instead of sending a part.
+- **It loads some other config, or fails on missing plugins.** `VIMINIT` overrides
+  `init.lua`, and a Nix-wrapped Neovim (kalam itself) exports it into its `:terminal`. Run
+  zero from there with `env -u VIMINIT NVIM_APPNAME=kalam nvim`. zero can't warn about
+  this itself: with `VIMINIT` set, its file is never read.
 - **Grep finds nothing.** Without rg it runs `grep -rnH --exclude-dir=.git` from the
   current folder; start `nvim` at the project root.
 - **Something looks wrong.** `<leader>n` shows the messages. `:lua print(vim.inspect(KalamZero.mini))`
