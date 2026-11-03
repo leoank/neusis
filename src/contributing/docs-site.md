@@ -20,6 +20,9 @@ The sidebar is defined in one file, `nav.md`.
 - **Publish another doc from `main`:** list `upstream/<path under docs/>` in
   `nav.md`. Links in it to other listed docs stay relative. Links to source
   files, or to docs that aren't listed, are rewritten to GitHub URLs.
+  Notebook links such as `[[PRJ-0001]]` (neusis's `notes/` is a yajna
+  notebook, which the site doesn't publish) become links to the page on
+  GitHub.
 - **Fix a reference page:** change the option `description`, the comment
   above the function, or the cobra `Short`/`Long` text in neusis itself.
 - **Restyle:** `theme/neusis.css`, and the `[output.html]` table in
