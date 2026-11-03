@@ -33,6 +33,7 @@
   - [Git workflow](upstream/kalam/git-workflow.md)
   - [kalam-full (LaTeX)](upstream/kalam/full.md)
   - [Writing LaTeX](upstream/kalam/latex-tutorial.md)
+  - [kalam-zero (no Nix)](upstream/kalam/zero.md)
 
 # Reference
 
