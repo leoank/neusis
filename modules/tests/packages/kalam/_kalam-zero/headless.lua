@@ -34,7 +34,7 @@ local function run()
     "<leader>ba", "<S-l>", "<S-h>", "<leader>qs", "<leader>ql", "<leader>qd", "<leader>qq", "<leader>qQ",
     "[d", "]d", "<leader>cd", "<leader>cf", "<leader>cR", "<leader>xx", "<leader>xX", "<leader>xL",
     "<leader>xQ", "<leader>gb", "<leader>ghd", "<leader>gdd", "<leader>tt", "<leader>w", "<leader>un",
-    "<leader>ur", "<leader>uw", "<leader>us", "<leader>ud", "<leader>S", "<leader>n",
+    "<leader>ur", "<leader>uw", "<leader>us", "<leader>ud", "<leader>S", "<leader>n", "-",
   }
   for _, lhs in ipairs(expected) do ok(vim.fn.maparg(lhs, "n") ~= "", "mapped: " .. lhs) end
 
@@ -56,6 +56,22 @@ local function run()
     vim.cmd("cclose")
   end)
   ok(Z.has_rg == (os.getenv("KALAM_ZERO_EXPECT_RG") == "1"), "rg detection")
+
+  -- oil, inlined into init.lua: lists the directory, hides its line IDs,
+  -- and creates a file from an edited buffer
+  ok(Z.has_oil, "oil loaded from package.preload: " .. tostring(Z.oil))
+  if Z.has_oil then
+    try("oil", function()
+      Z.oil.open(vim.fn.getcwd())
+      ok(vim.wait(3000, function() return vim.bo.filetype == "oil" and vim.fn.search("needle.txt", "n") > 0 end),
+        "oil lists needle.txt")
+      ok(vim.b.current_syntax == "oil", "oil syntax loaded (conceals IDs): " .. tostring(vim.b.current_syntax))
+      vim.api.nvim_buf_set_lines(0, -1, -1, false, { "created.txt" })
+      Z.oil.save({ confirm = false })
+      ok(vim.wait(3000, function() return vim.fn.filereadable("created.txt") == 1 end), "oil created created.txt")
+      vim.cmd("enew")
+    end)
+  end
 
   -- file source for :find
   try("find source", function()

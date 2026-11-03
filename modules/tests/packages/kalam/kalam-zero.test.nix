@@ -5,8 +5,8 @@
 # `kalam-zero-headless-no-rg` install `kalam-zero-init`'s init.lua the way
 # a user would (NVIM_APPNAME=kalam) and run `_kalam-zero/headless.lua`
 # against it in a scratch git repo: startup is silent, every shortcut is
-# mapped, and each fallback runs. The second variant has no ripgrep on
-# PATH, so grep and :find use their fallbacks.
+# mapped, oil (inlined) works, and each fallback runs. The second variant
+# has no ripgrep on PATH, so grep and :find use their fallbacks.
 { self, ... }:
 {
   perSystem =
@@ -78,18 +78,19 @@
           };
         };
 
-        test-no-plugins-and-no-providers = {
+        test-only-oil-and-no-providers = {
           expr = {
-            # nixvim's own `nvim-config` carries the config; nothing else
-            plugins = lib.filter (n: n != "nvim-config") (
-              map (p: p.name or p.plugin.name) zero.config.build.plugins
+            # nixvim's own `nvim-config` carries the config; besides it,
+            # only oil (inlined in kalam-zero-init, ADR-0017)
+            plugins = map (n: lib.hasInfix "oil.nvim" n) (
+              lib.filter (n: n != "nvim-config") (map (p: p.name or p.plugin.name) zero.config.build.plugins)
             );
             python = zero.config.withPython3;
             ruby = zero.config.withRuby;
             fallbacks = lib.hasInfix "_G.KalamZero" zero.config.extraConfigLua;
           };
           expected = {
-            plugins = [ ];
+            plugins = [ true ];
             python = false;
             ruby = false;
             fallbacks = true;

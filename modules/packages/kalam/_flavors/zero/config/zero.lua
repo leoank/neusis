@@ -414,11 +414,25 @@ map("n", "<leader>sm", "<cmd>marks<cr>", "marks")
 map("n", "<leader>sq", "<cmd>botright copen<cr>", "quickfix list")
 map("n", "<leader>sj", "<cmd>jumps<cr>", "jumps")
 
--- explorer (netrw)
-vim.g.netrw_banner = 0
-vim.g.netrw_liststyle = 3
-map("n", "<leader>e", "<cmd>Lexplore 30<cr>", "explorer")
-map("n", "<leader>o", "<cmd>Explore<cr>", "files as buffer")
+-- explorer: oil.nvim, inlined into the released init.lua (ADR-0017), with
+-- base's settings; netrw only if oil can't load.
+Z.has_oil, Z.oil = pcall(require, "oil")
+if Z.has_oil then
+  Z.oil.setup({
+    default_file_explorer = true,
+    view_options = { show_hidden = true },
+    keymaps = { ["<C-p>"] = "actions.preview" },
+    float = { padding = 2, max_width = 100, max_height = 30, border = "rounded" },
+  })
+  map("n", "<leader>o", function() Z.oil.open() end, "oil — files as buffer")
+  map("n", "<leader>e", function() Z.oil.toggle_float() end, "explorer (oil float)")
+  map("n", "-", function() Z.oil.open() end, "parent directory")
+else
+  vim.g.netrw_banner = 0
+  vim.g.netrw_liststyle = 3
+  map("n", "<leader>e", "<cmd>Lexplore 30<cr>", "explorer")
+  map("n", "<leader>o", "<cmd>Explore<cr>", "files as buffer")
+end
 
 -- buffers
 map("n", "<leader>bd", function() Z.buf_delete(false) end, "delete buffer")

@@ -3,13 +3,14 @@
 # Base's options and plain keymaps, verbatim, plus `zero.lua`: built-in
 # fallbacks for the shortcuts base gets from plugins, and the
 # conveniences that matter over ssh (OSC 52 copy, grep without rg, a
-# plugin-free statusline). No plugins, no external packages. Everything
-# that needs a newer Neovim than 0.8 is behind a version check in Lua.
+# plugin-free statusline). The one plugin is oil.nvim, which the released
+# file carries inlined (ADR-0017); no external packages. Everything that
+# needs a newer Neovim than 0.8 is behind a version check in Lua.
 #
 # `packages.kalam-zero` is this config wrapped by nixvim, for trying it
 # locally; `packages.kalam-zero-init` is the same config rendered as a
 # standalone init.lua (see ../../kalam.nix).
-{ lib, ... }:
+{ lib, pkgs, ... }:
 {
   enableMan = false;
   withPython3 = false;
@@ -33,6 +34,10 @@
     # leader sequences need more time.
     timeoutlen = lib.mkForce 800;
   };
+
+  # The wrapped package loads oil the normal way; kalam-zero-init inlines
+  # the same package instead (../../kalam.nix).
+  extraPlugins = [ pkgs.vimPlugins.oil-nvim ];
 
   extraConfigLua = builtins.readFile ./zero.lua;
 }
