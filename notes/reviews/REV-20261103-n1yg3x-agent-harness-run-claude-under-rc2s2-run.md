@@ -12,7 +12,7 @@ head: 706a999b8a6001af705f67ce849d75d85b95516b
 rounds: [66754dc99ea9b032cc8ae6e3b181aa850ac47072]
 paths: []
 about: [PRJ-0001]             # the pages it is about: experiments, runs, a project
-status: open              # open | changes_requested | approved | merged | closed
+status: approved          # open | changes_requested | approved | merged | closed
 created: 2026-11-03
 author: agent:claude
 ---
@@ -32,5 +32,6 @@ Checks:
   - both print `2.1.316 (Claude Code)`.
 
 Not tried: a full interactive session interrupted from the phone, and Linux in practice (no Linux host runs the daemon).
+- 2026-11-03 20:30 ank approved: I tried it on rogue, and it works. Approving this. If issues crop up later in linux, we'll work on it on a separate review.
 
 ## Threads
