@@ -10,11 +10,27 @@
     };
   };
   flake.neusis.users.ank.hmBundles.yajna =
-    { config, pkgs, ... }:
     {
-      home.packages = [
-        inputs.yajna.packages.${pkgs.stdenv.hostPlatform.system}.yajna
-      ];
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
+    let
+      yajna = inputs.yajna.packages.${pkgs.stdenv.hostPlatform.system}.yajna;
+      # yajna's dynamic zsh completion (subcommands, flags, the notebook's
+      # IDs). The hook asks the `yajna` on PATH as you type, so generating it
+      # once at build time stays right across updates and costs nothing at
+      # shell start (REV-20261103-k6bx64 T1).
+      zshCompletion = pkgs.runCommand "yajna-zsh-completion" { } ''
+        COMPLETE=zsh ${lib.getExe yajna} > $out
+      '';
+    in
+    {
+      home.packages = [ yajna ];
+      # initContent runs after compinit (oh-my-zsh.sh, or completionInit
+      # without it), which compdef needs
+      programs.zsh.initContent = lib.mkIf config.programs.zsh.enable "source ${zshCompletion}";
       # The per-user yajna config (ADR-0032 in yajna): the notebooks on this
       # home, by namespace, so `--in manthan` etc. work from anywhere; outside
       # any notebook, `yajna log` and `yajna todo` write to manthan. Pinned

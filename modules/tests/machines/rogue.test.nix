@@ -58,6 +58,8 @@
             kalam = t.hasPkg "nixvim" home.home.packages && t.hasPkg "nixvim" cfg.home-manager.users.ank.home.packages;
             neusisCli = t.hasPkg "neusis" home.home.packages;
             yajnaConfig = home.xdg.configFile."yajna/config.toml".text;
+            # yajna's zsh completion is sourced in ank's zsh
+            yajnaCompletion = lib.hasInfix "yajna-zsh-completion" home.programs.zsh.initContent;
           };
           expected = {
             hmUsers = [ "ank" ];
@@ -67,6 +69,7 @@
             standaloneHome = "/Users/ank";
             kalam = true;
             neusisCli = true;
+            yajnaCompletion = true;
             yajnaConfig = ''
               default = "manthan"
 
