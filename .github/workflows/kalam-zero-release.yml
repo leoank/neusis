@@ -76,8 +76,9 @@ jobs:
 
           SHA-256: \`$(cut -d' ' -f1 init.lua.sha256)\`. Guide: docs/kalam/zero.md.
           EOF
-          # Files first, tag last: whatever stops this step, the tag never
-          # names a commit whose init.lua isn't the one published.
+          # Files first, tag last: if this step stops in between, the tag
+          # lags one commit behind the files, but never names a commit
+          # whose init.lua hasn't been published.
           if gh release view kalam-zero > /dev/null 2>&1; then
             gh release upload kalam-zero init.lua init.lua.sha256 --clobber
             gh release edit kalam-zero --notes-file notes.md
