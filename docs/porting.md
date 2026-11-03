@@ -1,5 +1,12 @@
 # Porting Notes
 
+> **Frozen on 2026-11-03.** No new entries. Work since then is recorded in the
+> yajna notebook (`notes/README.md`, `yajna log`), design decisions in
+> [`decisions/`](./decisions/README.md) and the overall design in
+> [`architecture.md`](./architecture.md) — see
+> [ADR-0001](./decisions/ADR-0001-record-work-in-a-yajna-notebook.md). This file
+> stays as the history of everything before.
+
 A working journal of the migration from the legacy layout (`modules/`,
 `machines/`, `homes/`, `users/`, root-level `secrets/`, `lib/`) to the
 dendritic / flake-parts layout under `new_modules/`. Read

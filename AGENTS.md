@@ -3,9 +3,10 @@
 Neusis is a flake-based NixOS / nix-darwin / home-manager configuration
 library and fleet config for Ankur's machines. The flake is organised in the
 **dendritic** pattern: every `.nix` file under `modules/` is a flake-parts
-module, auto-imported by `import-tree`. Read `docs/overview.md` first and
-`docs/porting.md` (the running engineering log) when you need history or
-rationale for a decision.
+module, auto-imported by `import-tree`. Read `docs/overview.md` first, then
+the project page `notes/README.md` and `docs/architecture.md`. Rationale for
+decisions lives in `docs/decisions/` (ADRs) from 2026-11-03 and in
+`docs/porting.md` (frozen engineering log) before that.
 
 ## Layout
 
@@ -38,7 +39,10 @@ infra/<stack>/     OpenTofu working dirs; only the encrypted terraform.tfstate i
 templates/         `nix flake init -t .#<name>` project templates (exposed by modules/templates.nix)
 scripts/           standalone helper scripts (anywhere.py: nixos-anywhere + age secrets bootstrap)
 examples/          consumer-repo examples (external-flake, flake-parts-consumer)
-docs/              overview, per-module tutorials, porting log, specs; cloud/tutorial.md is the OCI runbook
+docs/              overview, architecture.md, decisions/ (ADRs), per-module tutorials, specs,
+                   porting.md (frozen log); cloud/tutorial.md is the OCI runbook
+notes/             the yajna notebook (yajna.toml at the root): project page README.md (PRJ-0001),
+                   log/, agents/, experiments and runs
 old_modules/       the complete pre-refactor (v1) tree, archived verbatim — see its README
 ```
 
@@ -62,7 +66,7 @@ Conventions that matter:
 - **stateVersion** (`home.stateVersion`, `system.stateVersion`) records the
   release a host/home was created under. Do not bump it when bumping nixpkgs.
 - `old_modules/` is not evaluated by the flake. Don't port from it silently —
-  log what moved in `docs/porting.md`.
+  log what moved with `yajna log`.
 
 ## Commands
 
@@ -105,6 +109,29 @@ values, never derivations; a known bug is pinned with `expectedError` and a
 comment, never skipped. Add or update the test in the same commit as the
 module change.
 
+## Lab notebook (yajna)
+
+neusis is a project-shaped yajna notebook (namespace `neusis`); load the
+`yajna` skill (`.claude/skills/yajna/SKILL.md`, or the yajna Claude plugin)
+before touching `notes/`. `yajna` is in the dev shell.
+
+- Create pages only through the CLI, never by hand. Agents write as
+  `agent:<harness>` (`--author agent:claude` or `YAJNA_AUTHOR`); in a
+  `yajna worktree` the `.yajna/author` file names you instead.
+- Every agent session opens a session page (`yajna new agent "<task>"`),
+  logs its start, surprises and finish with `yajna log`, and keeps the
+  session page's `created_entities` current.
+- A design decision is a new ADR in `docs/decisions/` plus a row in its
+  README; never rewrite an accepted one, supersede it. Keep
+  `docs/architecture.md` current when the design changes and tick the
+  project page's *Progress* items as milestones land.
+- Questions that need evidence (does comin survive X, does attic keep
+  signatures) become experiments with runs, not prose.
+- Parallel work starts with `yajna worktree PRJ-0001 <topic>`, which in
+  this bare-repo layout puts the worktree at `../<branch>` beside `main`;
+  run `yajna validate --against main` before calling a branch ready.
+- `yajna validate` is part of verification for any change under `notes/`.
+
 ## Contributing guidelines
 
 - **No surprises**: features are opt-in per user (`modules/users/<user>/`) or
@@ -118,7 +145,7 @@ module change.
 - **User management**: add users in `modules/users/` + `modules/registry/users/`,
   never inline in a machine file.
 - **Surgical commits**: conventional-commit prefixes (`feat(scope):`,
-  `fix(scope):`, `chore(...)`, `docs(porting):`); one concern per commit; the
+  `fix(scope):`, `chore(...)`, `docs(decisions):`); one concern per commit; the
   generated `flake.nix` + `flake.lock` travel in the commit that changed the
   inputs.
 

@@ -1,0 +1,9 @@
+# Repo-level configuration for the yajna CLI.
+shape = "project"       # lab | project (ADR-0018)
+namespace = "neusis"  # this repo's name in links from other repos
+author = "ank"      # the human author handle written into every page
+vault = "notes"       # the notebook directory, relative to this file
+timezone = "Europe/London"
+bibliography = "notes/references/library.bib"
+
+[repos]             # namespaces this repo links to, e.g. rc2s2 = "github:leoank/rc2s2"
