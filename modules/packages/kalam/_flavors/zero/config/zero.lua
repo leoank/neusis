@@ -390,25 +390,109 @@ function Z.diff_off()
   end
 end
 
+---------------------------------------------------------------- mini.nvim (0.10+)
+-- Inlined into the released init.lua with base's settings (ADR-0018):
+-- the editing set, mini.pick for the pickers and mini.clue for
+-- which-key's job. On 0.8/0.9 none of this runs and the built-in
+-- fallbacks above stay in charge.
+
+Z.mini = {}
+if has("0.10") then
+  local function setup(name, opts)
+    local good, mod = pcall(require, "mini." .. name)
+    if good then
+      local done = pcall(mod.setup, opts or {})
+      Z.mini[name] = done or nil
+    end
+  end
+  setup("pairs")
+  setup("move")
+  setup("bracketed")
+  setup("splitjoin")
+  -- base moves surround from s* to gs* (leap owns s/S there)
+  setup("surround", {
+    mappings = {
+      add = "gsa", delete = "gsd", find = "gsf", find_left = "gsF",
+      highlight = "gsh", replace = "gsr", update_n_lines = "gsn",
+    },
+  })
+  setup("pick")
+  if Z.mini.pick then vim.ui.select = MiniPick.ui_select end
+
+  local good, clue = pcall(require, "mini.clue")
+  if good then
+    local groups = {
+      b = "buffer", c = "code", f = "find/file", g = "git", gh = "hunks", gd = "diff",
+      q = "quit/session", s = "search", t = "terminal", u = "toggles", w = "window", x = "diagnostics",
+    }
+    local clues = {}
+    for k, desc in pairs(groups) do
+      table.insert(clues, { mode = "n", keys = "<Leader>" .. k, desc = "+" .. desc })
+    end
+    table.insert(clues, { mode = "n", keys = "gs", desc = "+surround" })
+    vim.list_extend(clues, {
+      clue.gen_clues.builtin_completion(), clue.gen_clues.g(), clue.gen_clues.marks(),
+      clue.gen_clues.registers(), clue.gen_clues.windows(), clue.gen_clues.z(),
+    })
+    local triggers = {}
+    for _, t in ipairs({
+      { "n", "<Leader>" }, { "x", "<Leader>" }, { "n", "g" }, { "x", "g" }, { "n", "'" },
+      { "n", "`" }, { "n", '"' }, { "x", '"' }, { "i", "<C-r>" }, { "c", "<C-r>" },
+      { "n", "<C-w>" }, { "n", "z" }, { "x", "z" }, { "n", "[" }, { "n", "]" },
+    }) do
+      table.insert(triggers, { mode = t[1], keys = t[2] })
+    end
+    Z.mini.clue = pcall(clue.setup, { triggers = triggers, clues = clues, window = { delay = 300 } }) or nil
+  end
+end
+
+-- Picker shortcuts: mini.pick when loaded, the built-in versions otherwise.
+local P = Z.mini.pick and MiniPick.builtin
+local can_grep = Z.has_rg or Z.has_git -- mini.pick greps with rg or git only
+local function recent_files()
+  local files = {}
+  for _, f in ipairs(vim.v.oldfiles) do
+    if vim.fn.filereadable(f) == 1 then table.insert(files, vim.fn.fnamemodify(f, ":~:.")) end
+  end
+  return files
+end
+Z.pickers = {
+  files = function() if P then P.files() else Z.find_files("files") end end,
+  git_files = function()
+    if P and Z.has_git then P.files({ tool = "git" }) else Z.find_files("git") end
+  end,
+  buffers = function() if P then P.buffers() else Z.buffers() end end,
+  recent = function()
+    if P then MiniPick.start({ source = { items = recent_files(), name = "Recent files" } }) else Z.recent() end
+  end,
+  help = function() if P then P.help() else feed(":help ") end end,
+  grep = function() if P and can_grep then P.grep_live() else Z.grep() end end,
+  grep_word = function()
+    local word = vim.fn.expand("<cword>")
+    if P and can_grep then P.grep({ pattern = word }) else Z.grep(word) end
+  end,
+}
+
 ---------------------------------------------------------------- keymaps
 -- Same keys as kalam; base's plain keymaps.nix (save, clipboard, esc) is
 -- already loaded above this file.
 
 -- find
-map("n", "<leader>ff", function() Z.find_files("files") end, "find file")
-map("n", "<leader>fg", function() Z.find_files("git") end, "find git file")
-map("n", "<leader>fb", Z.buffers, "buffers")
-map("n", "<leader>,", Z.buffers, "buffers")
-map("n", "<leader>fr", Z.recent, "recent files")
-map("n", "<leader>fh", function() feed(":help ") end, "help")
+map("n", "<leader>ff", Z.pickers.files, "find file")
+map("n", "<leader>fg", Z.pickers.git_files, "find git file")
+map("n", "<leader>fb", Z.pickers.buffers, "buffers")
+map("n", "<leader>,", Z.pickers.buffers, "buffers")
+map("n", "<leader>fr", Z.pickers.recent, "recent files")
+map("n", "<leader>fh", Z.pickers.help, "help")
 map("n", "<leader>fk", Z.keymaps, "keymaps")
 map("n", "<leader>fc", function() feed(":") end, "commands")
 map("n", "<leader>:", "q:", "command history")
 
 -- search
-map("n", "<leader>/", function() Z.grep() end, "grep")
-map("n", "<leader>sg", function() Z.grep() end, "grep workspace")
-map("n", "<leader>sw", function() Z.grep(vim.fn.expand("<cword>")) end, "word under cursor")
+map("n", "<leader>/", Z.pickers.grep, "grep")
+map("n", "<leader>sg", Z.pickers.grep, "grep workspace")
+map("n", "<leader>sw", Z.pickers.grep_word, "word under cursor")
+if P then map("n", "<leader>sr", function() P.resume() end, "resume last picker") end
 map("n", "<leader>sd", function() vim.diagnostic.setqflist() end, "diagnostics")
 map("n", "<leader>sm", "<cmd>marks<cr>", "marks")
 map("n", "<leader>sq", "<cmd>botright copen<cr>", "quickfix list")

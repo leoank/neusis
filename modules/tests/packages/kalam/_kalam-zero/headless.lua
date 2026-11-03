@@ -38,6 +38,48 @@ local function run()
   }
   for _, lhs in ipairs(expected) do ok(vim.fn.maparg(lhs, "n") ~= "", "mapped: " .. lhs) end
 
+  -- mini.nvim (ADR-0018): set up on 0.10+, absent on 0.8/0.9
+  local new = vim.fn.has("nvim-0.10") == 1
+  for _, m in ipairs({ "pairs", "move", "bracketed", "splitjoin", "surround", "pick", "clue" }) do
+    ok((Z.mini[m] == true) == new, "mini." .. m .. (new and " set up" or " not set up on this version"))
+  end
+  if new then
+    for _, k in ipairs({ { "n", "gsa" }, { "n", "gsd" }, { "n", "gsr" }, { "n", "<M-j>" }, { "n", "]b" }, { "n", "gS" }, { "i", "(" }, { "n", "<leader>sr" } }) do
+      ok(vim.fn.maparg(k[2], k[1]) ~= "", "mini mapping " .. k[1] .. " " .. k[2])
+    end
+    ok(vim.ui.select == MiniPick.ui_select, "vim.ui.select is mini.pick's")
+    local d = vim.fn.maparg("]d", "n", false, true)
+    ok(d.desc == "next diagnostic", "]d stays zero's diagnostic jump, not bracketed's: " .. tostring(d.desc))
+    -- the find/grep shortcuts call mini.pick: stub its builtins and press them
+    local called = {}
+    for _, b in ipairs({ "files", "buffers", "help", "grep_live", "grep" }) do
+      MiniPick.builtin[b] = function() called[b] = true end
+    end
+    local start = MiniPick.start
+    MiniPick.start = function(o) called.start = o.source.name end
+    for _, k in ipairs({ "<leader>ff", "<leader>fb", "<leader>fh", "<leader>/", "<leader>sw", "<leader>fr" }) do
+      vim.fn.maparg(k, "n", false, true).callback()
+    end
+    MiniPick.start = start
+    ok(called.files and called.buffers and called.help, "pickers use mini.pick")
+    ok(called.grep_live and called.grep, "grep uses mini.pick (rg or git present)")
+    ok(called.start == "Recent files", "recent files use mini.pick")
+    try("surround", function()
+      vim.cmd("enew")
+      vim.api.nvim_buf_set_lines(0, 0, -1, false, { "word" })
+      vim.api.nvim_win_set_cursor(0, { 1, 0 })
+      vim.cmd("normal gsaiw)")
+      ok(vim.api.nvim_get_current_line() == "(word)", "gsaiw) surrounds: " .. vim.api.nvim_get_current_line())
+    end)
+    try("splitjoin", function()
+      vim.api.nvim_buf_set_lines(0, 0, -1, false, { "f(a, b, c)" })
+      vim.api.nvim_win_set_cursor(0, { 1, 3 })
+      MiniSplitjoin.split()
+      ok(vim.api.nvim_buf_line_count(0) == 5, "splitjoin splits the arglist: " .. vim.api.nvim_buf_line_count(0) .. " lines")
+      vim.bo.modified = false
+    end)
+  end
+
   -- options that differ from base
   ok(vim.o.foldmethod == "indent", "foldmethod indent")
   ok(vim.o.exrc == false, "exrc off")

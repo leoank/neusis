@@ -38,13 +38,22 @@
       # becomes a `package.preload` entry ahead of the config, so
       # `require` finds it with nothing installed. Syntax files can't go
       # through `vim.cmd` (`:finish`), so they're written into a
-      # per-process temp dir on 'runtimepath'. Same package as base's.
-      oil = variants.kalam.config.plugins.oil.package;
-      inlinePlugin = name: plugin: src: ''
+      # per-process temp dir on 'runtimepath'. Same packages as base's.
+      # `files` (paths under lua/) picks modules out of a collection like
+      # mini.nvim (ADR-0018); null takes the plugin's whole `<name>/` tree.
+      inlinePlugin =
+        {
+          name,
+          plugin,
+          files ? null,
+        }:
+        ''
         {
           echo "-- ${name} (${plugin.version}), inlined by kalam-zero (ADR-0017). Its license:"
-          sed 's/^/-- /' ${src}/LICENSE
-          (cd ${plugin}/lua && find ${name} -name '*.lua' | sort) | while read -r f; do
+          sed 's/^/-- /' ${plugin.src}/LICENSE
+          (cd ${plugin}/lua && ${
+            if files == null then "find ${name} -name '*.lua' | sort" else "printf '%s\n' ${toString files}"
+          }) | while read -r f; do
             mod=''${f%.lua}; mod=''${mod%/init}; mod=''${mod//\//.}
             printf 'package.preload["%s"] = function(...)\n' "$mod"
             cat "${plugin}/lua/$f"
@@ -68,7 +77,23 @@
       packages = variants // {
         kalam-zero-init = pkgs.runCommand "kalam-zero-init" { } ''
           : > init.lua
-          ${inlinePlugin "oil" oil oil.src}
+          ${inlinePlugin {
+            name = "oil";
+            plugin = variants.kalam.config.plugins.oil.package;
+          }}
+          ${inlinePlugin {
+            name = "mini.nvim";
+            plugin = variants.kalam.config.plugins.mini.package;
+            files = map (m: "mini/${m}.lua") [
+              "surround"
+              "pairs"
+              "move"
+              "bracketed"
+              "splitjoin"
+              "pick"
+              "clue"
+            ];
+          }}
           cat ${zeroInit} >> init.lua
           if grep -n /nix/store init.lua; then
             echo "kalam-zero-init: init.lua references the Nix store" >&2

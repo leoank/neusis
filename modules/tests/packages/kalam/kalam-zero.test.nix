@@ -107,19 +107,24 @@
           };
         };
 
-        test-only-oil-and-no-providers = {
+        test-only-oil-and-mini-and-no-providers = {
           expr = {
             # nixvim's own `nvim-config` carries the config; besides it,
-            # only oil (inlined in kalam-zero-init, ADR-0017)
-            plugins = map (n: lib.hasInfix "oil.nvim" n) (
-              lib.filter (n: n != "nvim-config") (map (p: p.name or p.plugin.name) zero.config.build.plugins)
+            # oil and mini (inlined in kalam-zero-init, ADR-0017/0018)
+            plugins = lib.sort lib.lessThan (
+              map (n: if lib.hasInfix "oil.nvim" n then "oil" else if lib.hasInfix "mini.nvim" n then "mini" else n) (
+                lib.filter (n: n != "nvim-config") (map (p: p.name or p.plugin.name) zero.config.build.plugins)
+              )
             );
             python = zero.config.withPython3;
             ruby = zero.config.withRuby;
             fallbacks = lib.hasInfix "_G.KalamZero" zero.config.extraConfigLua;
           };
           expected = {
-            plugins = [ true ];
+            plugins = [
+              "mini"
+              "oil"
+            ];
             python = false;
             ruby = false;
             fallbacks = true;

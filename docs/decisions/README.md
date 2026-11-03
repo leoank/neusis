@@ -21,8 +21,9 @@ and never renumbered. ADR-0002 to ADR-0014 were backfilled on 2026-11-03 from
 | [ADR-0013](ADR-0013-github-app-bot.md) | CI acts as a GitHub App, the only actor on deploy/* | accepted |
 | [ADR-0014](ADR-0014-attic-cache-on-spirit.md) | Binary cache: attic on spirit over the tailnet, paths signed with a neusis key | accepted (not yet built) |
 | [ADR-0015](ADR-0015-site-publishes-design-records.md) | The docs site publishes the architecture and every ADR, and links notebook IDs to GitHub | accepted |
-| [ADR-0016](ADR-0016-kalam-zero.md) | kalam-zero: one nixvim-generated init.lua for Neovim 0.8+, an optional vendored plugin bundle, a rolling release | accepted |
+| [ADR-0016](ADR-0016-kalam-zero.md) | kalam-zero: one nixvim-generated init.lua for Neovim 0.8+, an optional vendored plugin bundle, a rolling release | accepted (bundle superseded by ADR-0018) |
 | [ADR-0017](ADR-0017-kalam-zero-inlines-pure-lua-plugins.md) | kalam-zero's single file carries pure-Lua plugins as package.preload entries, starting with oil.nvim | accepted |
+| [ADR-0018](ADR-0018-kalam-zero-no-bundle-inline-mini.md) | kalam-zero has no plugin bundle; it inlines mini's editing set, mini.pick and mini.clue, active on Neovim 0.10+ | accepted |
 
 Each record:
 
