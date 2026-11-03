@@ -1,8 +1,9 @@
 # neusis: architecture
 
 The design of the code for [[PRJ-0001]]. Decisions with their alternatives are recorded one
-per file in `decisions/`; this document says how the pieces fit and links them. Decisions
-made before 2026-11-03 are recorded, with their rationale, in `porting.md`.
+per file in `decisions/`; this document says how the pieces fit and links them. The
+decisions that predate the notebook were backfilled as ADR-0002 to ADR-0014; the
+day-by-day history before 2026-11-03 is `porting.md`.
 
 ## Goals and constraints
 - Configure every machine of the fleet (macOS laptops, lab Linux builders, OCI cloud
@@ -63,10 +64,17 @@ flowchart LR
 
 ## Stack
 - Nix flakes with flake-parts, the dendritic pattern via import-tree, and flake-file for
-  the generated `flake.nix`.
+  the generated `flake.nix` (ADR-0002), under a typed `flake.neusis.*` schema (ADR-0003).
+- Modules that run on both platforms dispatch on their options set (ADR-0004), and
+  everything is opt-in (ADR-0005).
 - nixpkgs, nix-darwin and home-manager on 26.05, plus `pkgs.unstable`.
-- agenix-rekey for secrets; terranix + OpenTofu for cloud infrastructure; comin for pull
-  deploys; nix-unit for tests; Go for the CLI.
+- agenix-rekey for secrets (ADR-0006); nix-unit and NixOS VM tests (ADR-0007);
+  Tailscale with profiles (ADR-0008).
+- terranix + OpenTofu for cloud infrastructure (ADR-0010), one base image plus bootstrap
+  (ADR-0011).
+- comin pull deploys from signed `deploy/*` branches (ADR-0012), driven by a GitHub App
+  (ADR-0013), with an attic cache planned (ADR-0014).
+- Go for the CLI.
 
 ## Phases
 The project page's *Progress* checklist tracks the milestones; the specs that plan the
