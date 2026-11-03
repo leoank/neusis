@@ -72,6 +72,7 @@
   - [ADR-0015: Design records on this site](upstream/decisions/ADR-0015-site-publishes-design-records.md)
   - [ADR-0016: kalam-zero](upstream/decisions/ADR-0016-kalam-zero.md)
   - [ADR-0017: Plugins inlined into kalam-zero](upstream/decisions/ADR-0017-kalam-zero-inlines-pure-lua-plugins.md)
+  - [ADR-0018: No bundle; mini inlined](upstream/decisions/ADR-0018-kalam-zero-no-bundle-inline-mini.md)
 - [Testing](upstream/testing.md)
 - [Porting log (frozen)](upstream/porting.md)
 - [Future considerations](upstream/future-considerations.md)
