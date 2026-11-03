@@ -11,3 +11,4 @@ imaging-server-resources
 .remember/
 __pycache__/
 *.pyc
+.nvim.session
