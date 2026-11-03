@@ -627,6 +627,13 @@ do
   table.sort(files)
   for _, f in ipairs(files) do
     local good, err = pcall(dofile, f)
-    if not good then notify("error in " .. vim.fn.fnamemodify(f, ":~") .. ": " .. tostring(err), vim.log.levels.ERROR) end
+    -- reported once startup is done: an error message while init.lua is
+    -- being sourced gets "Error detected while processing init.lua" on
+    -- 0.8-0.10, which blames zero for the user's file
+    if not good then
+      vim.schedule(function()
+        notify("error in " .. vim.fn.fnamemodify(f, ":~") .. ": " .. tostring(err), vim.log.levels.ERROR)
+      end)
+    end
   end
 end
