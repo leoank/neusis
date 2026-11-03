@@ -83,6 +83,10 @@ jobs:
             gh release upload kalam-zero init.lua init.lua.sha256 --clobber
             gh release edit kalam-zero --notes-file notes.md
           else
+            # --latest=false only takes effect once another release exists:
+            # while kalam-zero is the repo's only one, GitHub's releases/latest
+            # is this. The CLI's first v* release takes it over. Left as is
+            # (REV-20261103-hv2prm T8).
             gh release create kalam-zero --target "$GITHUB_SHA" --title "kalam-zero" \
               --notes-file notes.md --latest=false init.lua init.lua.sha256
           fi
