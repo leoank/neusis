@@ -51,13 +51,18 @@
       # Close buffer without closing the window (used by <leader>bd).
       bufremove = { };
 
-      # Per-cwd session manager. Captures windows, tabs, folds,
-      # terminal buffers (see sessionoptions in opts.nix). Auto-save
-      # on exit; manual load to keep the dashboard intact on fresh
-      # `nvim` invocations.
+      # Per-project session manager. Captures windows, tabs, folds,
+      # terminal buffers (see sessionoptions in opts.nix) in a local
+      # `.nvim.session` in the cwd, so worktrees that share a basename
+      # (every `…/main`) keep their own layout. Auto-save on exit once a
+      # session is active. A bare `nvim` in a folder with one loads it
+      # (the autocmd below); elsewhere the dashboard opens as usual.
       sessions = {
+        # Its own autoread falls back to the latest *global* session,
+        # i.e. some other project's layout; the autocmd reads local only.
         autoread = false;
         autowrite = true;
+        file = ".nvim.session";
       };
 
       # Icon provider used by mini.statusline and friends; snacks
@@ -65,6 +70,23 @@
       icons = { };
     };
   };
+
+  autoCmd = [
+    {
+      event = "VimEnter";
+      # nested, so the session's buffers fire their FileType autocmds.
+      nested = true;
+      once = true;
+      callback.__raw = ''
+        function()
+          if vim.fn.argc(-1) == 0 and vim.fn.filereadable('.nvim.session') == 1 then
+            require('mini.sessions').read('.nvim.session')
+          end
+        end
+      '';
+      desc = "load the cwd's .nvim.session";
+    }
+  ];
 
   keymaps = [
     # mini.bufremove — close buffer without nuking the window.
@@ -132,14 +154,13 @@
       options.desc = "prev buffer";
     }
 
-    # mini.sessions — save/load per-cwd sessions. Session name is
-    # the cwd basename, so `~/code/myproject` ↔ session "myproject".
+    # mini.sessions — save/load the cwd's local `.nvim.session`.
     {
       mode = "n";
       key = "<leader>qs";
       action.__raw = ''
         function()
-          require('mini.sessions').write(vim.fs.basename(vim.uv.cwd()))
+          require('mini.sessions').write('.nvim.session')
         end
       '';
       options.desc = "save session";
@@ -149,7 +170,7 @@
       key = "<leader>ql";
       action.__raw = ''
         function()
-          require('mini.sessions').read(vim.fs.basename(vim.uv.cwd()))
+          require('mini.sessions').read('.nvim.session')
         end
       '';
       options.desc = "load session";

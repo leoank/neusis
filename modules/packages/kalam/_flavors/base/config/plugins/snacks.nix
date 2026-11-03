@@ -75,11 +75,11 @@
             { icon = " "; key = "n"; desc = "new file"; action = ":ene | startinsert"; }
             { icon = " "; key = "g"; desc = "grep"; action = ":lua Snacks.dashboard.pick('live_grep')"; }
             { icon = " "; key = "r"; desc = "recent files"; action = ":lua Snacks.dashboard.pick('oldfiles')"; }
-            # mini.sessions: lowercase `s` loads the session whose name
-            # matches the cwd basename (paired with `<leader>qs` save).
-            # Uppercase `S` opens the picker so you can grab any saved
-            # session — useful when launching nvim from $HOME.
-            { icon = " "; key = "s"; desc = "load session"; action = ":lua require('mini.sessions').read(vim.fs.basename(vim.uv.cwd()))"; }
+            # mini.sessions: lowercase `s` loads the cwd's local
+            # `.nvim.session` (paired with `<leader>qs` save).
+            # Uppercase `S` opens the picker for the local session and
+            # any older global ones.
+            { icon = " "; key = "s"; desc = "load session"; action = ":lua require('mini.sessions').read('.nvim.session')"; }
             { icon = " "; key = "S"; desc = "select session"; action = ":lua require('mini.sessions').select()"; }
             { icon = " "; key = "c"; desc = "config"; action = ":lua Snacks.dashboard.pick('files', { cwd = vim.fn.stdpath('config') })"; }
             { icon = " "; key = "q"; desc = "quit"; action = ":qa"; }
