@@ -12,7 +12,7 @@ head: 32eb056d159c1330c9de14c716fcb8ac753eb1af
 rounds: [d55dc55f618da0a6eab9786e2707616ad96db942, a03a8f1c01d8ff8fe2460a74309f10ce2e242a99]
 paths: []
 about: [PRJ-0001, EXP-20261103-g9kpxs, RUN-20261103-g9nmnp, RUN-20261103-h3sjsx]             # the pages it is about: experiments, runs, a project
-status: changes_requested # open | changes_requested | approved | merged | closed
+status: approved          # open | changes_requested | approved | merged | closed
 created: 2026-11-03
 author: agent:claude
 ---
@@ -32,6 +32,7 @@ Evidence:
 Threads opened by the agent from its own read-through: one security issue (session autoload), one release-ordering issue, one reproducibility issue, and smaller questions. Approving and resolving are ank's.
 - 2026-11-03 16:20 ank requested changes: Also add instructions for a windows machine on the release page
 - 2026-11-03 17:16 ank requested changes: Also, running nix run .#kalam-zero is builds the package, but it is broken because of snacks.statuscolumn doesn't exisit. and the error just keep popping up continuously making the whole thing unsuable.
+- 2026-11-03 18:23 ank approved: All the tasks for the MVP is done and manually verified as well.
 
 ## Threads
 
@@ -119,11 +120,12 @@ function Z.osc52_copy(lines)
 - 2026-11-03 17:41 agent:claude addressed in 2c638c7: Added to §5: over OSC 52 <leader>p pastes Neovim's last yank, and pasting from the local clipboard is the terminal's paste in insert mode. Also a line for T4's new warning on copies too large for OSC 52.
 - 2026-11-03 18:07 ank resolved
 
-### T6 (addressed) general
+### T6 (resolved) general
 - 2026-11-03 16:15 agent:claude: Coverage gaps, for the record (RUN-20261103-h3sjsx Notes): no LSP server in the sandbox, so the LspAttach shortcuts are untested; pickers are interactive, so the test only checks the shortcuts reach mini.pick; OSC 52 is checked by the escape sequence, not a terminal; no macOS or arm64 release builds below 0.10.
 - 2026-11-03 17:43 agent:claude: No change asked for. T4 and T12 added checks (encoder, size limit, user Lua), and Windows joins the list of what no test covers; it stays a record for ank to resolve.
 - 2026-11-03 18:09 ank: add a test for the lsp using the "lua" folder to add custom lsp config.
 - 2026-11-03 18:19 agent:claude addressed in 32eb056: The harness installs lua/50-lsp.lua, which starts lua-language-server for Lua buffers with vim.lsp.start (0.8+), and adds the server to the check's inputs. The test opens a Lua file, then checks that lua_ls attaches, zero's LSP shortcuts are buffer-local, an undefined global is reported (and counted in the statusline), gd jumps to the definition, and rename renames both uses. It passes on 0.8.3, 0.9.5, 0.10.4, 0.11.7 and 0.12.4 (129 checks on 0.8/0.9, 146 on 0.10+). docs/kalam/zero.md §6 shows the same file and the 0.11+ vim.lsp.config/enable form; §4 points there.
+- 2026-11-03 18:23 ank resolved
 
 ### T7 (resolved) modules/packages/kalam/kalam.nix:54-66 @ a03a8f1
 ```nix

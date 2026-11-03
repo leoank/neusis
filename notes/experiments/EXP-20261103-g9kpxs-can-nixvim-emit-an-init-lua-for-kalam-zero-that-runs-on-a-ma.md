@@ -12,7 +12,8 @@ author: agent:claude
 protocols: []
 materials: []
 tags: [kalam, kalam-zero]
-review: pending
+review: approved
+approval: {by: ank, on: 2026-11-03, in: REV-20261103-hv2prm}
 ---
 
 ## Question
