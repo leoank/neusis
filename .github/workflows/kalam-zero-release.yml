@@ -74,6 +74,14 @@ jobs:
           NVIM_APPNAME=kalam nvim        # Neovim 0.8: nvim -u ~/.config/kalam/init.lua
           \`\`\`
 
+          Windows (PowerShell):
+
+          \`\`\`powershell
+          New-Item -ItemType Directory -Force "\$env:LOCALAPPDATA\kalam" | Out-Null
+          Invoke-WebRequest https://github.com/${{ github.repository }}/releases/download/kalam-zero/init.lua -OutFile "\$env:LOCALAPPDATA\kalam\init.lua"
+          \$env:NVIM_APPNAME = "kalam"; nvim
+          \`\`\`
+
           SHA-256: \`$(cut -d' ' -f1 init.lua.sha256)\`. Guide: docs/kalam/zero.md.
           EOF
           # Files first, tag last: if this step stops in between, the tag
