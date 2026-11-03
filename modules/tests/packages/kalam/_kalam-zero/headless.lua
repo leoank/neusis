@@ -108,6 +108,16 @@ local function run()
     vim.cmd("cclose")
   end)
   ok(Z.has_rg == (os.getenv("KALAM_ZERO_EXPECT_RG") == "1"), "rg detection")
+  -- no rg and no grep (a stock Windows): :vimgrep
+  try("vimgrep fallback", function()
+    local rg, grep = Z.has_rg, Z.has_grep
+    Z.has_rg, Z.has_grep = false, false
+    Z.grep("needle")
+    Z.has_rg, Z.has_grep = rg, grep
+    local qf = vim.fn.getqflist()
+    ok(#qf >= 1 and vim.fn.bufname(qf[1].bufnr):match("needle%.txt"), "vimgrep found needle (" .. #qf .. " hits)")
+    vim.cmd("cclose")
+  end)
 
   -- oil, inlined into init.lua: lists the directory, hides its line IDs,
   -- and creates a file from an edited buffer

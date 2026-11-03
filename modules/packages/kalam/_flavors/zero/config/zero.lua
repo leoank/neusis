@@ -17,7 +17,7 @@ local function feed(keys)
 end
 local function notify(msg, level) vim.notify("kalam-zero: " .. msg, level or vim.log.levels.INFO) end
 
-Z.has_rg, Z.has_git = exe("rg"), exe("git")
+Z.has_rg, Z.has_git, Z.has_grep = exe("rg"), exe("git"), exe("grep")
 
 ---------------------------------------------------------------- environment
 
@@ -36,7 +36,8 @@ do
   if vim.fn.filewritable(dir) == 2 then vim.o.undodir = dir else vim.o.undofile = false end
 end
 
--- grep: base sets `rg --vimgrep`; without rg, recursive grep from cwd.
+-- grep: base sets `rg --vimgrep`; without rg, recursive grep from cwd;
+-- without either (a stock Windows), Z.grep uses :vimgrep.
 if not Z.has_rg then
   vim.o.grepprg = "grep -rnH --exclude-dir=.git $* ."
   vim.o.grepformat = "%f:%l:%m"
@@ -297,7 +298,12 @@ end
 function Z.grep(query)
   local function run(q)
     if not q or q == "" then return end
-    vim.cmd("silent grep! " .. vim.fn.shellescape(q))
+    if Z.has_rg or Z.has_grep then
+      vim.cmd("silent grep! " .. vim.fn.shellescape(q))
+    else
+      vim.fn.setqflist({}, "r")
+      vim.cmd("silent! vimgrep /\\V" .. vim.fn.escape(q, "/\\") .. "/gj **")
+    end
     vim.cmd("botright copen")
   end
   if query then return run(query) end

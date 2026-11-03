@@ -27,6 +27,31 @@ an alias to the shell's rc file:
 alias vi='NVIM_APPNAME=kalam nvim'
 ```
 
+**Windows** (PowerShell; untested so far, see below):
+
+```powershell
+$dir = "$env:LOCALAPPDATA\kalam"
+New-Item -ItemType Directory -Force $dir | Out-Null
+Invoke-WebRequest https://github.com/leoank/neusis/releases/download/kalam-zero/init.lua -OutFile "$dir\init.lua"
+$env:NVIM_APPNAME = "kalam"; nvim
+```
+
+With `NVIM_APPNAME=kalam`, Neovim on Windows reads `%LOCALAPPDATA%\kalam\init.lua`, and
+your own Lua goes in `%LOCALAPPDATA%\kalam\lua\` (§6). To keep the machine's `nvim` as
+it is, add a function to your PowerShell `$PROFILE` instead of setting the variable for
+good:
+
+```powershell
+function kvim { $env:NVIM_APPNAME = "kalam"; try { nvim @args } finally { Remove-Item Env:NVIM_APPNAME } }
+```
+
+From `cmd.exe`: `curl.exe -fsSL <url> --create-dirs -o %LOCALAPPDATA%\kalam\init.lua`, then
+`set NVIM_APPNAME=kalam` and `nvim`. On a stock Windows without `rg` or `grep`, grep
+uses Neovim's own `:vimgrep`. The OSC 52 copy needs a terminal that supports it
+(Windows Terminal does), and the session ownership check is skipped, since Windows has
+no uids. The headless tests run on Linux and macOS only, so Windows hasn't been tried
+yet: tell me what breaks.
+
 **Neovim 0.8** predates `NVIM_APPNAME`. Pass the file instead:
 `nvim -u ~/.config/kalam/init.lua`.
 
