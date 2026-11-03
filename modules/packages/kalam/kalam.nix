@@ -16,11 +16,33 @@
 
   perSystem =
     { pkgs, ... }:
-    {
-      packages = self.neusis.lib.kalam.mkKalamVariants {
+    let
+      variants = self.neusis.lib.kalam.mkKalamVariants {
         pkgs = pkgs.extend self.outputs.overlays.git-worktree;
         inherit (self) inputs outputs;
         root = ./_flavors;
+      };
+
+      # kalam-zero as a standalone init.lua for machines without Nix
+      # (ADR-0016): the same config with nixvim's wrapper assumptions
+      # removed. RUN-20261103-g9nmnp found these options sufficient; the
+      # build fails if the file still names the Nix store.
+      zeroInit =
+        (variants.kalam-zero.extend {
+          wrapRc = false;
+          impureRtp = true;
+          luaLoader.enable = null;
+        }).config.build.initFile;
+    in
+    {
+      packages = variants // {
+        kalam-zero-init = pkgs.runCommand "kalam-zero-init" { } ''
+          if grep -n /nix/store ${zeroInit}; then
+            echo "kalam-zero-init: init.lua references the Nix store" >&2
+            exit 1
+          fi
+          install -Dm644 ${zeroInit} $out/init.lua
+        '';
       };
     };
 }

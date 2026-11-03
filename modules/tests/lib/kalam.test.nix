@@ -122,6 +122,7 @@
           expected = [
             "kalam"
             "kalam-full"
+            "kalam-zero"
           ];
         };
       };
