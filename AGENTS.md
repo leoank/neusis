@@ -127,9 +127,10 @@ before touching `notes/`. `yajna` is in the dev shell.
   project page's *Progress* items as milestones land.
 - Questions that need evidence (does comin survive X, does attic keep
   signatures) become experiments with runs, not prose.
-- Parallel work starts with `yajna worktree PRJ-0001 <topic>`, which in
-  this bare-repo layout puts the worktree at `../<branch>` beside `main`;
-  run `yajna validate --against main` before calling a branch ready.
+- Parallel work starts with `yajna worktree PRJ-0001 <topic>`: branch
+  `neusis/<topic>`, checked out at `../<topic>` beside `main` (yajna
+  0.24.1+ names a project repo's worktree by its topic alone); run
+  `yajna validate --against main` before calling a branch ready.
 - `yajna validate` is part of verification for any change under `notes/`.
 
 ## Contributing guidelines
