@@ -30,6 +30,7 @@ Evidence:
 
 Threads opened by the agent from its own read-through: one security issue (session autoload), one release-ordering issue, one reproducibility issue, and smaller questions. Approving and resolving are ank's.
 - 2026-11-03 16:20 ank requested changes: Also add instructions for a windows machine on the release page
+- 2026-11-03 17:16 ank requested changes: Also, running nix run .#kalam-zero is builds the package, but it is broken because of snacks.statuscolumn doesn't exisit. and the error just keep popping up continuously making the whole thing unsuable.
 
 ## Threads
 
@@ -44,6 +45,7 @@ vim.api.nvim_create_autocmd("VimEnter", {
 })
 ```
 - 2026-11-03 16:15 agent:claude: Security: a bare nvim auto-sources ./.nvim.session, and a session file is Vimscript. zero turned exrc off because a machine you ssh into may hold someone else's files, but this autoload has the same exposure: cd into another user's folder that contains a .nvim.session, start nvim, and it runs. Proposal: autoload only when the file is owned by the current user (vim.loop.fs_stat(...).uid == vim.loop.getuid()) and was written by zero (mksession adds a recognisable header); otherwise leave <leader>ql as the explicit opt-in.
+- 2026-11-03 17:23 ank: make the session load manual by default. and add your suggested fixes for autoload session
 
 ### T2 (open) .github/workflows/kalam-zero-release.yml:76-84 @ d55dc55
 ```yml
@@ -58,6 +60,7 @@ vim.api.nvim_create_autocmd("VimEnter", {
           gh release upload kalam-zero init.lua init.lua.sha256 --clobber
 ```
 - 2026-11-03 16:15 agent:claude: Correctness: cancel-in-progress plus a tag move before the upload. If a newer push cancels this run after 'git push -f ... refs/tags/kalam-zero' but before 'gh release upload', the tag points at the new commit while the release still serves the old init.lua and sha256 (the next run fixes it, but the notes and checksum disagree in between). Proposal: upload first and move the tag last, or set cancel-in-progress: false for this group so a run that has started publishing finishes.
+- 2026-11-03 17:09 ank: follow your proposal
 
 ### T3 (open) modules/packages/kalam/_flavors/zero/config/default.nix:32-36 @ d55dc55
 ```nix
@@ -68,6 +71,7 @@ vim.api.nvim_create_autocmd("VimEnter", {
     timeoutlen = lib.mkForce 800;
 ```
 - 2026-11-03 16:15 agent:claude: Question: timeoutlen is 800 everywhere because ADR-0016 assumed no which-key popup. Since ADR-0018, 0.10+ has mini.clue, which shows the next keys after 300 ms on its own, so 800 only slows down non-trigger multi-key maps there. Set vim.o.timeoutlen = 300 in zero.lua when Z.mini.clue loaded, and keep 800 for 0.8/0.9?
+- 2026-11-03 17:20 ank: change it to 300ms when mini.clue is loaded. good catch!
 
 ### T4 (open) modules/packages/kalam/_flavors/zero/config/zero.lua:82-97 @ d55dc55
 ```lua
@@ -89,6 +93,7 @@ function Z.osc52_copy(lines)
   vim.fn.chansend(vim.v.stderr, seq)
 ```
 - 2026-11-03 16:15 agent:claude: Performance: the hand-written base64 builds a bit string per byte, so OSC 52 on a large yank (a few MB) will stall noticeably. vim.base64.encode exists from 0.10; use it when present and keep this for 0.8/0.9. Terminals also cap OSC 52 payloads (often ~100 KB), so a size limit with a message would be friendlier than a silent truncation.
+- 2026-11-03 17:21 ank: do this.
 
 ### T5 (open) modules/packages/kalam/_flavors/zero/config/zero.lua:106-111 @ d55dc55
 ```lua
@@ -100,6 +105,7 @@ function Z.osc52_copy(lines)
   }
 ```
 - 2026-11-03 16:15 agent:claude: Behaviour to confirm: with the OSC 52 provider, <leader>p pastes the unnamed register, not the local clipboard, because few terminals answer OSC 52 paste requests. So copying out works, pasting in needs the terminal's own paste (Cmd-V). docs/kalam/zero.md doesn't say so; worth a line in §5 if this is the intended behaviour.
+- 2026-11-03 17:22 ank: Add that line.
 
 ### T6 (open) general
 - 2026-11-03 16:15 agent:claude: Coverage gaps, for the record (RUN-20261103-h3sjsx Notes): no LSP server in the sandbox, so the LspAttach shortcuts are untested; pickers are interactive, so the test only checks the shortcuts reach mini.pick; OSC 52 is checked by the escape sequence, not a terminal; no macOS or arm64 release builds below 0.10.
@@ -121,6 +127,7 @@ function Z.osc52_copy(lines)
             for s in ${plugin}/syntax/*.vim; do
 ```
 - 2026-11-03 16:16 agent:claude: Reproducibility: the published init.lua (built on x86_64-linux, sha256 a3ba2aa0…) and a local aarch64-darwin build (88559b4f…) differ only in the order of oil's two syntax files: the shell glob and 'find | sort' collate oil.vim vs oil_preview.vim by locale. Harmless at runtime, but the same commit should give the same bytes on every system, so the published checksum can be checked against a local build. Proposal: export LC_ALL=C at the top of the kalam-zero-init runCommand, and a check that compares the two systems' outputs.
+- 2026-11-03 17:24 ank: go with your proposal
 
 ### T8 (open) .github/workflows/kalam-zero-release.yml:79-83 @ d55dc55
 ```yml
@@ -131,9 +138,35 @@ function Z.osc52_copy(lines)
           fi
 ```
 - 2026-11-03 16:16 agent:claude: Minor: --latest=false doesn't help while kalam-zero is the repo's only release; GitHub's releases/latest resolves to it (checked: tag_name kalam-zero). The first CLI v* release will take latest over. If that matters before then, mark it --prerelease instead.
+- 2026-11-03 17:08 ank: leave it for now. only make a note.
 
 ### T9 (open) docs/kalam/zero.md#5. Troubleshooting @ d55dc55
 ```md
 ## 5. Troubleshooting
 ```
 - 2026-11-03 16:16 agent:claude: Docs gap, found while verifying the release: VIMINIT overrides init.lua. A nixvim-wrapped Neovim (kalam itself) exports VIMINIT into its :terminal, so running 'NVIM_APPNAME=kalam nvim' inside kalam's terminal loads kalam's config, not zero's, and fails on missing plugins. Worth a troubleshooting line ('env -u VIMINIT NVIM_APPNAME=kalam nvim'), and maybe zero should warn when VIMINIT is set.
+- 2026-11-03 17:19 ank: add this
+
+### T10 (open) .github/workflows/kalam-zero-release.yml:69-73 @ d55dc55
+```yml
+          \`\`\`sh
+          curl -fsSL https://github.com/${{ github.repository }}/releases/download/kalam-zero/init.lua \\
+            --create-dirs -o ~/.config/kalam/init.lua
+          NVIM_APPNAME=kalam nvim        # Neovim 0.8: nvim -u ~/.config/kalam/init.lua
+          \`\`\`
+```
+- 2026-11-03 17:06 ank: Add instruction for a windows machine as well
+
+### T11 (open) docs/kalam/zero.md:17-19 @ d55dc55
+```md
+curl -fsSL https://github.com/leoank/neusis/releases/download/kalam-zero/init.lua \
+  --create-dirs -o ~/.config/kalam/init.lua
+NVIM_APPNAME=kalam nvim
+```
+- 2026-11-03 17:11 ank: Add a windows section as well
+
+### T12 (open) docs/kalam/zero.md:118 @ d55dc55
+```md
+## 4. Different from kalam
+```
+- 2026-11-03 17:18 ank: Add an option to load custom lua config that sits next to init.lua file inside a "lua" dir. This will enable users to add custom configs in a pinch.
