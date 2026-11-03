@@ -1,0 +1,2 @@
+default: store_paths=2 vim_loader=0 rtp_edits=2
+portable: store_paths=0 vim_loader=0 rtp_edits=0

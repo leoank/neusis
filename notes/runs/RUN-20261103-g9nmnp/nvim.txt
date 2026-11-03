@@ -1,0 +1,3 @@
+NVIM v0.12.4
+leader-space -> <Cmd>write<CR>
+errors: 

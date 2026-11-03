@@ -37,6 +37,11 @@ open items with the rest.
 - [ ] darwin001: the age secret that fails T1 (`path … darwin001 is not valid`), or its removal from the repo
 - [ ] Auto-updates M7: attic binary cache, CI pushes and hosts substitute
 - [ ] Auto-updates M8: ntfy alerts
+- [ ] kalam-zero 1: `_flavors/zero`, `packages.kalam-zero` and the portable `kalam-zero-init`, checked for store paths and loaded headless (ADR-0016)
+- [ ] kalam-zero 2: built-in fallbacks for the plugin shortcuts (pickers, grep, netrw, sessions, diagnostics, LSP, OSC 52, statusline), each exercised headless
+- [ ] kalam-zero 3: CI runs the headless test on Neovim 0.8, 0.9, 0.10 and 0.11 release builds ([[EXP-20261103-g9kpxs]])
+- [ ] kalam-zero 4: `kalam-zero-bundle`, the tarball with vendored pure-Lua plugins that init.lua picks up
+- [ ] kalam-zero 5: the rolling `kalam-zero` GitHub release and `docs/kalam/zero.md`
 
 ## Open questions
 - Does comin's darwin module survive nix-darwin removing the `activate-user` stub? (auto-update spec R1)
@@ -65,3 +70,4 @@ What was tried and dropped, and why, so nobody tries it again.
 ## Experiments
 One line per experiment after its link, what it asks and what came of it; `yajna validate`
 rejects a bare link here. Newest last.
+- [[EXP-20261103-g9kpxs]] can nixvim emit kalam-zero's init.lua? On 0.12.4 yes, with five options (wrapRc, impureRtp, luaLoader, providers); 0.8–0.11 untested
