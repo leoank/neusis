@@ -138,6 +138,12 @@ saved, whose first line is `" kalam-zero session`.
 - **`<leader>y` doesn't reach my clipboard.** OSC 52 needs a terminal that accepts it
   (most do). Inside tmux, set `set -g set-clipboard on`. zero only uses OSC 52 when
   the machine has no clipboard tool (xclip, wl-copy, pbcopy…).
+- **`<leader>p` doesn't paste what I copied on my own machine.** OSC 52 carries copies
+  out to your terminal, but few terminals answer requests to paste back in. Over OSC 52,
+  `<leader>p` pastes Neovim's own last yank; to paste from your local clipboard, use the
+  terminal's paste (Cmd-V, Ctrl-Shift-V) in insert mode.
+- **A copy says it is too large for OSC 52.** Terminals drop payloads past about 100 KB,
+  so zero keeps copies over ~73 KB in Neovim's registers instead of sending a part.
 - **Grep finds nothing.** Without rg it runs `grep -rnH --exclude-dir=.git` from the
   current folder; start `nvim` at the project root.
 - **Something looks wrong.** `<leader>n` shows the messages. `:lua print(vim.inspect(KalamZero.mini))`
