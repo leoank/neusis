@@ -37,3 +37,19 @@ only; the oama config; a `test-mail` invariant in rogue's machine test; ADR-0019
 both test sets. aerc, notmuch, oama and the XOAUTH2-wrapped mbsync build. The rogue home
 can't build until ank fills the secrets and runs `agenix rekey`; the error is "Rekeyed
 secret for age.secrets.mailGmail not found", as expected.
+
+After the first switch, leoank and mrclmb synced; gmail and cam didn't, and aerc
+showed no message body. gmail: the XOAUTH2 SASL plugin is visible to every account,
+and mbsync preferred it where Gmail offers it, so it sent the app password as a bearer
+token. The failed command (base64, with the password) went to the world-readable
+`/tmp/mail-sync.err.log` on every run. cam: oama has no token in the keychain yet. aerc:
+Home Manager's `aerc.conf` replaces aerc's own, which is where the `[filters]` live.
+Fixed in `mail.nix`:
+- the password accounts sign in with PLAIN, and logs go to `~/Library/Logs`;
+- aerc gets its filters back, plus a 16-colour styleset and layout settings;
+- MRC LMB's sieve folders aren't synced, and Gmail's trash maps to `[Gmail]/Bin`;
+- `create = "both"`, because aerc's archive would otherwise strand mail in a local-only
+  folder.
+
+`docs/mail/aerc.md` is the guide. `mbsync -l gmail` with the built config lists the
+folders.
