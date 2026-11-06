@@ -35,7 +35,7 @@ open items with the rest.
 - [ ] Worktree reorganisation: rework `main`, then start parallel work in fresh worktrees from it
 - [ ] Unattended deploys on rogue succeed end to end (activation failures of 10-30 and 11-01)
 - [ ] darwin001: the age secret that fails T1 (`path … darwin001 is not valid`), or its removal from the repo
-- [ ] Auto-updates on ghost001: comin on `deploy/stable` and `testing-ghost001`, enrolled through the testing branch
+- [x] Auto-updates on ghost001: comin on `deploy/stable` and `testing-ghost001`, enrolled through the testing branch
 - [ ] Auto-updates M7: attic binary cache, CI pushes and hosts substitute
 - [ ] Auto-updates M8: ntfy alerts
 - [x] kalam-zero 1: `_flavors/zero`, `packages.kalam-zero` and the portable `kalam-zero-init`, checked for store paths and loaded headless (ADR-0016) (since c7b40fa)
@@ -53,6 +53,7 @@ open items with the rest.
 - Do comin retention and `nix.gc.automatic` agree? (R6)
 - Does attic keep our own signatures on pushed paths, so hosts can trust only our key? (R8)
 - Should darwin001 be fixed or removed?
+- Why does oama keep asking ank for a keychain password on rogue? Not reproduced from an agent shell (read and refresh with no prompt, item ACL trusts /usr/bin/security, no keychain timeout); needs the dialog's wording and when it appears; candidate fixes in agent:claude's 2026-11-06 22:14 log line
 
 ## Design
 The architecture is `docs/architecture.md` and its decision records are
