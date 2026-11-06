@@ -171,6 +171,41 @@
           };
         };
 
+        # Enrolled in auto-updates in the stable group: comin polls
+        # deploy/stable (a day behind rogue's canary) and testing-ghost001,
+        # trusts only the registry signers, emails failures through the
+        # notify secret, and a manual switch first runs the switch check.
+        test-auto-update = {
+          expr = {
+            inherit (cfg.services.comin) enable;
+            remotes = map (r: {
+              inherit (r) url;
+              branch = r.branches.main.name;
+              testing = r.branches.testing.name;
+              period = r.poller.period;
+            }) cfg.services.comin.remotes;
+            signers = cfg.services.comin.sshAllowedSignersPath != null;
+            notify = cfg.neusis.services.auto-update.notify.environmentFile;
+            emailTo = cfg.neusis.services.auto-update.notify.emailTo;
+            switchCheck = cfg.system.preSwitchChecks ? neusis-auto-update;
+          };
+          expected = {
+            enable = true;
+            remotes = [
+              {
+                url = "https://github.com/leoank/neusis.git";
+                branch = "deploy/stable";
+                testing = "testing-ghost001";
+                period = 60;
+              }
+            ];
+            signers = true;
+            notify = "/run/agenix/autoUpdateNotify";
+            emailTo = [ "leoank98@gmail.com" ];
+            switchCheck = true;
+          };
+        };
+
         test-no-failed-assertions = {
           expr = {
             system = t.failedAssertions cfg;

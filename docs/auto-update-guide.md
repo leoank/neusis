@@ -17,7 +17,7 @@ daily input bump (03:17 UTC)┴─► pipeline.yml: gates (tests, VM tests, ever
                                 deploy/canary ──► rogue's comin (polls every 60 s)
                                       │ after 24 h on canary
                                       ▼
-                                deploy/stable ──► ghost001's comin (once enrolled)
+                                deploy/stable ──► ghost001's comin (polls every 60 s)
 ```
 
 - Work on `main` and sign your commits. An unsigned head (a web-editor
@@ -36,7 +36,7 @@ daily input bump (03:17 UTC)┴─► pipeline.yml: gates (tests, VM tests, ever
 |---|---|
 | see that it builds | `darwin-rebuild build --flake .#rogue` (or `nix build .#checks.aarch64-darwin.darwin-rogue`) |
 | try uncommitted changes live | `darwin-rebuild switch --flake .#rogue` |
-| try a commit live, without CI | `git push origin HEAD:testing-rogue` |
+| try a commit live, without CI | `git push origin HEAD:testing-rogue` (ghost001: `HEAD:testing-ghost001`) |
 | ship it | `git push origin main` |
 
 **Build only.** Nothing activates, so neither comin nor the switch check
@@ -60,7 +60,10 @@ switch or a reboot undoes.
 **A commit, on the testing branch.** comin also follows `testing-rogue`.
 Push a signed commit there and rogue deploys it within a minute, with no
 gates: only the signature is checked. When it works, push it to `main`;
-the next `deploy/canary` commit replaces the test deploy.
+the next `deploy/canary` commit replaces the test deploy. ghost001 does
+the same with `testing-ghost001`, and there the next `deploy/stable`
+commit replaces the test deploy. Everything below about `testing-rogue`
+holds for it too; on NixOS a reboot boots the system profile.
 
 A testing deploy lasts **until reboot**. comin runs it with its `test`
 operation, which activates the system without adding it to the system

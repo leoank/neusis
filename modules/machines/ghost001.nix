@@ -40,7 +40,16 @@
           self.neusis.features.nixos.rc2s2-hub
           # Public hostnames under leoank.me (cloudflare-leoank stack).
           self.nixosModules.cloudflare-tunnel
+          # auto-updates: comin follows ghost001's deploy group (stable,
+          # a day behind rogue) and testing-ghost001, deploys signed heads
+          # only, and emails failures (docs/auto-update-guide.md).
+          inputs.comin.nixosModules.comin
+          self.nixosModules.auto-update
+          self.neusis.features.agnostic.auto-update
         ];
+
+        age.secrets.autoUpdateNotify.rekeyFile = ../secrets/common/auto-update-notify.age;
+        neusis.services.auto-update.notify.environmentFile = config.age.secrets.autoUpdateNotify.path;
 
         programs.zsh.enable = true;
 
