@@ -128,6 +128,7 @@
               hub = lib.hasInfix "--hub http://ghost001:7700" line;
               name = lib.hasInfix "--name rogue" line;
               tokenFromSecret = lib.hasInfix "--token-file ${home.age.secrets.rc2s2RogueNodeToken.path}" line;
+              spawnRoot = lib.hasInfix "--spawn-root /Users/ank/workspace" line;
               onPath = t.hasPkg "rc2s2" home.home.packages;
             };
           expected = {
@@ -136,6 +137,7 @@
             hub = true;
             name = true;
             tokenFromSecret = true;
+            spawnRoot = true;
             onPath = true;
           };
         };

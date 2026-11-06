@@ -319,6 +319,10 @@
         # Hold the machine out of idle sleep while a session is busy, so a turn
         # finishes and the hub link holds when the screen turns off (rc2s2 ADR-0031).
         keepAwake = true;
+        # The phone may start sessions in any repo under ~/workspace (rc2s2
+        # ADR-0034). `claude` is the login shell's, the profile's wrapper with the
+        # plugins, which runs claude directly when its input is not a terminal.
+        spawnRoots = [ "${config.home.homeDirectory}/workspace" ];
         # The account's rate limits as health, the access token read from the keychain,
         # never written (rc2s2 ADR-0030; checked on this login in EXP-20261025-25f6vm).
         claudeUsage = true;

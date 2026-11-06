@@ -48,6 +48,14 @@
         ]) cfg.ignoreCwd
         ++ lib.optional cfg.claudeUsage "--claude-usage"
         ++ lib.optional cfg.keepAwake "--keep-awake"
+        ++ lib.concatMap (r: [
+          "--spawn-root"
+          r
+        ]) cfg.spawnRoots
+        ++ lib.optionals (cfg.claude != null) [
+          "--claude"
+          cfg.claude
+        ]
         ++ cfg.extraArgs;
       cmdline = lib.escapeShellArgs args;
     in
@@ -115,6 +123,27 @@
             Keep the machine from idle-sleeping while a Claude Code session is busy
             (`caffeinate -i` on Darwin), so a turn finishes and the hub link holds when
             the screen turns off (rc2s2 ADR-0031).
+          '';
+        };
+
+        spawnRoots = lib.mkOption {
+          type = lib.types.listOf lib.types.str;
+          default = [ ];
+          example = lib.literalExpression ''[ "''${config.home.homeDirectory}/workspace" ]'';
+          description = ''
+            Absolute directories a client may start headless Claude Code sessions in,
+            each itself or anything below it (rc2s2 ADR-0034). Empty: spawning is off.
+            Sessions start through the user's login shell, so they get a terminal's
+            PATH even though the daemon's own is minimal.
+          '';
+        };
+
+        claude = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          example = "/etc/profiles/per-user/ank/bin/claude";
+          description = ''
+            The `claude` spawned sessions run. Null: `claude` as the login shell finds it.
           '';
         };
 

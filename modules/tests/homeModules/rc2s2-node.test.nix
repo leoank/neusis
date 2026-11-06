@@ -36,6 +36,25 @@
     in
     {
       tests.hm-rc2s2-node = {
+        test-spawning-is-off-by-default = {
+          expr =
+            let
+              line =
+                if isDarwin then
+                  lib.last home.launchd.agents.rc2s2-node.config.ProgramArguments
+                else
+                  lib.concatStringsSep " " (lib.toList home.systemd.user.services.rc2s2-node.Service.ExecStart);
+            in
+            {
+              roots = lib.hasInfix "--spawn-root" line;
+              claude = lib.hasInfix "--claude " line;
+            };
+          expected = {
+            roots = false;
+            claude = false;
+          };
+        };
+
         test-runs-the-daemon-per-platform = {
           expr =
             if isDarwin then
@@ -86,6 +105,11 @@
                 ignoreCwd = [ "*/target/live-work-*" ];
                 claudeUsage = true;
                 keepAwake = true;
+                spawnRoots = [
+                  "/home/u/workspace"
+                  "/home/u/scratch"
+                ];
+                claude = "/opt/claude";
                 extraArgs = [
                   "--hold-secs"
                   "60"
@@ -107,6 +131,8 @@
               ) line;
               hasUsage = lib.hasInfix "--claude-usage" line;
               hasAwake = lib.hasInfix "--keep-awake" line;
+              hasRoots = lib.hasInfix "--spawn-root /home/u/workspace --spawn-root /home/u/scratch" line;
+              hasClaude = lib.hasInfix "--claude /opt/claude" line;
               hasExtra = lib.hasInfix "--hold-secs 60" line;
             };
           expected = {
@@ -114,6 +140,8 @@
             hasIgnore = true;
             hasUsage = true;
             hasAwake = true;
+            hasRoots = true;
+            hasClaude = true;
             hasExtra = true;
           };
         };
