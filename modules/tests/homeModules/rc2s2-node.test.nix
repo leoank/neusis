@@ -36,6 +36,46 @@
     in
     {
       tests.hm-rc2s2-node = {
+        # The hooks land in the declared Claude settings, so a switch writes
+        # them into settings.json instead of dropping them.
+        test-hooks-in-claude-settings = {
+          expr =
+            let
+              h = home.programs.claude-code.settings.hooks;
+              off = (node { claudeHooks = false; }).programs.claude-code.settings;
+            in
+            {
+              events = builtins.attrNames h;
+              permission = h.PermissionRequest;
+              off = off ? hooks;
+            };
+          expected = {
+            events = [
+              "Notification"
+              "PermissionRequest"
+              "PostToolUse"
+              "PreToolUse"
+              "SessionEnd"
+              "SessionStart"
+              "Stop"
+              "SubagentStop"
+              "UserPromptSubmit"
+            ];
+            permission = [
+              {
+                hooks = [
+                  {
+                    type = "http";
+                    url = "http://127.0.0.1:7777/hook";
+                    timeout = 600;
+                  }
+                ];
+              }
+            ];
+            off = false;
+          };
+        };
+
         test-spawning-is-off-by-default = {
           expr =
             let

@@ -7,11 +7,12 @@
 # launchd user agent on Darwin, a systemd user service on Linux. The daemon
 # runs as the user because it reads that user's `~/.claude`.
 #
-# This module only runs the daemon. It does NOT edit `~/.claude/settings.json`:
-# the hook block that points Claude Code at the daemon must live in the user's
-# own settings file (SessionStart only fires from there, not from a
-# `--settings` file), so adding it is a deliberate manual step —
-# `rc2s2 node hooks` prints the block to merge.
+# The hook block that points Claude Code at the daemon must live in the
+# user's own settings file (SessionStart only fires from there, not from a
+# `--settings` file). With `claudeHooks` (on by default) the module adds it to
+# `programs.claude-code.settings`, the block `rc2s2 node hooks` prints: the
+# agent harness writes that file on every switch, so a block merged in by
+# hand is lost at the next one.
 #
 # Configure via `neusis.services.rc2s2-node.*`.
 { ... }:
@@ -147,6 +148,18 @@
           '';
         };
 
+        claudeHooks = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = ''
+            Add the hooks that point Claude Code at the daemon (`hookAddr`) to
+            `programs.claude-code.settings`, as `rc2s2 node hooks` prints them, so
+            every session reports to it and its permission dialogs can be answered
+            from the phone. Off: merge that block into `~/.claude/settings.json`
+            yourself.
+          '';
+        };
+
         extraArgs = lib.mkOption {
           type = lib.types.listOf lib.types.str;
           default = [ ];
@@ -169,6 +182,34 @@
       };
 
       config = lib.mkIf cfg.enable (lib.mkMerge [
+        # The hooks block of `rc2s2 node hooks`: every event the daemon
+        # handles, an HTTP hook to its endpoint. The 600 s timeout is that
+        # command's default and the one the daemon gives the sessions it
+        # spawns, so Claude Code sees one hook, not two (rc2s2 ADR-0037).
+        (lib.mkIf cfg.claudeHooks {
+          programs.claude-code.settings.hooks = lib.genAttrs [
+            "SessionStart"
+            "UserPromptSubmit"
+            "PreToolUse"
+            "PermissionRequest"
+            "PostToolUse"
+            "Notification"
+            "Stop"
+            "SubagentStop"
+            "SessionEnd"
+          ] (_: [
+            {
+              hooks = [
+                {
+                  type = "http";
+                  url = "http://${cfg.hookAddr}/hook";
+                  timeout = 600;
+                }
+              ];
+            }
+          ]);
+        })
+
         # Darwin: user launchd agent, kept alive.
         (lib.mkIf pkgs.stdenv.isDarwin {
           launchd.agents.rc2s2-node = {
