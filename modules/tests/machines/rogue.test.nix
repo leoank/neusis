@@ -140,6 +140,78 @@
           };
         };
 
+        # Mail (ADR-0019): four accounts synced by mbsync, indexed by notmuch,
+        # read in aerc. Passwords come from agenix secrets at stable paths;
+        # the Microsoft 365 account signs in with an oama access token.
+        test-mail = {
+          expr =
+            let
+              accounts = home.accounts.email.accounts;
+              on = a: a.mbsync.enable && a.notmuch.enable && a.aerc.enable;
+            in
+            {
+              accounts = lib.mapAttrs (_: a: {
+                inherit (a) address;
+                synced = on a;
+              }) accounts;
+              primary = lib.attrNames (lib.filterAttrs (_: a: a.primary) accounts);
+              passwords = lib.mapAttrs (_: a: {
+                cat = lib.hasSuffix "/bin/cat" (lib.head a.passwordCommand);
+                file = lib.last a.passwordCommand;
+              }) (lib.filterAttrs (n: _: n != "cam") accounts);
+              camToken = lib.hasSuffix "/bin/oama access ak2396@cam.ac.uk" (
+                lib.concatStringsSep " " accounts.cam.passwordCommand
+              );
+              camAuth = {
+                mbsync = accounts.cam.mbsync.extraConfig.account.AuthMechs;
+                inherit (accounts.cam.aerc) imapAuth smtpAuth;
+              };
+              sync = home.launchd.agents.mail-sync.enable;
+            };
+          expected = {
+            accounts = {
+              leoank = {
+                address = "ank@leoank.me";
+                synced = true;
+              };
+              gmail = {
+                address = "leoank98@gmail.com";
+                synced = true;
+              };
+              mrclmb = {
+                address = "kumar@mrclmb.ac.uk";
+                synced = true;
+              };
+              cam = {
+                address = "ak2396@cam.ac.uk";
+                synced = true;
+              };
+            };
+            primary = [ "leoank" ];
+            passwords = {
+              leoank = {
+                cat = true;
+                file = "/Users/ank/.config/mail/mailMigadu";
+              };
+              gmail = {
+                cat = true;
+                file = "/Users/ank/.config/mail/mailGmail";
+              };
+              mrclmb = {
+                cat = true;
+                file = "/Users/ank/.config/mail/mailMrclmb";
+              };
+            };
+            camToken = true;
+            camAuth = {
+              mbsync = "XOAUTH2";
+              imapAuth = "xoauth2";
+              smtpAuth = "xoauth2";
+            };
+            sync = true;
+          };
+        };
+
         # Enrolled in auto-updates as the canary: comin polls this repo's
         # deploy/canary every minute, trusts only the registry signers and
         # emails failures through the notify secret.

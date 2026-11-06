@@ -24,6 +24,7 @@ and never renumbered. ADR-0002 to ADR-0014 were backfilled on 2026-11-03 from
 | [ADR-0016](ADR-0016-kalam-zero.md) | kalam-zero: one nixvim-generated init.lua for Neovim 0.8+, an optional vendored plugin bundle, a rolling release | accepted (bundle superseded by ADR-0018) |
 | [ADR-0017](ADR-0017-kalam-zero-inlines-pure-lua-plugins.md) | kalam-zero's single file carries pure-Lua plugins as package.preload entries, starting with oil.nvim | accepted |
 | [ADR-0018](ADR-0018-kalam-zero-no-bundle-inline-mini.md) | kalam-zero has no plugin bundle; it inlines mini's editing set, mini.pick and mini.clue, active on Neovim 0.10+ | accepted |
+| [ADR-0019](ADR-0019-mail-maildir-notmuch-aerc.md) | ank's mail is a local maildir: mbsync syncs it, notmuch indexes it, aerc reads it, agents read it through notmuch | proposed |
 
 Each record:
 
