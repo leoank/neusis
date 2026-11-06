@@ -30,8 +30,9 @@ AADSTS50105).
 
 ## Plan
 1. After the switch to the `mail` bundle on rogue, run `oama authorize microsoft
-   ak2396@cam.ac.uk`, open the URL it prints, enter the code, and sign in with Raven
-   and MFA.
+   ak2396@cam.ac.uk --device`. Open the page it prints, enter the code, and sign in
+   with Raven and MFA. (Without `--device`, oama runs the auth-code flow against the
+   device-code endpoint and waits forever: first attempt, 2026-11-06.)
 2. `oama access ak2396@cam.ac.uk` prints an access token. This checks the keychain
    store, not the token.
 3. `mbsync cam` syncs the Inbox, which tests IMAP XOAUTH2 through the SASL plugin.
