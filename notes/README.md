@@ -42,6 +42,9 @@ open items with the rest.
 - [x] kalam-zero 3: CI runs the headless test on Neovim 0.8, 0.9, 0.10 and 0.11 release builds ([[EXP-20261103-g9kpxs]]) (since a47b91b)
 - [x] kalam-zero 4: inline mini's editing set, mini.pick and mini.clue into init.lua, active on 0.10+ (ADR-0018, replaces the bundle) (since 84ac318)
 - [x] kalam-zero 5: the rolling `kalam-zero` GitHub release and `docs/kalam/zero.md` (since f5e33ee)
+- [ ] Mail 1: `hmBundles.mail` on rogue: four accounts synced by mbsync, indexed by notmuch, read in aerc, with `homeModules.mail-sync` and the password secrets (ADR-0019)
+- [ ] Mail 2: real passwords in the secrets, Cambridge signed in through oama ([[EXP-20261106-2s4hg4]]), all four accounts syncing on rogue
+- [ ] Mail 3: agents read mail through notmuch and draft or send replies
 
 ## Open questions
 - Does comin's darwin module survive nix-darwin removing the `activate-user` stub? (auto-update spec R1)
@@ -71,3 +74,4 @@ What was tried and dropped, and why, so nobody tries it again.
 One line per experiment after its link, what it asks and what came of it; `yajna validate`
 rejects a bare link here. Newest last.
 - [[EXP-20261103-g9kpxs]] can nixvim emit kalam-zero's init.lua? Yes, with five options; the file passes the headless test on 0.8.3–0.12.4 (conclusion pending ank)
+- [[EXP-20261106-2s4hg4]] can oama sign ak2396@cam.ac.uk in to Microsoft 365 IMAP and SMTP with Thunderbird's client id? Planned: needs ank's one-time device-code sign-in
