@@ -10,7 +10,8 @@
 #   mailMrclmb  the MRC LMB password for kumar
 # ak2396@cam.ac.uk is Microsoft 365, which refuses passwords for IMAP/SMTP:
 # oama keeps its OAuth2 refresh token in the login keychain and hands out
-# access tokens (`oama authorize microsoft ak2396@cam.ac.uk` once;
+# access tokens (`oama authorize microsoft ak2396@cam.ac.uk --device` once;
+# without --device oama waits for a browser redirect that never comes;
 # EXP-20261106-2s4hg4).
 { self, ... }:
 {
@@ -22,6 +23,9 @@
       ...
     }:
     let
+      # 0.22.0+: 0.20 piped the token record to `security -i`, which cuts a line
+      # at ~4 KB, so a Microsoft record failed to store (oama issue #93).
+      oama = pkgs.unstable.oama;
       pass = name: "${pkgs.coreutils}/bin/cat ${config.age.secrets.${name}.path}";
       realName = "Ankur Kumar";
     in
@@ -95,7 +99,7 @@
               inherit realName;
               flavor = "outlook.office365.com";
               userName = "ak2396@cam.ac.uk";
-              passwordCommand = "${lib.getExe pkgs.oama} access ak2396@cam.ac.uk";
+              passwordCommand = "${lib.getExe oama} access ak2396@cam.ac.uk";
               folders.sent = "Sent Items";
               mbsync.extraConfig.account.AuthMechs = "XOAUTH2";
               aerc = {
@@ -234,7 +238,7 @@
                 # allow Thunderbird allow it. Device-code flow, no secret.
                 client_id: 9e5f94bc-e8a4-4e73-b8be-63364c29d753
           '';
-          home.packages = [ pkgs.oama ];
+          home.packages = [ oama ];
 
           neusis.services.mail-sync = {
             enable = true;

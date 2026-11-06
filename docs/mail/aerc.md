@@ -91,8 +91,12 @@ passwords.
 
 ## 6. Signing in, and when an account stops
 
-- **Cambridge (once, and again if it stops):** `oama authorize microsoft ak2396@cam.ac.uk`.
-  Open the URL it prints, enter the code, and sign in with Raven. After that,
+- **Cambridge (once, and again if it stops):**
+  `oama authorize microsoft ak2396@cam.ac.uk --device`. It prints
+  `https://login.microsoft.com/device` and a code. Open the page, enter the code, sign in
+  with Raven, and oama finishes by itself a few seconds later. Without `--device`,
+  oama starts a different flow, "Visit http://localhost:…/start", which waits for a
+  redirect that Microsoft's device-code endpoint never sends. After that,
   `oama access ak2396@cam.ac.uk` returns a token without asking again. Whether
   Cambridge allows this sign-in is EXP-20261106-2s4hg4.
 - **A password changed:** `agenix edit modules/secrets/ank/<secret>.age` (secret names
