@@ -169,6 +169,13 @@
                 inherit (accounts.cam.aerc) imapAuth smtpAuth;
               };
               sync = home.launchd.agents.mail-sync.enable;
+              # The XOAUTH2 plugin is visible to every account; the password
+              # accounts must not offer their password as a bearer token.
+              authMechs = lib.mapAttrs (_: a: a.mbsync.extraConfig.account.AuthMechs or null) accounts;
+              # mbsync's errors can quote the sign-in exchange: never /tmp.
+              logDir = home.neusis.services.mail-sync.logDir;
+              # aerc shows no body without filters (HM's aerc.conf replaces aerc's own).
+              bodyFilter = home.programs.aerc.extraConfig.filters."text/plain";
             };
           expected = {
             accounts = {
@@ -211,6 +218,14 @@
               smtpAuth = "xoauth2";
             };
             sync = true;
+            authMechs = {
+              leoank = "PLAIN";
+              gmail = "PLAIN";
+              mrclmb = "PLAIN";
+              cam = "XOAUTH2";
+            };
+            logDir = "/Users/ank/Library/Logs";
+            bodyFilter = "colorize";
           };
         };
 

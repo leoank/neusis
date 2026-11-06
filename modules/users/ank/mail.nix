@@ -54,7 +54,7 @@
               folders = {
                 sent = "[Gmail]/Sent Mail";
                 drafts = "[Gmail]/Drafts";
-                trash = "[Gmail]/Trash";
+                trash = "[Gmail]/Bin"; # a UK account's name for Trash
               };
               # Gmail shows each label as a folder; All Mail, Important and
               # Starred would sync every message a second time.
@@ -81,6 +81,13 @@
                 host = "mail.mrclmb.ac.uk";
                 port = 465;
               };
+              # The server's sieve filter scripts show up as folders that
+              # can't be opened.
+              mbsync.patterns = [
+                "*"
+                "!.dovecot.sieve"
+                "!sieve*"
+              ];
             };
 
             cam = {
@@ -108,8 +115,114 @@
           programs.notmuch.enable = true;
           programs.aerc = {
             enable = true;
-            # accounts.conf holds only credential commands, never a password.
-            extraConfig.general.unsafe-accounts-conf = true;
+            extraConfig = {
+              # accounts.conf holds only credential commands, never a password.
+              general.unsafe-accounts-conf = true;
+              ui = {
+                styleset-name = "terminal";
+                index-columns = "date<10,name<22,flags>4,subject<*";
+                column-date = "{{.DateAutoFormat .Date.Local}}";
+                timestamp-format = "2006-01-02";
+                this-day-time-format = "15:04";
+                this-week-time-format = "Mon 15:04";
+                this-year-time-format = "Jan 02";
+                sidebar-width = 26;
+                dirlist-tree = true;
+                threading-enabled = true;
+                mouse-enabled = true;
+                fuzzy-complete = true;
+                border-char-vertical = "│";
+                border-char-horizontal = "─";
+                icon-encrypted = "󰌾";
+                icon-signed = "󰏪";
+              };
+              viewer = {
+                pager = "${pkgs.less}/bin/less -Rc";
+                alternatives = "text/plain,text/html";
+                header-layout = "From,To,Cc,Date,Subject";
+              };
+              # Home Manager's aerc.conf replaces aerc's own, which is where
+              # these live; without them aerc shows no message body.
+              # The filters are aerc's own (libexec/aerc/filters, on PATH
+              # for filters); html renders through w3m with no network.
+              filters = {
+                "text/plain" = "colorize";
+                "text/calendar" = "calendar";
+                "message/delivery-status" = "colorize";
+                "message/rfc822" = "colorize";
+                "text/html" = "! html";
+                ".headers" = "colorize";
+              };
+            };
+            # Only the 16 terminal colours, so aerc follows the stylix scheme
+            # the terminal already uses (stylix has no aerc target).
+            stylesets.terminal = ''
+              *.default=true
+              *.normal=true
+              border.fg=8
+              title.fg=4
+              title.bold=true
+              header.fg=4
+              header.bold=true
+              *error.fg=1
+              *error.bold=true
+              warning.fg=3
+              success.fg=2
+              statusline_default.fg=7
+              statusline_default.bg=0
+              statusline_error.fg=1
+              statusline_success.fg=2
+              tab.fg=8
+              tab.selected.fg=4
+              tab.selected.bold=true
+              dirlist*.selected.fg=0
+              dirlist*.selected.bg=4
+              dirlist_unread.fg=6
+              dirlist_unread.bold=true
+              dirlist_recent.fg=6
+              msglist_default.fg=7
+              msglist_read.fg=8
+              msglist_unread.fg=15
+              msglist_unread.bold=true
+              msglist_flagged.fg=3
+              msglist_deleted.fg=1
+              msglist_deleted.dim=true
+              msglist_marked.bg=5
+              msglist_marked.fg=0
+              msglist_result.fg=2
+              msglist_answered.fg=8
+              msglist_pill.reverse=true
+              msglist_thread_folded.fg=6
+              msglist_*.selected.fg=0
+              msglist_*.selected.bg=4
+              msglist_*.selected.bold=true
+              selector_focused.fg=0
+              selector_focused.bg=4
+              selector_chooser.bold=true
+              completion_pill.reverse=true
+              completion_description.dim=true
+              completion_default.fg=7
+              completion_gutter.bg=8
+              part_mimetype.fg=8
+              part_*.selected.fg=0
+              part_*.selected.bg=4
+
+              [viewer]
+              *.default=true
+              *.normal=true
+              url.underline=true
+              url.fg=4
+              header.bold=true
+              header.fg=4
+              signature.dim=true
+              diff_meta.bold=true
+              diff_chunk.fg=6
+              diff_add.fg=2
+              diff_del.fg=1
+              quote_*.fg=8
+              quote_1.fg=6
+              quote_2.fg=5
+            '';
           };
 
           xdg.configFile."oama/config.yaml".text = ''
@@ -123,13 +236,19 @@
           '';
           home.packages = [ pkgs.oama ];
 
-          neusis.services.mail-sync.enable = true;
+          neusis.services.mail-sync = {
+            enable = true;
+            # Not /tmp: mbsync's errors can quote the sign-in exchange.
+            logDir = "${config.home.homeDirectory}/Library/Logs";
+          };
         }
 
         # Every account: synced with mbsync, indexed by notmuch, read in aerc.
-        # Folders the server gains appear locally; deletes and moves made in
-        # aerc reach the server (expunge both), but a folder removed on either
-        # side is never removed on the other.
+        # A folder made on either side is made on the other (aerc's archive
+        # moves into a local Archive folder, which must reach the server, or
+        # the message would exist only here); deletes and moves made in aerc
+        # reach the server (expunge both); a folder removed on either side is
+        # never removed on the other.
         {
           accounts.email.accounts =
             lib.genAttrs
@@ -139,11 +258,16 @@
                 "mrclmb"
                 "cam"
               ]
-              (_: {
+              (name: {
                 mbsync = {
                   enable = true;
-                  create = "maildir";
+                  create = "both";
                   expunge = "both";
+                  # The XOAUTH2 plugin cam needs is visible to every account,
+                  # and mbsync prefers it where the server offers it (Gmail):
+                  # pin the password accounts to PLAIN so a password is never
+                  # sent as a bearer token.
+                  extraConfig.account = lib.mkIf (name != "cam") { AuthMechs = "PLAIN"; };
                 };
                 notmuch.enable = true;
                 aerc.enable = true;

@@ -27,8 +27,11 @@ Alternatives considered:
 ## Decision
 - An ank home bundle, `hmBundles.mail` (`modules/users/ank/mail.nix`), on rogue only:
   the four accounts in `accounts.email`, each synced by mbsync, indexed by notmuch and
-  read in aerc. mbsync creates the folders the server gains, and passes deletes and
-  moves made in aerc back to the server; it never removes a folder on either side.
+  read in aerc. mbsync creates a folder made on either side on the other (aerc's
+  archive moves into a local Archive folder, which must reach the server), and passes
+  deletes and moves made in aerc back to the server; it never removes a folder on
+  either side. The password accounts sign in with PLAIN: the XOAUTH2 plugin is visible
+  to all of them, and mbsync would otherwise offer Gmail the password as a token.
 - A reusable `homeModules.mail-sync` runs `mbsync -a; notmuch new` every five minutes
   (a launchd agent on Darwin, a systemd user timer on Linux; Home Manager's
   `services.mbsync` is Linux-only). The index runs even when one account fails.
