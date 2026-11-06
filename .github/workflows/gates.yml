@@ -75,6 +75,9 @@ jobs:
     name: system ${{ matrix.host }} (${{ matrix.group }})
     needs: plan
     runs-on: ${{ matrix.runner }}
+    # A stalled fixed-output download otherwise holds the job until
+    # GitHub's 6 h limit; a good rogue build takes under an hour.
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
@@ -112,8 +115,14 @@ jobs:
         with:
           determinate: false
           diagnostic-endpoint: ""
+          # The hosts substitute llm-agents (qmd, gemini-cli, opencode…)
+          # from numtide's cache (features/agnostic/nix-settings.nix);
+          # without it the runner builds them from source, where npm
+          # fetches stall and hashes drift.
           extra-conf: |
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+            extra-substituters = https://cache.numtide.com
+            extra-trusted-public-keys = niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g=
 
       - name: Build ${{ join(matrix.checks, ', ') }}
         run: |
