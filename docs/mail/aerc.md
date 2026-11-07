@@ -37,7 +37,8 @@ on the right. `?` lists every key, and `:` opens the command line, which complet
 ## 2. Reading
 
 `<Enter>` opens a message, and its text part is shown in `less`. When a message has only
-HTML, aerc renders it as text through w3m and loads no remote images. `<C-j>` / `<C-k>`
+HTML, aerc renders it as text through w3m and loads no remote images. Code and config
+attachments (`.py`, `.nix`, `.json`, `.yaml`, … and `text/x-*` types) are highlighted by bat. `<C-j>` / `<C-k>`
 move between parts, `o` opens the current part in the macOS app for it (a browser for
 HTML, Preview for a PDF), and `S` saves it. `<C-l>` opens a link and `<C-y>` copies one.
 `H` shows all headers, `J` / `K` go to the next / previous message, and `q` closes.

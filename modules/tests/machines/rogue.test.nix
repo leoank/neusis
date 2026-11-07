@@ -176,6 +176,18 @@
               logDir = home.neusis.services.mail-sync.logDir;
               # aerc shows no body without filters (HM's aerc.conf replaces aerc's own).
               bodyFilter = home.programs.aerc.extraConfig.filters."text/plain";
+              # Code attachments by file name, ahead of text/plain (first match
+              # wins, keys are sorted): bat, without paging.
+              codeFilter =
+                let
+                  f = home.programs.aerc.extraConfig.filters;
+                  key = lib.findFirst (lib.hasPrefix ".filename,~") null (lib.attrNames f);
+                in
+                {
+                  beforePlain = key != null && key < "text/plain";
+                  py = key != null && builtins.match ".*[|(]py[|)].*" key != null;
+                  bat = key != null && lib.hasInfix "/bin/bat -fP" f.${key};
+                };
               # oama sets the keychain item's access list only on create, so a
               # token refresh doesn't ask for the keychain password.
               oamaPatched = lib.any (pa: lib.hasSuffix "oama-keychain-update.patch" (toString pa)) (
@@ -231,6 +243,11 @@
             };
             logDir = "/Users/ank/Library/Logs";
             bodyFilter = "colorize";
+            codeFilter = {
+              beforePlain = true;
+              py = true;
+              bat = true;
+            };
             oamaPatched = true;
           };
         };

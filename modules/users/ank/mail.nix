@@ -34,6 +34,9 @@
       });
       pass = name: "${pkgs.coreutils}/bin/cat ${config.age.secrets.${name}.path}";
       realName = "Ankur Kumar";
+      # aerc filter: -f colours without a terminal, -P leaves paging to aerc;
+      # the file name (when the part has one) picks the language.
+      bat = ''${lib.getExe pkgs.bat} -fP --style=plain --theme=ansi ''${AERC_FILENAME:+"--file-name=$AERC_FILENAME"}'';
     in
     {
       imports = [ self.homeModules.mail-sync ];
@@ -162,6 +165,16 @@
                 "message/rfc822" = "colorize";
                 "text/html" = "! html";
                 ".headers" = "colorize";
+                # Code and config attachments: bat picks the language from
+                # the file name, in the terminal's 16 colours like the
+                # styleset. The first matching filter wins and HM writes the
+                # keys sorted, so the .filename rule comes before text/plain
+                # (attachments often arrive as text/plain or octet-stream).
+                ".filename,~(?i)\\.(c|h|cc|cpp|hpp|go|rs|py|rb|js|jsx|ts|tsx|java|kt|swift|nix|sh|bash|zsh|fish|lua|r|jl|sql|json|ya?ml|toml|ini|conf|xml|tex|csv|md)$" =
+                  bat;
+                "text/x-*" = bat;
+                "application/json" = "${bat} -l json";
+                "application/x-sh" = "${bat} -l sh";
               };
             };
             # Only the 16 terminal colours, so aerc follows the stylix scheme
