@@ -53,7 +53,7 @@ open items with the rest.
 - Do comin retention and `nix.gc.automatic` agree? (R6)
 - Does attic keep our own signatures on pushed paths, so hosts can trust only our key? (R8)
 - Should darwin001 be fixed or removed?
-- Why does oama keep asking ank for a keychain password on rogue? Not reproduced from an agent shell (read and refresh with no prompt, item ACL trusts /usr/bin/security, no keychain timeout); needs the dialog's wording and when it appears; candidate fixes in agent:claude's 2026-11-06 22:14 log line
+- Why does oama keep asking ank for a keychain password on rogue? Not reproduced from an agent shell (read and refresh with no prompt, item ACL trusts /usr/bin/security, no keychain timeout); seen again at ~23:17Z right as a token refresh rewrote the item (agent:claude 2026-11-06 22:14 and 23:18 log lines); needs the dialog wording; cause found 2026-11-07: -U -T rewrites the access list on each refresh, fixed by oama-keychain-update.patch (agent:claude 2026-11-07 log)
 
 ## Design
 The architecture is `docs/architecture.md` and its decision records are
