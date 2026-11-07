@@ -176,6 +176,11 @@
               logDir = home.neusis.services.mail-sync.logDir;
               # aerc shows no body without filters (HM's aerc.conf replaces aerc's own).
               bodyFilter = home.programs.aerc.extraConfig.filters."text/plain";
+              # oama sets the keychain item's access list only on create, so a
+              # token refresh doesn't ask for the keychain password.
+              oamaPatched = lib.any (pa: lib.hasSuffix "oama-keychain-update.patch" (toString pa)) (
+                lib.head (lib.filter (pk: (pk.pname or "") == "oama") home.home.packages)
+              ).patches;
             };
           expected = {
             accounts = {
@@ -226,6 +231,7 @@
             };
             logDir = "/Users/ank/Library/Logs";
             bodyFilter = "colorize";
+            oamaPatched = true;
           };
         };
 

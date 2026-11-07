@@ -25,7 +25,13 @@
     let
       # 0.22.0+: 0.20 piped the token record to `security -i`, which cuts a line
       # at ~4 KB, so a Microsoft record failed to store (oama issue #93).
-      oama = pkgs.unstable.oama;
+      # Patched: 0.22.0 saves every refreshed token with `-U -T`, which rewrites
+      # the item's access list each time, so macOS asks for the keychain
+      # password ("security wants to change access permissions"); the patch
+      # sets the access list only when it creates the item.
+      oama = pkgs.unstable.oama.overrideAttrs (old: {
+        patches = (old.patches or [ ]) ++ [ ./oama-keychain-update.patch ];
+      });
       pass = name: "${pkgs.coreutils}/bin/cat ${config.age.secrets.${name}.path}";
       realName = "Ankur Kumar";
     in

@@ -1,0 +1,50 @@
+--- a/lib/Crypto/Manager.hs
++++ b/lib/Crypto/Manager.hs
+@@ -164,18 +164,35 @@ storeSecret label attribute value secret = do
+           }
+         >>= \(h, _, _, p) -> write2Pipe h p secret
+     "darwin" -> do
+-      P.readProcessWithExitCode
+-        "security"
+-        ["add-generic-password",
+-         "-l", label,
+-         "-a", value,
+-         "-s", attribute,
+-         "-T", "/usr/bin/security",
+-         "-U",
+-         "-w", secret
+-        ]
+-        ""
+-        >>= result
++      -- Create the item trusting /usr/bin/security. When it already exists,
++      -- update only its data: -U with -T rewrites the access list on every
++      -- refresh, and macOS then asks for the keychain password ("security
++      -- wants to change access permissions").
++      created <-
++        P.readProcessWithExitCode
++          "security"
++          ["add-generic-password",
++           "-l", label,
++           "-a", value,
++           "-s", attribute,
++           "-T", "/usr/bin/security",
++           "-w", secret
++          ]
++          ""
++      case created of
++        (ExitSuccess, _, _) -> result created
++        _ ->
++          P.readProcessWithExitCode
++            "security"
++            ["add-generic-password",
++             "-l", label,
++             "-a", value,
++             "-s", attribute,
++             "-U",
++             "-w", secret
++            ]
++            ""
++            >>= result
+     os -> pure $ Left $ StoreError $ printf "Can't work in %s operating system." os
+   where
+     write2Pipe (Just h) p s = do
