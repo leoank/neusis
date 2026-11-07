@@ -27,6 +27,8 @@
     }:
     let
       cfg = config.neusis.services.rc2s2-node;
+      toml = pkgs.formats.toml { };
+      profilesFile = toml.generate "rc2s2-profiles.toml" { profiles = cfg.profiles; };
       args =
         [
           (lib.getExe cfg.package)
@@ -56,6 +58,10 @@
         ++ lib.optionals (cfg.claude != null) [
           "--claude"
           cfg.claude
+        ]
+        ++ lib.optionals (cfg.profiles != { }) [
+          "--profiles"
+          "${profilesFile}"
         ]
         ++ cfg.extraArgs;
       cmdline = lib.escapeShellArgs args;
@@ -145,6 +151,30 @@
           example = "/etc/profiles/per-user/ank/bin/claude";
           description = ''
             The `claude` spawned sessions run. Null: `claude` as the login shell finds it.
+          '';
+        };
+
+        profiles = lib.mkOption {
+          type = lib.types.attrsOf toml.type;
+          default = { };
+          example = lib.literalExpression ''
+            {
+              sandbox = {
+                backend = "seatbelt";
+                description = "Confined: the working directory, the nix store and git";
+                state_dir = "~/.local/state/rc2s2/sandbox";
+                token_file = "~/.config/rc2s2/sandbox-claude-token";
+                path = [ "/etc/profiles/per-user/me/bin" ];
+              };
+            }
+          '';
+          description = ''
+            Launch profiles a spawned session may run under, written to a TOML file
+            given with `--profiles` (rc2s2 ADR-0038): each a `host` or `seatbelt`
+            backend, a sandbox with its state directory, the file holding a token
+            from `claude setup-token`, `path`, `readonly`, `readwrite` and `denied`
+            paths, `claude_files` linked from `~/.claude`, and `env`. `~/` is the
+            user's home. The app offers them on New session. Empty: no profiles.
           '';
         };
 

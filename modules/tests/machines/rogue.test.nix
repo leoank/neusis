@@ -129,6 +129,15 @@
               name = lib.hasInfix "--name rogue" line;
               tokenFromSecret = lib.hasInfix "--token-file ${home.age.secrets.rc2s2RogueNodeToken.path}" line;
               spawnRoot = lib.hasInfix "--spawn-root /Users/ank/workspace" line;
+              profiles = lib.hasInfix "--profiles /nix/store/" line;
+              sandbox =
+                let
+                  p = home.neusis.services.rc2s2-node.profiles.sandbox;
+                in
+                {
+                  inherit (p) backend;
+                  tokenFromSecret = p.token_file == home.age.secrets.rc2s2SandboxClaudeToken.path;
+                };
               onPath = t.hasPkg "rc2s2" home.home.packages;
             };
           expected = {
@@ -138,6 +147,11 @@
             name = true;
             tokenFromSecret = true;
             spawnRoot = true;
+            profiles = true;
+            sandbox = {
+              backend = "seatbelt";
+              tokenFromSecret = true;
+            };
             onPath = true;
           };
         };

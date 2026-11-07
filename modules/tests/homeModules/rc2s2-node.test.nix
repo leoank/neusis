@@ -88,10 +88,12 @@
             {
               roots = lib.hasInfix "--spawn-root" line;
               claude = lib.hasInfix "--claude " line;
+              profiles = lib.hasInfix "--profiles" line;
             };
           expected = {
             roots = false;
             claude = false;
+            profiles = false;
           };
         };
 
@@ -150,6 +152,11 @@
                   "/home/u/scratch"
                 ];
                 claude = "/opt/claude";
+                profiles.sandbox = {
+                  backend = "seatbelt";
+                  state_dir = "~/.local/state/rc2s2/sandbox";
+                  token_file = "~/.config/rc2s2/sandbox-claude-token";
+                };
                 extraArgs = [
                   "--hold-secs"
                   "60"
@@ -173,6 +180,8 @@
               hasAwake = lib.hasInfix "--keep-awake" line;
               hasRoots = lib.hasInfix "--spawn-root /home/u/workspace --spawn-root /home/u/scratch" line;
               hasClaude = lib.hasInfix "--claude /opt/claude" line;
+              # The profiles file from the store, before the extra arguments.
+              hasProfiles = builtins.match ".*--profiles /nix/store/[a-z0-9]+-rc2s2-profiles\\.toml --hold-secs 60.*" line != null;
               hasExtra = lib.hasInfix "--hold-secs 60" line;
             };
           expected = {
@@ -182,6 +191,7 @@
             hasAwake = true;
             hasRoots = true;
             hasClaude = true;
+            hasProfiles = true;
             hasExtra = true;
           };
         };

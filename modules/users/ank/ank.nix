@@ -307,6 +307,13 @@
         rekeyFile = ../../secrets/ank/rc2s2RogueNodeToken.age;
         path = "${config.home.homeDirectory}/.config/rc2s2/node-token";
       };
+      # The Claude login of sandboxed sessions: a long-lived token from
+      # `claude setup-token`, which the node passes in as CLAUDE_CODE_OAUTH_TOKEN,
+      # so the keychain login stays out of the sandbox (rc2s2 ADR-0038).
+      age.secrets.rc2s2SandboxClaudeToken = {
+        rekeyFile = ../../secrets/ank/rc2s2SandboxClaudeToken.age;
+        path = "${config.home.homeDirectory}/.config/rc2s2/sandbox-claude-token";
+      };
 
       neusis.services.rc2s2-node = {
         enable = true;
@@ -326,6 +333,46 @@
         # The account's rate limits as health, the access token read from the keychain,
         # never written (rc2s2 ADR-0030; checked on this login in EXP-20261025-25f6vm).
         claudeUsage = true;
+        # A confined way to start a session, offered on the app's New session
+        # (rc2s2 ADR-0038, checked live in rc2s2's AGS-20261107-413qp0): seatbelt
+        # through mxc, its own Claude config under the state directory, all egress,
+        # the nix store and daemon, the profile's tools, git identity, the SSH
+        # agent (push without the keys), and CLAUDE.md, skills, commands and agents.
+        profiles.sandbox = {
+          backend = "seatbelt";
+          description = "Confined: the working directory, the nix store, git identity and the SSH agent";
+          state_dir = "~/.local/state/rc2s2/sandbox";
+          token_file = config.age.secrets.rc2s2SandboxClaudeToken.path;
+          path = [
+            "~/.nix-profile/bin"
+            "/etc/profiles/per-user/${config.home.username}/bin"
+            "/run/current-system/sw/bin"
+            "/nix/var/nix/profiles/default/bin"
+          ];
+          readonly = [
+            "/nix/var/nix/profiles"
+            "/nix/var/nix/gcroots"
+            "/private/etc/profiles"
+            "/private/etc/nix"
+            "/private/etc/static"
+            "/private/var/run/current-system"
+            "~/.nix-profile"
+            "~/.local/state/nix/profiles"
+            "~/.config/git"
+            "~/.ssh/config"
+            "~/.ssh/known_hosts"
+          ];
+          claude_files = [
+            "CLAUDE.md"
+            "skills"
+            "commands"
+            "agents"
+          ];
+          env = {
+            GIT_CONFIG_GLOBAL = "~/.config/git/config";
+            SSH_AUTH_SOCK = "~/.bitwarden-ssh-agent.sock";
+          };
+        };
       };
 
       # rc2s2 on PATH for `rc2s2 run` (the PTY wrapper), `rc2s2 node hooks`
