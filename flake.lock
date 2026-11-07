@@ -1111,11 +1111,11 @@
         "yajna": "yajna"
       },
       "locked": {
-        "lastModified": 1794009863,
-        "narHash": "sha256-E/H+8+u5XeCDYozUka/Xcc71Nn4Zb6nKm/eoqZkxylw=",
+        "lastModified": 1794013018,
+        "narHash": "sha256-e2BK03os3lblxCTjLRY4db2vb1NgoRfUgZzJ1fL9FqY=",
         "owner": "leoank",
         "repo": "rc2s2",
-        "rev": "9d734a626d7e34ba73fe82c1a0c15d49f11e17e3",
+        "rev": "fdb960be7d84d876473320d5ea065fb5934754cc",
         "type": "github"
       },
       "original": {
