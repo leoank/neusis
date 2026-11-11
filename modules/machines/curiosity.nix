@@ -132,10 +132,14 @@ in
         };
         # ank's secrets on curiosity are system secrets owned by ank, decrypted with the host key
         # (ank's own key never comes to this machine: he works here over ssh with agent
-        # forwarding). Same rekeyFiles as ank's home bundles; `agenix rekey` encrypts them for
-        # curiosity's host key.
+        # forwarding): GitHub, atuin and rc2s2 tokens. Same rekeyFiles as ank's home bundles;
+        # `agenix rekey` encrypts them for curiosity's host key.
         age.secrets.ghauthToken = {
           rekeyFile = ../secrets/ank/ghauthToken.age;
+          owner = "ank";
+        };
+        age.secrets.atuinToken = {
+          rekeyFile = ../secrets/ank/atuinToken.age;
           owner = "ank";
         };
         age.secrets.rc2s2CuriosityNodeToken = {
