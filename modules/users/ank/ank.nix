@@ -380,6 +380,39 @@
       home.packages = [ inputs.rc2s2.packages.${pkgs.stdenv.hostPlatform.system}.rc2s2 ];
     };
 
+  # rc2s2 node on curiosity (the N1X live disk), as on rogue minus what is macOS-only: no
+  # seatbelt sandbox profile, no keepAwake (documented as `caffeinate` on Darwin).
+  flake.neusis.users.ank.hmBundles.rc2s2-node-curiosity =
+    {
+      config,
+      pkgs,
+      inputs,
+      ...
+    }:
+    {
+      imports = [ self.homeModules.rc2s2-node ];
+
+      # PLACEHOLDER: encrypted to the master identity with a dummy value until curiosity has
+      # a node token on the hub. Then `agenix edit modules/secrets/ank/rc2s2CuriosityNodeToken.age`
+      # with the real token, and `agenix rekey`.
+      age.secrets.rc2s2CuriosityNodeToken = {
+        rekeyFile = ../../secrets/ank/rc2s2CuriosityNodeToken.age;
+        path = "${config.home.homeDirectory}/.config/rc2s2/node-token";
+      };
+
+      neusis.services.rc2s2-node = {
+        enable = true;
+        hub = "http://ghost001:7700";
+        tokenFile = config.age.secrets.rc2s2CuriosityNodeToken.path;
+        name = "curiosity";
+        ignoreCwd = [ "*/target/live-work-*" ];
+        spawnRoots = [ "${config.home.homeDirectory}/workspace" ];
+        claudeUsage = true;
+      };
+
+      home.packages = [ inputs.rc2s2.packages.${pkgs.stdenv.hostPlatform.system}.rc2s2 ];
+    };
+
   # Configuring user for neusisOS
   flake.neusis.users.ank.neusisOS = {
     username = "ank";
@@ -428,6 +461,7 @@
         self.neusis.users.ank.hmBundles.yajna
         self.neusis.users.ank.hmBundles.terminal-life
         self.neusis.users.ank.hmBundles.agent-harness
+        self.neusis.users.ank.hmBundles.rc2s2-node-curiosity
         self.neusis.users.ank.hmBundles.secrets
       ];
     };
