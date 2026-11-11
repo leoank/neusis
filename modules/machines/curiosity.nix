@@ -118,17 +118,24 @@ in
             ExecStart = "/bin/sh /etc/curiosity-host-key.sh";
           };
         };
+        # Keys only: ank comes in with `ssh -A` over the tailnet, and port 22 is open on whatever
+        # network the laptop joins.
         services.openssh = {
           enable = true;
           hostKeys = [ { path = "/etc/ssh/ssh_host_ed25519_key"; type = "ed25519"; } ];
+          settings = {
+            PasswordAuthentication = false;
+            KbdInteractiveAuthentication = false;
+          };
         };
 
         # The data drive itself, for results and the files above; automount because N1X USB
-        # enumerates late.
+        # enumerates late. Root only (0077): the drive holds the host key, which decrypts every
+        # secret of this host, so no other user or service may read it.
         fileSystems."/mnt/sparkdata" = {
           device = sparkdata;
           fsType = "exfat";
-          options = [ "nofail" "x-systemd.automount" "uid=0" "gid=0" "fmask=0022" "dmask=0022" ];
+          options = [ "nofail" "x-systemd.automount" "uid=0" "gid=0" "fmask=0077" "dmask=0077" ];
         };
         # ank's secrets on curiosity are system secrets owned by ank, decrypted with the host key
         # (ank's own key never comes to this machine: he works here over ssh with agent
