@@ -25,6 +25,7 @@ and never renumbered. ADR-0002 to ADR-0014 were backfilled on 2026-11-03 from
 | [ADR-0017](ADR-0017-kalam-zero-inlines-pure-lua-plugins.md) | kalam-zero's single file carries pure-Lua plugins as package.preload entries, starting with oil.nvim | accepted |
 | [ADR-0018](ADR-0018-kalam-zero-no-bundle-inline-mini.md) | kalam-zero has no plugin bundle; it inlines mini's editing set, mini.pick and mini.clue, active on Neovim 0.10+ | accepted |
 | [ADR-0019](ADR-0019-mail-maildir-notmuch-aerc.md) | ank's mail is a local maildir: mbsync syncs it, notmuch indexes it, aerc reads it, agents read it through notmuch | proposed |
+| [ADR-0020](ADR-0020-curiosity-live-disk-host-key-from-a-data-drive.md) | curiosity is a live disk whose host key comes from a data drive in the initrd; its N1X support comes from anvesana | proposed |
 
 Each record:
 
