@@ -386,7 +386,8 @@
                 tools.hermes.enable = true;
               };
               names = t.pkgNames (cfg.home.packages ++ [ cfg.programs.claude-code.package ]);
-              # Darwin: plain llm-agents packages; Linux: jail wrappers named after the agent
+              # Darwin: plain llm-agents packages; Linux: jail wrappers named after the agent,
+              # except claude, which is the plain package on both (no jail; mxc to come).
               expect =
                 if testPkgs.stdenv.isDarwin then
                   map lib.getName (
@@ -400,7 +401,7 @@
                   )
                 else
                   [
-                    "claude"
+                    (lib.getName llmPkgs.claude-code)
                     "agy"
                     "pi"
                     "hermes"
