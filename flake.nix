@@ -13,7 +13,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     anvesana = {
-      url = "github:leoank/anvesana/exp/nvpcf-throttle";
+      url = "github:leoank/anvesana";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     brew-api = {
