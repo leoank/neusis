@@ -135,18 +135,18 @@
           };
         };
 
-        # tools.claude.rc2s2: claude at a terminal runs under `rc2s2 run`,
+        # tools.claude.saarthi: claude at a terminal runs under `saarthi run`,
         # claude without one runs directly; off by default.
-        test-claude-under-rc2s2-run = {
+        test-claude-under-saarthi-run = {
           expr =
             let
-              rc2s2 = testPkgs.writeShellScriptBin "rc2s2" "";
+              saarthi = testPkgs.writeShellScriptBin "saarthi" "";
               on = (harness {
                 tools.claude = {
                   enable = true;
-                  rc2s2 = {
+                  saarthi = {
                     enable = true;
-                    package = rc2s2;
+                    package = saarthi;
                   };
                 };
               }).programs.claude-code.package;
@@ -155,10 +155,10 @@
               text = plain (on.text or "");
             in
             {
-              offWrapped = lib.hasInfix "rc2s2" (plain (off.text or ""));
+              offWrapped = lib.hasInfix "saarthi" (plain (off.text or ""));
               name = on.name;
               atTerminal = lib.hasInfix "[ -t 0 ] && [ -t 1 ]" text;
-              runsRc2s2 = lib.hasInfix (plain "${rc2s2}/bin/rc2s2 run --command ") text;
+              runsSaarthi = lib.hasInfix (plain "${saarthi}/bin/saarthi run --command ") text;
               # every argument after `--`, and claude itself without a terminal
               forwardsArgs = lib.hasInfix "/bin/claude -- \"$@\"" text;
               directOtherwise = lib.hasInfix "fi\nexec " text;
@@ -167,7 +167,7 @@
             offWrapped = false;
             name = "claude";
             atTerminal = true;
-            runsRc2s2 = true;
+            runsSaarthi = true;
             forwardsArgs = true;
             directOtherwise = true;
           };

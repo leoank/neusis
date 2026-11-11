@@ -93,8 +93,8 @@
         "~/.claude.json.backup"
       ] cfg.tools.claude.extraPkgs;
 
-      # `claude` under `rc2s2 run` (tools.claude.rc2s2): the session gets a
-      # PTY the rc2s2 node daemon can interrupt and kill from the phone, and
+      # `claude` under `saarthi run` (tools.claude.saarthi): the session gets a
+      # PTY the saarthi node daemon can interrupt and kill from the phone, and
       # still works when no daemon runs. Only at a terminal: without one
       # (`claude -p … | jq`, scripts) there is nothing to mirror, and a PTY
       # would mix stderr into stdout, so claude runs directly.
@@ -102,7 +102,7 @@
         name = "claude";
         text = ''
           if [ -t 0 ] && [ -t 1 ]; then
-            exec ${lib.getExe' cfg.tools.claude.rc2s2.package "rc2s2"} run --command ${lib.getExe' claudePkg "claude"} -- "$@"
+            exec ${lib.getExe' cfg.tools.claude.saarthi.package "saarthi"} run --command ${lib.getExe' claudePkg "claude"} -- "$@"
           fi
           exec ${lib.getExe' claudePkg "claude"} "$@"
         '';
@@ -195,18 +195,18 @@
               default = [ ];
               description = "Extra packages added to claude's jail (Linux only).";
             };
-            rc2s2 = {
+            saarthi = {
               enable = lib.mkEnableOption ''
-                running `claude` at a terminal under `rc2s2 run`, a PTY the rc2s2
-                node daemon (`neusis.services.rc2s2-node`) can interrupt and kill.
+                running `claude` at a terminal under `saarthi run`, a PTY the saarthi
+                node daemon (`services.saarthi-node`) can interrupt and kill.
                 Without the daemon the session works as usual; without a
                 terminal, claude runs directly
               '';
               package = lib.mkOption {
                 type = lib.types.package;
-                default = inputs.rc2s2.packages.${system}.rc2s2;
-                defaultText = lib.literalExpression "inputs.rc2s2.packages.\${system}.rc2s2";
-                description = "The rc2s2 package providing `rc2s2 run`.";
+                default = inputs.saarthi.packages.${system}.saarthi;
+                defaultText = lib.literalExpression "inputs.saarthi.packages.\${system}.saarthi";
+                description = "The saarthi package providing `saarthi run`.";
               };
             };
             settings = lib.mkOption {
@@ -376,7 +376,7 @@
         (lib.mkIf cfg.tools.claude.enable {
           programs.claude-code = {
             enable = true;
-            package = if cfg.tools.claude.rc2s2.enable then claudeRunPkg else claudePkg;
+            package = if cfg.tools.claude.saarthi.enable then claudeRunPkg else claudePkg;
             skills = cfg.skillsDir;
             commandsDir = cfg.commandsDir;
             agentsDir = cfg.agentsDir;

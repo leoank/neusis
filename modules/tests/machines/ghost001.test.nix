@@ -141,21 +141,23 @@
           };
         };
 
-        # The rc2s2 hub records on the data volume and pushes through a
+        # The saarthi hub records on the data volume and pushes through a
         # self-hosted ntfy, reachable over the tailnet only.
-        test-rc2s2-hub = {
+        test-saarthi-hub = {
           expr =
             let
-              e = cfg.systemd.services.rc2s2-hub.serviceConfig.ExecStart;
+              e = cfg.systemd.services.saarthi-hub.serviceConfig.ExecStart;
             in
             {
-              hub = cfg.neusis.services.rc2s2-hub.enable;
-              dbOnSrv = lib.hasInfix "--db /srv/rc2s2/hub.db" e;
+              hub = cfg.services.saarthi-hub.enable;
+              oldHub = cfg.systemd.services ? rc2s2-hub;
+              migrates = cfg.systemd.services.saarthi-hub.serviceConfig.ExecStartPre != [ ];
+              dbOnSrv = lib.hasInfix "--db /srv/saarthi/hub.db" e;
               tokensFromAgenix =
-                lib.hasInfix "--node-tokens ${cfg.age.secrets.rc2s2NodeTokens.path}" e
-                && lib.hasInfix "--client-tokens ${cfg.age.secrets.rc2s2ClientTokens.path}" e;
+                lib.hasInfix "--node-tokens ${cfg.age.secrets.saarthiNodeTokens.path}" e
+                && lib.hasInfix "--client-tokens ${cfg.age.secrets.saarthiClientTokens.path}" e;
               ntfy = cfg.services.ntfy-sh.enable;
-              ntfyLocalTopic = lib.hasInfix "--ntfy http://127.0.0.1:2586/rc2s2" e;
+              ntfyLocalTopic = lib.hasInfix "--ntfy http://127.0.0.1:2586/saarthi" e;
               # Neither the hub nor ntfy opens a host port: tailnet only.
               noOpenPorts =
                 !(builtins.elem 7700 (cfg.networking.firewall.allowedTCPPorts or [ ]))
@@ -163,6 +165,8 @@
             };
           expected = {
             hub = true;
+            oldHub = false;
+            migrates = true;
             dbOnSrv = true;
             tokensFromAgenix = true;
             ntfy = true;

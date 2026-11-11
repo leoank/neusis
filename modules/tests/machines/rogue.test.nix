@@ -60,8 +60,8 @@
             yajnaConfig = home.xdg.configFile."yajna/config.toml".text;
             # yajna's zsh completion is sourced in ank's zsh
             yajnaCompletion = lib.hasInfix "yajna-zsh-completion" home.programs.zsh.initContent;
-            # claude runs under `rc2s2 run` where the rc2s2 node daemon runs
-            claudeUnderRc2s2 = home.neusis.agent-harness.tools.claude.rc2s2.enable;
+            # claude runs under `saarthi run` where the saarthi node daemon runs
+            claudeUnderSaarthi = home.neusis.agent-harness.tools.claude.saarthi.enable;
           };
           expected = {
             hmUsers = [ "ank" ];
@@ -72,13 +72,13 @@
             kalam = true;
             neusisCli = true;
             yajnaCompletion = true;
-            claudeUnderRc2s2 = true;
+            claudeUnderSaarthi = true;
             yajnaConfig = ''
               default = "manthan"
 
               [repos]
               manthan = "/Users/ank/workspace/chaos/manthan/main"
-              rc2s2 = "/Users/ank/workspace/hub/leoank/rc2s2"
+              saarthi = "/Users/ank/workspace/hub/leoank/rc2s2"
               yajna = "/Users/ank/workspace/chaos/yajna/main"
             '';
           };
@@ -113,13 +113,14 @@
           };
         };
 
-        # The rc2s2 node daemon is wired on rogue (launchd agent), pointed at
+        # The saarthi node daemon is wired on rogue (launchd agent), pointed at
         # the ghost001 hub with its token from an agenix home secret, and the
-        # `rc2s2` binary is on PATH for the wrapper and ctl.
-        test-rc2s2-node = {
+        # `saarthi` binary is on PATH for the wrapper and ctl; the token
+        # files live under ~/.config/saarthi.
+        test-saarthi-node = {
           expr =
             let
-              agent = home.launchd.agents.rc2s2-node;
+              agent = home.launchd.agents.saarthi-node;
               line = lib.last agent.config.ProgramArguments;
             in
             {
@@ -127,18 +128,21 @@
               keepAlive = agent.config.KeepAlive;
               hub = lib.hasInfix "--hub http://ghost001:7700" line;
               name = lib.hasInfix "--name rogue" line;
-              tokenFromSecret = lib.hasInfix "--token-file ${home.age.secrets.rc2s2RogueNodeToken.path}" line;
+              tokenFromSecret = lib.hasInfix "--token-file ${home.age.secrets.saarthiRogueNodeToken.path}" line;
               spawnRoot = lib.hasInfix "--spawn-root /Users/ank/workspace" line;
               profiles = lib.hasInfix "--profiles /nix/store/" line;
               sandbox =
                 let
-                  p = home.neusis.services.rc2s2-node.profiles.sandbox;
+                  p = home.services.saarthi-node.profiles.sandbox;
                 in
                 {
                   inherit (p) backend;
-                  tokenFromSecret = p.token_file == home.age.secrets.rc2s2SandboxClaudeToken.path;
+                  tokenFromSecret = p.token_file == home.age.secrets.saarthiSandboxClaudeToken.path;
+                  stateDir = p.state_dir;
                 };
-              onPath = t.hasPkg "rc2s2" home.home.packages;
+              onPath = t.hasPkg "saarthi" home.home.packages;
+              tokenPath = home.age.secrets.saarthiRogueNodeToken.path;
+              oldAgent = home.launchd.agents ? rc2s2-node;
             };
           expected = {
             enabled = true;
@@ -151,8 +155,11 @@
             sandbox = {
               backend = "seatbelt";
               tokenFromSecret = true;
+              stateDir = "~/.local/state/saarthi/sandbox";
             };
             onPath = true;
+            tokenPath = "/Users/ank/.config/saarthi/node-token";
+            oldAgent = false;
           };
         };
 

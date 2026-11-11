@@ -40,7 +40,7 @@
 
         [repos]
         manthan = "${config.home.homeDirectory}/workspace/chaos/manthan/main"
-        rc2s2 = "${config.home.homeDirectory}/workspace/hub/leoank/rc2s2"
+        saarthi = "${config.home.homeDirectory}/workspace/hub/leoank/rc2s2"
         yajna = "${config.home.homeDirectory}/workspace/chaos/yajna/main"
       '';
     };
@@ -85,10 +85,10 @@
         tools = {
           claude = {
             enable = true;
-            # `claude` at a terminal runs under `rc2s2 run`, so the session can
+            # `claude` at a terminal runs under `saarthi run`, so the session can
             # be interrupted and killed from the phone, wherever this home also
-            # runs the rc2s2 node daemon (the rc2s2-node bundle: rogue today).
-            rc2s2.enable = config.neusis.services.rc2s2-node.enable or false;
+            # runs the saarthi node daemon (the saarthi-node bundle: rogue today).
+            saarthi.enable = config.services.saarthi-node.enable or false;
             # `settings` replaces the module default wholesale, so the
             # defaults are restated here. The yajna repo is a plugin
             # marketplace: its plugin brings the lab-notebook skill and
@@ -287,62 +287,63 @@
       };
     };
 
-  # rc2s2 node — the daemon that observes and gates this machine's Claude Code
+  # saarthi node — the daemon that observes and gates this machine's Claude Code
   # sessions and streams them to the hub on ghost001. Attached to rogue only
-  # (it reads ~/.claude and watches the owner's live sessions).
-  flake.neusis.users.ank.hmBundles.rc2s2-node =
+  # (it reads ~/.claude and watches the owner's live sessions). The module comes
+  # from the saarthi flake (saarthi ADR-0041) and puts `saarthi` on PATH for
+  # `saarthi run`, `saarthi node hooks` and `saarthi ctl`.
+  flake.neusis.users.ank.hmBundles.saarthi-node =
     {
       config,
-      pkgs,
       inputs,
       ...
     }:
     {
-      imports = [ self.homeModules.rc2s2-node ];
+      imports = [ inputs.saarthi.homeModules.saarthi-node ];
 
       # Explicit stable path: the default darwin agenix path is under
       # `$(getconf DARWIN_USER_TEMP_DIR)`, which a quoted launchd argument would
       # not expand (same reason the oci* secrets above pin a path).
-      age.secrets.rc2s2RogueNodeToken = {
-        rekeyFile = ../../secrets/ank/rc2s2RogueNodeToken.age;
-        path = "${config.home.homeDirectory}/.config/rc2s2/node-token";
+      age.secrets.saarthiRogueNodeToken = {
+        rekeyFile = ../../secrets/ank/saarthiRogueNodeToken.age;
+        path = "${config.home.homeDirectory}/.config/saarthi/node-token";
       };
       # The Claude login of sandboxed sessions: a long-lived token from
       # `claude setup-token`, which the node passes in as CLAUDE_CODE_OAUTH_TOKEN,
-      # so the keychain login stays out of the sandbox (rc2s2 ADR-0038).
-      age.secrets.rc2s2SandboxClaudeToken = {
-        rekeyFile = ../../secrets/ank/rc2s2SandboxClaudeToken.age;
-        path = "${config.home.homeDirectory}/.config/rc2s2/sandbox-claude-token";
+      # so the keychain login stays out of the sandbox (saarthi ADR-0038).
+      age.secrets.saarthiSandboxClaudeToken = {
+        rekeyFile = ../../secrets/ank/saarthiSandboxClaudeToken.age;
+        path = "${config.home.homeDirectory}/.config/saarthi/sandbox-claude-token";
       };
 
-      neusis.services.rc2s2-node = {
+      services.saarthi-node = {
         enable = true;
         hub = "http://ghost001:7700";
-        tokenFile = config.age.secrets.rc2s2RogueNodeToken.path;
+        tokenFile = config.age.secrets.saarthiRogueNodeToken.path;
         name = "rogue";
-        # The rc2s2 live checks start throwaway sessions here; the live hub must not
-        # list them or push their turns to the phone (rc2s2 ADR-0028).
+        # The saarthi live checks start throwaway sessions here; the live hub must not
+        # list them or push their turns to the phone (saarthi ADR-0028).
         ignoreCwd = [ "*/target/live-work-*" ];
         # Hold the machine out of idle sleep while a session is busy, so a turn
-        # finishes and the hub link holds when the screen turns off (rc2s2 ADR-0031).
+        # finishes and the hub link holds when the screen turns off (saarthi ADR-0031).
         keepAwake = true;
-        # The phone may start sessions in any repo under ~/workspace (rc2s2
+        # The phone may start sessions in any repo under ~/workspace (saarthi
         # ADR-0034). `claude` is the login shell's, the profile's wrapper with the
         # plugins, which runs claude directly when its input is not a terminal.
         spawnRoots = [ "${config.home.homeDirectory}/workspace" ];
         # The account's rate limits as health, the access token read from the keychain,
-        # never written (rc2s2 ADR-0030; checked on this login in EXP-20261025-25f6vm).
+        # never written (saarthi ADR-0030; checked on this login in EXP-20261025-25f6vm).
         claudeUsage = true;
         # A confined way to start a session, offered on the app's New session
-        # (rc2s2 ADR-0038, checked live in rc2s2's AGS-20261107-413qp0): seatbelt
+        # (saarthi ADR-0038, checked live in saarthi's AGS-20261107-413qp0): seatbelt
         # through mxc, its own Claude config under the state directory, all egress,
         # the nix store and daemon, the profile's tools, git identity, the SSH
         # agent (push without the keys), and CLAUDE.md, skills, commands and agents.
         profiles.sandbox = {
           backend = "seatbelt";
           description = "Confined: the working directory, the nix store, git identity and the SSH agent";
-          state_dir = "~/.local/state/rc2s2/sandbox";
-          token_file = config.age.secrets.rc2s2SandboxClaudeToken.path;
+          state_dir = "~/.local/state/saarthi/sandbox";
+          token_file = config.age.secrets.saarthiSandboxClaudeToken.path;
           path = [
             "~/.nix-profile/bin"
             "/etc/profiles/per-user/${config.home.username}/bin"
@@ -374,10 +375,6 @@
           };
         };
       };
-
-      # rc2s2 on PATH for `rc2s2 run` (the PTY wrapper), `rc2s2 node hooks`
-      # and `rc2s2 ctl`.
-      home.packages = [ inputs.rc2s2.packages.${pkgs.stdenv.hostPlatform.system}.rc2s2 ];
     };
 
   # Configuring user for neusisOS
@@ -401,7 +398,7 @@
         self.neusis.users.ank.hmBundles.yajna
         self.neusis.users.ank.hmBundles.terminal-life
         self.neusis.users.ank.hmBundles.agent-harness
-        self.neusis.users.ank.hmBundles.rc2s2-node
+        self.neusis.users.ank.hmBundles.saarthi-node
         self.neusis.users.ank.hmBundles.darwin-tools
         self.neusis.users.ank.hmBundles.theming
         self.neusis.users.ank.hmBundles.browsers

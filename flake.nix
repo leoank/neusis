@@ -71,8 +71,8 @@
       url = "github:graelo/homebrew-tap";
       flake = false;
     };
-    rc2s2 = {
-      url = "github:leoank/rc2s2";
+    saarthi = {
+      url = "github:leoank/saarthi";
       inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
     stylix = {

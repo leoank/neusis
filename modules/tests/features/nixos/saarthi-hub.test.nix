@@ -1,8 +1,9 @@
-# Tests for flake.neusis.features.nixos.rc2s2-hub: it turns on the hub
-# with the data volume and the local ntfy, and points the token flags at
-# the agenix secret paths. agenix is stubbed (the real machine test
-# exercises it with agenix present).
-{ self, ... }:
+# Tests for flake.neusis.features.nixos.saarthi-hub: it turns on the hub
+# (the saarthi flake's module) with the data volume and the local ntfy,
+# points the token flags at the agenix secret paths, and copies the
+# record over from /srv/rc2s2 before the first start. agenix is stubbed
+# (the real machine test exercises it with agenix present).
+{ self, inputs, ... }:
 {
   perSystem =
     {
@@ -12,7 +13,7 @@
     }:
     let
       t = self.neusis.lib.tests;
-      fakePkg = testPkgs.writeShellScriptBin "rc2s2-hub" "exit 0";
+      fakePkg = testPkgs.writeShellScriptBin "saarthi-hub" "exit 0";
       # Minimal stand-in for agenix: enough that `age.secrets.<n>.path`
       # resolves to /run/agenix/<n> while the feature sets rekeyFile/owner.
       stubAgenix =
@@ -48,24 +49,29 @@
         system = "aarch64-linux";
         modules = [
           stubAgenix
-          self.nixosModules.rc2s2-hub
-          self.neusis.features.nixos.rc2s2-hub
-          { neusis.services.rc2s2-hub.package = fakePkg; }
+          inputs.saarthi.nixosModules.saarthi-hub
+          self.neusis.features.nixos.saarthi-hub
+          { services.saarthi-hub.package = fakePkg; }
         ];
       };
-      e = cfg.systemd.services.rc2s2-hub.serviceConfig.ExecStart;
+      s = cfg.systemd.services.saarthi-hub.serviceConfig;
+      e = s.ExecStart;
+      pre = builtins.head s.ExecStartPre;
     in
     {
-      tests.feature-nixos-rc2s2-hub = {
+      tests.feature-nixos-saarthi-hub = {
         test-wires-hub-and-ntfy = {
           expr = {
-            hubOn = cfg.neusis.services.rc2s2-hub.enable;
-            dataDir = cfg.neusis.services.rc2s2-hub.dataDir;
-            db = lib.hasInfix "--db /srv/rc2s2/hub.db" e;
-            nodeTokens = lib.hasInfix "--node-tokens /run/agenix/rc2s2NodeTokens" e;
-            clientTokens = lib.hasInfix "--client-tokens /run/agenix/rc2s2ClientTokens" e;
-            ntfyFlag = lib.hasInfix "--ntfy http://127.0.0.1:2586/rc2s2" e;
-            secretOwner = cfg.age.secrets.rc2s2NodeTokens.owner;
+            hubOn = cfg.services.saarthi-hub.enable;
+            dataDir = cfg.services.saarthi-hub.dataDir;
+            db = lib.hasInfix "--db /srv/saarthi/hub.db" e;
+            nodeTokens = lib.hasInfix "--node-tokens /run/agenix/saarthiNodeTokens" e;
+            clientTokens = lib.hasInfix "--client-tokens /run/agenix/saarthiClientTokens" e;
+            ntfyFlag = lib.hasInfix "--ntfy http://127.0.0.1:2586/saarthi" e;
+            secretOwner = cfg.age.secrets.saarthiNodeTokens.owner;
+            # the copy from /srv/rc2s2 runs as root before the hub starts
+            # (the script is not read here: that would build it at eval)
+            migrateAsRoot = builtins.match "[+]/nix/store/[a-z0-9]+-saarthi-hub-migrate" pre != null;
             ntfyOn = cfg.services.ntfy-sh.enable;
             ntfyListen = cfg.services.ntfy-sh.settings.listen-http;
             ntfyBaseUrl = cfg.services.ntfy-sh.settings.base-url;
@@ -73,12 +79,13 @@
           };
           expected = {
             hubOn = true;
-            dataDir = "/srv/rc2s2";
+            dataDir = "/srv/saarthi";
             db = true;
             nodeTokens = true;
             clientTokens = true;
             ntfyFlag = true;
-            secretOwner = "rc2s2-hub";
+            secretOwner = "saarthi-hub";
+            migrateAsRoot = true;
             ntfyOn = true;
             ntfyListen = ":2586";
             ntfyBaseUrl = "http://ghost001:2586";

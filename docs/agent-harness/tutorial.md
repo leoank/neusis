@@ -105,21 +105,21 @@ Add extra packages to the Linux jail (no-op on Darwin):
 neusis.agent-harness.tools.claude.extraPkgs = with pkgs; [ uv nodejs_22 ];
 ```
 
-Run `claude` under [rc2s2](https://github.com/leoank/rc2s2)'s PTY wrapper, so a session
+Run `claude` under [saarthi](https://github.com/leoank/saarthi)'s PTY wrapper, so a session
 can be interrupted and killed from the phone, not only watched:
 
 ```nix
-neusis.agent-harness.tools.claude.rc2s2.enable = true;
-# rc2s2.package defaults to the flake's `rc2s2` input
+neusis.agent-harness.tools.claude.saarthi.enable = true;
+# saarthi.package defaults to the flake's `saarthi` input
 ```
 
-At a terminal, `claude …` then runs `rc2s2 run --command <claude> -- …`. On Linux that
+At a terminal, `claude …` then runs `saarthi run --command <claude> -- …`. On Linux that
 `<claude>` is the jailed one, and every argument passes through. Without a terminal
 (`claude -p … | jq`, scripts) it runs claude directly, since a PTY would mix stderr into
-the output. The wrapper talks to the rc2s2 node daemon (`neusis.services.rc2s2-node`).
+the output. The wrapper talks to the saarthi node daemon (`services.saarthi-node`, from the saarthi flake).
 If the daemon isn't running, the session works as usual and only can't be interrupted
 remotely. ank's home turns it on wherever it also runs the daemon:
-`rc2s2.enable = config.neusis.services.rc2s2-node.enable or false`.
+`saarthi.enable = config.services.saarthi-node.enable or false`.
 
 ---
 

@@ -1,47 +1,77 @@
-# Neusis feature: the rc2s2 hub, wired for ank's fleet (NixOS).
+# Neusis feature: the saarthi hub, wired for ank's fleet (NixOS).
 #
-# Turns on `neusis.services.rc2s2-hub` with the data volume, the agenix
-# token secrets, and a self-hosted ntfy the hub pushes through. A machine
-# that wants the hub imports `self.nixosModules.rc2s2-hub` (the service) and
-# `self.neusis.features.nixos.rc2s2-hub` (this), and needs the secrets
-# service enabled (for agenix) — see machines/ghost001.nix.
+# The hub's module comes from the saarthi flake, its source of truth (saarthi
+# ADR-0041): a machine imports `inputs.saarthi.nixosModules.saarthi-hub` (the
+# service) and `self.neusis.features.nixos.saarthi-hub` (this), and needs the
+# secrets service enabled (for agenix) — see machines/ghost001.nix. This feature
+# adds what is the fleet's own: the data volume, the agenix token secrets, and a
+# self-hosted ntfy the hub pushes through.
 #
 # Secrets (edit with `agenix edit modules/secrets/ank/<name>.age`, then
 # `agenix rekey`):
-#   rc2s2NodeTokens    file of `<node name> <token>` lines
-#   rc2s2ClientTokens  file of `<client name> <token>` lines
+#   saarthiNodeTokens    file of `<node name> <token>` lines
+#   saarthiClientTokens  file of `<client name> <token>` lines
 #
 # ntfy is self-hosted and reachable over the tailnet only (its port is not
-# opened on the host firewall or the OCI security list). The hub posts to
-# the `rc2s2` topic locally; the phone subscribes to that topic and/or
-# registers a UnifiedPush endpoint against the same server (ADR-0026).
+# opened on the host firewall or the OCI security list). The hub posts to the
+# `saarthi` topic locally; the phone registers UnifiedPush endpoints against the
+# same server.
 { ... }:
 {
-  flake.neusis.features.nixos.rc2s2-hub =
-    { config, ... }:
+  # The saarthi flake: the hub and node modules and the `saarthi` and
+  # `saarthi-hub` binaries. ank's node bundle and the agent harness read it too;
+  # it is declared once here.
+  flake-file.inputs.saarthi = {
+    url = "github:leoank/saarthi";
+    inputs.nixpkgs.follows = "nixpkgs-unstable";
+  };
+
+  flake.neusis.features.nixos.saarthi-hub =
+    { config, pkgs, ... }:
+    let
+      dataDir = "/srv/saarthi";
+      # Before the rename the hub was rc2s2-hub with its record in /srv/rc2s2.
+      # On the first start after the switch (which has stopped the old unit),
+      # copy that record over, as root, and give it to the new user; the old
+      # directory stays as a backup. A no-op once hub.db exists here.
+      migrate = pkgs.writeShellScript "saarthi-hub-migrate" ''
+        set -eu
+        old=/srv/rc2s2
+        new=${dataDir}
+        if [ -e "$old/hub.db" ] && [ ! -e "$new/hub.db" ]; then
+          install -d -m 0750 -o saarthi-hub -g saarthi-hub "$new"
+          cp -p "$old"/hub.db* "$new"/
+          chown saarthi-hub:saarthi-hub "$new"/hub.db*
+          echo "saarthi-hub: copied the hub record from $old to $new"
+        fi
+      '';
+    in
     {
-      age.secrets.rc2s2NodeTokens = {
-        rekeyFile = ../../secrets/ank/rc2s2NodeTokens.age;
-        owner = "rc2s2-hub";
-        group = "rc2s2-hub";
+      age.secrets.saarthiNodeTokens = {
+        rekeyFile = ../../secrets/ank/saarthiNodeTokens.age;
+        owner = "saarthi-hub";
+        group = "saarthi-hub";
       };
-      age.secrets.rc2s2ClientTokens = {
-        rekeyFile = ../../secrets/ank/rc2s2ClientTokens.age;
-        owner = "rc2s2-hub";
-        group = "rc2s2-hub";
+      age.secrets.saarthiClientTokens = {
+        rekeyFile = ../../secrets/ank/saarthiClientTokens.age;
+        owner = "saarthi-hub";
+        group = "saarthi-hub";
       };
 
-      neusis.services.rc2s2-hub = {
+      services.saarthi-hub = {
         enable = true;
         # Persist the SQLite record on the data volume (survives
         # reprovisioning); reachable over the tailnet only.
-        dataDir = "/srv/rc2s2";
+        inherit dataDir;
         listen = "0.0.0.0:7700";
         openFirewall = false;
-        nodeTokensFile = config.age.secrets.rc2s2NodeTokens.path;
-        clientTokensFile = config.age.secrets.rc2s2ClientTokens.path;
-        ntfy = "http://127.0.0.1:2586/rc2s2";
+        nodeTokensFile = config.age.secrets.saarthiNodeTokens.path;
+        clientTokensFile = config.age.secrets.saarthiClientTokens.path;
+        ntfy = "http://127.0.0.1:2586/saarthi";
       };
+
+      # `+`: runs as root, outside the service's sandbox, before the hub starts.
+      systemd.services.saarthi-hub.serviceConfig.ExecStartPre = [ "+${migrate}" ];
 
       # Self-hosted ntfy for push. base-url is the tailnet name so the
       # phone can register UnifiedPush endpoints and subscribe; no auth,

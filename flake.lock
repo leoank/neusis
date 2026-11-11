@@ -529,7 +529,7 @@
     "flake-parts_6": {
       "inputs": {
         "nixpkgs-lib": [
-          "rc2s2",
+          "saarthi",
           "nixpkgs"
         ]
       },
@@ -1101,29 +1101,6 @@
         "type": "github"
       }
     },
-    "rc2s2": {
-      "inputs": {
-        "flake-parts": "flake-parts_6",
-        "nixpkgs": [
-          "nixpkgs-unstable"
-        ],
-        "rust-overlay": "rust-overlay",
-        "yajna": "yajna"
-      },
-      "locked": {
-        "lastModified": 1794357539,
-        "narHash": "sha256-q9D3zL8fwErdISr4xNo14ppL9+LUBVznDoqtZCOa7GQ=",
-        "owner": "leoank",
-        "repo": "rc2s2",
-        "rev": "f7c602ec6579d766d4c63625e660115e3b885c43",
-        "type": "github"
-      },
-      "original": {
-        "owner": "leoank",
-        "repo": "rc2s2",
-        "type": "github"
-      }
-    },
     "root": {
       "inputs": {
         "agenix": "agenix",
@@ -1148,7 +1125,7 @@
         "nixpkgs-unstable": "nixpkgs-unstable",
         "nixvim": "nixvim",
         "pumas-tap": "pumas-tap",
-        "rc2s2": "rc2s2",
+        "saarthi": "saarthi",
         "stylix": "stylix",
         "terranix": "terranix",
         "whatcable-tap": "whatcable-tap",
@@ -1158,7 +1135,7 @@
     "rust-overlay": {
       "inputs": {
         "nixpkgs": [
-          "rc2s2",
+          "saarthi",
           "nixpkgs"
         ]
       },
@@ -1173,6 +1150,29 @@
       "original": {
         "owner": "oxalica",
         "repo": "rust-overlay",
+        "type": "github"
+      }
+    },
+    "saarthi": {
+      "inputs": {
+        "flake-parts": "flake-parts_6",
+        "nixpkgs": [
+          "nixpkgs-unstable"
+        ],
+        "rust-overlay": "rust-overlay",
+        "yajna": "yajna"
+      },
+      "locked": {
+        "lastModified": 1794414623,
+        "narHash": "sha256-KvKhWEWSzYwR6sL9MSrGewLyCuIvHKBUcCYUek9U9wY=",
+        "owner": "leoank",
+        "repo": "saarthi",
+        "rev": "32fe5d045354395b0e418d1e8d7a9417e9e8249d",
+        "type": "github"
+      },
+      "original": {
+        "owner": "leoank",
+        "repo": "saarthi",
         "type": "github"
       }
     },
@@ -1538,7 +1538,7 @@
     "yajna": {
       "inputs": {
         "nixpkgs": [
-          "rc2s2",
+          "saarthi",
           "nixpkgs"
         ]
       },
