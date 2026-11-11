@@ -158,6 +158,57 @@
           ];
         };
 
+        # A group with `ci = false` gets no matrix entry, and needs no checks.
+        test-ci-matrix-skips-groups-out-of-ci = {
+          expr = au.ciMatrix {
+            groups = {
+              canary = group [ ] { } // {
+                machines = [
+                  {
+                    hostname = "a";
+                    system = "x86_64-linux";
+                  }
+                ];
+              };
+              live = group [ ] { ci = false; } // {
+                machines = [
+                  {
+                    hostname = "l";
+                    system = "aarch64-linux";
+                  }
+                ];
+              };
+            };
+            checks.x86_64-linux.nixos-a = null;
+          };
+          expected = [
+            {
+              host = "a";
+              group = "canary";
+              system = "x86_64-linux";
+              checks = [ "nixos-a" ];
+            }
+          ];
+        };
+
+        test-not-in-ci-lists-hosts-of-ci-false-groups = {
+          expr = au.notInCi {
+            lab1 = {
+              canary = group [ "a" ] { };
+              live = group [ "l" ] { ci = false; };
+            };
+            lab2.other = group [
+              "m"
+              "n"
+            ] { ci = false; };
+          };
+          expected = [
+            "l"
+            "m"
+            "n"
+          ];
+        };
+
         # A member without a system check would silently skip its gate.
         test-ci-matrix-needs-the-system-check = {
           expr = au.ciMatrix {

@@ -21,10 +21,12 @@ in
       after = "canary";
       soakHours = 24;
     };
-    # curiosity (the N1X live disk) alone: its build compiles the N1X kernel, so a slow or
-    # failing build must not hold back canary or stable.
+    # curiosity (the N1X live disk) alone and out of CI (`ci = false`): its build compiles the
+    # N1X kernel, which CI must not do, and a slow or failing build must not hold back canary
+    # or stable. It moves with every green main and builds the commit itself.
     live = {
       machines = [ m.curiosity ];
+      ci = false;
     };
   };
 }

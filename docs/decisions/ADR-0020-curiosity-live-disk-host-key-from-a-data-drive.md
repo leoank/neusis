@@ -25,7 +25,7 @@ The N1X hardware support (NVIDIA's kernel with patches, out-of-tree spi-hid, LPS
 desktop tuning) could be copied into neusis or taken from anvesana.
 
 ## Decision
-- curiosity's ISO (`packages.aarch64-linux.curiosity-live`) is built from
+- curiosity's ISO (`legacyPackages.aarch64-linux.curiosity-live`) is built from
   `machines/curiosity.nix` like any host: users, homes, secrets, cslab tailnet, distributed
   builds, comin.
 - Its host key is pre-generated like ghost001's (ADR-0011): public half in the machine file,

@@ -7,6 +7,9 @@
 #   checks.<system>.nixos-<host>       = nixosConfigurations.<host>.config.system.build.toplevel
 #   checks.<system>.home-<user>@<host> = homeConfigurations."<user>@<host>".activationPackage
 #
+# Machines in a deploy group with `ci = false` (curiosity) get no checks,
+# so CI never evaluates or builds them.
+#
 # The target system comes from the machine registry, not from the
 # configuration's `pkgs`: instantiating a host's `pkgs` applies its
 # overlays (stylix needs import-from-derivation), which would make even
@@ -22,8 +25,10 @@
         (lib.findFirst (m: m.hostname == host) (throw "checks: no registered machine named ${host}") machines)
         .system;
       hostOf = name: lib.last (lib.splitString "@" name);
+      notInCi = self.neusis.lib.autoUpdate.notInCi self.neusis.registry.deployGroups;
 
-      forThisSystem = sysOf: lib.filterAttrs (n: _: sysOf n == system);
+      forThisSystem =
+        sysOf: lib.filterAttrs (n: _: sysOf n == system && !(lib.elem (hostOf n) notInCi));
       named =
         prefix: sysOf: f: cfgs:
         lib.mapAttrs' (n: c: lib.nameValuePair "${prefix}${n}" (f c)) (forThisSystem sysOf cfgs);

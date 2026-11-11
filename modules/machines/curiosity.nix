@@ -209,7 +209,9 @@ in
   perSystem =
     { system, lib, ... }:
     {
-      packages = lib.optionalAttrs (system == "aarch64-linux") {
+      # legacyPackages, not packages: every package is a `pkg-*` check, and CI must not build
+      # the ISO (its deploy group has `ci = false`). `nix build .#curiosity-live` finds it here.
+      legacyPackages = lib.optionalAttrs (system == "aarch64-linux") {
         curiosity-live = self.nixosConfigurations.curiosity.config.system.build.isoImage;
       };
     };

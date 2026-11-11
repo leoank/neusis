@@ -67,6 +67,7 @@
     # before its group may move — its system (`nixos-<host>` or
     # `darwin-<host>`) and every home on it (`home-<user>@<host>`).
     # `checks` is the flake's `checks` output; only its names are read.
+    # Groups with `ci = false` are left out.
     ciMatrix =
       { groups, checks }:
       lib.concatMap (
@@ -89,7 +90,18 @@
               ) names;
             }
         ) groups.${group}.machines
-      ) (lib.attrNames groups);
+      ) (lib.filter (g: groups.${g}.ci or true) (lib.attrNames groups));
+
+    # Hostnames in groups with `ci = false`, across every lab: CI neither
+    # builds nor evaluates them (machines/checks glue, ciMatrix).
+    notInCi =
+      deployGroups:
+      lib.concatMap (
+        groups:
+        lib.concatMap (g: map (m: m.hostname) g.machines) (
+          lib.filter (g: !(g.ci or true)) (lib.attrValues groups)
+        )
+      ) (lib.attrValues deployGroups);
 
     # OpenSSH `allowed_signers` text for a signer list, restricted to git
     # signatures (comin accepts only key entries and `namespaces=`).

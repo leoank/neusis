@@ -20,6 +20,7 @@
               after
               soakHours
               pollPeriod
+              ci
               ;
             machines = map (m: m.hostname) g.machines;
           }) groups;
@@ -29,6 +30,7 @@
               after = null;
               soakHours = 0;
               pollPeriod = 60;
+              ci = true;
               machines = [ "rogue" ];
             };
             stable = {
@@ -36,14 +38,17 @@
               after = "canary";
               soakHours = 24;
               pollPeriod = 60;
+              ci = true;
               machines = [ "ghost001" ];
             };
-            # curiosity alone, so its kernel build never holds back canary or stable
+            # curiosity alone and out of CI, so CI never builds its kernel and it never holds
+            # back canary or stable
             live = {
               branch = "deploy/live";
               after = null;
               soakHours = 0;
               pollPeriod = 60;
+              ci = false;
               machines = [ "curiosity" ];
             };
           };
@@ -54,7 +59,7 @@
           expected = [ ];
         };
 
-        # What gates.yml builds before promoting each group.
+        # What gates.yml builds before promoting each group: not curiosity (live, ci = false).
         test-anklab-ci-matrix = {
           expr = self.neusis.lib.autoUpdate.ciMatrix {
             inherit groups;
@@ -70,16 +75,6 @@
                 "home-ank@rogue"
               ];
             }
-            # groups in name order: canary, live, stable
-            {
-              host = "curiosity";
-              group = "live";
-              system = "aarch64-linux";
-              checks = [
-                "home-ank@curiosity"
-                "nixos-curiosity"
-              ];
-            }
             {
               host = "ghost001";
               group = "stable";
@@ -90,6 +85,15 @@
               ];
             }
           ];
+        };
+
+        # CI evaluates and builds nothing of curiosity's: no system, home or ISO check on any
+        # system (T1 instantiates every check; the ISO is in legacyPackages, not packages).
+        test-curiosity-has-no-checks = {
+          expr = lib.concatMap (
+            sys: lib.filter (n: lib.hasInfix "curiosity" n) (lib.attrNames self.checks.${sys})
+          ) (lib.attrNames self.checks);
+          expected = [ ];
         };
 
         test-every-member-is-built-by-the-lab = {

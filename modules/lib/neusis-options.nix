@@ -319,6 +319,18 @@ let
           default = 60;
           description = "Seconds between polls of the group's branch on each member (comin's poller period).";
         };
+        ci = mkOption {
+          type = types.bool;
+          default = true;
+          description = ''
+            Whether CI gates this group's machines: builds them in the
+            system matrix and evaluates their checks. `false` leaves them
+            out of CI entirely (no `nixos-`/`darwin-`/`home-` checks, no
+            matrix entry), so they never hold another group back; the
+            group still moves with every green `main`, and its machines
+            build the commit themselves.
+          '';
+        };
       };
     }
   );
