@@ -304,7 +304,14 @@ fail.
   promotion failing" (the promote job itself broke). The email goes out
   when the issue **opens**; later failures only comment, so a failure
   that persists mails once, not every hour. The next success closes it
-  (`.github/scripts/alert.sh`).
+  (`.github/scripts/alert.sh`). For the input update, the comment also
+  carries what failed (`.github/scripts/failure-summary.sh`: the failed
+  jobs and the distinct `error:` lines of their logs, with store hashes
+  and build paths masked) and a hash of it, and a repeat whose summary
+  differs from the issue's last one mails again ("…: the failure
+  changed"). Added 2026-11-11, after a brave removal, an nvim download
+  and an rc2s2-hub link failure followed each other under one issue and
+  only the first was mailed.
 
 Sources:
 

@@ -109,7 +109,9 @@ The bump cadence is the `cron` line in `.github/workflows/update-inputs.yml`.
 
 Failures open a GitHub issue labelled `auto-update` and send **one**
 email (from ghcibot@leoank.me) when the issue opens; repeats only comment.
-The next success closes it.
+The next success closes it. For the input update, each comment lists the
+failed jobs and their errors, and a repeat that fails differently (a new
+job, or new error text) emails again.
 
 | Issue | Means | Usually |
 |---|---|---|

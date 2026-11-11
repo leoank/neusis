@@ -116,6 +116,7 @@ jobs:
     if: always() && needs.bump.result != 'skipped'
     runs-on: ubuntu-latest
     permissions:
+      actions: read
       contents: read
       issues: write
     steps:
@@ -136,5 +137,10 @@ jobs:
           BODY: >-
             Input update ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}:
             bump ${{ needs.bump.result }}, gates ${{ needs.gates.result }}, land ${{ needs.land.result }}.
+        # What failed goes into the issue; a different failure mails again.
         run: |
-          .github/scripts/alert.sh "$STATE" "auto-update: input update failing" "$BODY"
+          details=
+          if [ "$STATE" = failed ]; then
+            details=$(.github/scripts/failure-summary.sh "$GITHUB_RUN_ID") || details=
+          fi
+          .github/scripts/alert.sh "$STATE" "auto-update: input update failing" "$BODY" "$details"
