@@ -392,18 +392,14 @@
     {
       imports = [ self.homeModules.rc2s2-node ];
 
-      # PLACEHOLDER: encrypted to the master identity with a dummy value until curiosity has
-      # a node token on the hub. Then `agenix edit modules/secrets/ank/rc2s2CuriosityNodeToken.age`
-      # with the real token, and `agenix rekey`.
-      age.secrets.rc2s2CuriosityNodeToken = {
-        rekeyFile = ../../secrets/ank/rc2s2CuriosityNodeToken.age;
-        path = "${config.home.homeDirectory}/.config/rc2s2/node-token";
-      };
-
       neusis.services.rc2s2-node = {
         enable = true;
         hub = "http://ghost001:7700";
-        tokenFile = config.age.secrets.rc2s2CuriosityNodeToken.path;
+        # A system secret of curiosity's, owned by ank and decrypted with the host key
+        # (machines/curiosity.nix): ank's own key never comes to this machine.
+        # PLACEHOLDER value until curiosity has a node token on the hub: then
+        # `agenix edit modules/secrets/ank/rc2s2CuriosityNodeToken.age` and `agenix rekey`.
+        tokenFile = "/run/agenix/rc2s2CuriosityNodeToken";
         name = "curiosity";
         ignoreCwd = [ "*/target/live-work-*" ];
         spawnRoots = [ "${config.home.homeDirectory}/workspace" ];
@@ -452,8 +448,9 @@
         self.neusis.users.ank.hmBundles.neusis-cli
         self.neusis.users.ank.hmBundles.terminal-life
       ];
-      # N1X laptop live disk (GNOME): the workstation bundles for sessions on the machine, with
-      # ank's secrets (needs ank's key on SPARKDATA, see machines/curiosity.nix).
+      # N1X laptop live disk (GNOME): the workstation bundles for sessions on the machine. No
+      # `secrets` bundle: it decrypts with ank's own key, which stays off this machine; the
+      # secrets ank needs here are system secrets owned by him (machines/curiosity.nix).
       curiosity = [
         self.neusis.features.agnostic.nix-pkgs
         self.neusis.users.ank.hmBundles.kalam-ide
@@ -462,7 +459,6 @@
         self.neusis.users.ank.hmBundles.terminal-life
         self.neusis.users.ank.hmBundles.agent-harness
         self.neusis.users.ank.hmBundles.rc2s2-node-curiosity
-        self.neusis.users.ank.hmBundles.secrets
       ];
     };
   };

@@ -13,9 +13,9 @@
 #                                           sshd/tailscale keep one identity. The public half is
 #                                           `hostPubkey`; an age copy for the master identity is
 #                                           in secrets/bootstrap/curiosity/.
-#   config/curiosity/ank/id_ed25519         optional: ank's own key, for the home `secrets`
-#                                           bundle (decrypts with it) and for cloning over ssh.
-#                                           Put there by ank, never by tooling.
+# ank's own key stays on his machines: he connects over the tailnet with `ssh -A`, and the
+# secrets ank needs here (GitHub token, rc2s2 node token) are system secrets owned by ank,
+# decrypted with the host key.
 # Build: nix build .#curiosity-live (aarch64-linux); write the ISO to a stick directly (not
 # Ventoy). After changing secrets or this host's key: `agenix rekey` on a machine with the
 # master identity.
@@ -25,7 +25,7 @@ let
 in
 {
   flake-file.inputs.anvesana = {
-    url = "github:leoank/anvesana/exp/nvpcf-throttle";
+    url = "github:leoank/anvesana";
     inputs.nixpkgs.follows = "nixpkgs";
   };
 
@@ -130,34 +130,40 @@ in
           fsType = "exfat";
           options = [ "nofail" "x-systemd.automount" "uid=0" "gid=0" "fmask=0022" "dmask=0022" ];
         };
-        # ank's own key, if ank put it on SPARKDATA, before ank's home activates.
-        systemd.services.curiosity-user-key = {
-          description = "Install ank's SSH key from SPARKDATA";
-          wantedBy = [ "multi-user.target" ];
-          before = [ "home-manager-ank.service" ];
-          unitConfig.RequiresMountsFor = "/mnt/sparkdata";
-          serviceConfig.Type = "oneshot";
-          script = ''
-            [ -f /mnt/sparkdata/config/curiosity/ank/id_ed25519 ] || exit 0
-            install -d -m 0700 -o ank -g users /home/ank/.ssh
-            install -m 0600 -o ank -g users /mnt/sparkdata/config/curiosity/ank/id_ed25519 /home/ank/.ssh/id_ed25519
-          '';
+        # ank's secrets on curiosity are system secrets owned by ank, decrypted with the host key
+        # (ank's own key never comes to this machine: he works here over ssh with agent
+        # forwarding). Same rekeyFiles as ank's home bundles; `agenix rekey` encrypts them for
+        # curiosity's host key.
+        age.secrets.ghauthToken = {
+          rekeyFile = ../secrets/ank/ghauthToken.age;
+          owner = "ank";
+        };
+        age.secrets.rc2s2CuriosityNodeToken = {
+          rekeyFile = ../secrets/ank/rc2s2CuriosityNodeToken.age;
+          owner = "ank";
         };
         # neusis checked out at ~/workspace/repos/leoank/neusis (ank's bootstrap-repos list,
-        # `gclb-sync`), for changing curiosity from a session on it. Retries until the network
-        # and a GitHub credential are there.
+        # `gclb-sync`), for changing curiosity from a session on it. Cloned over https with the
+        # GitHub token: git@github.com: URLs are rewritten for this run only (GIT_CONFIG_*), so
+        # the remotes stay ssh and pushing works through a forwarded agent. Retries until the
+        # network is up.
         systemd.user.services.neusis-checkout = {
           description = "Clone ank's repos (gclb-sync)";
           wantedBy = [ "default.target" ];
           after = [ "network-online.target" ];
           unitConfig.ConditionUser = "ank";
-          environment.GIT_SSH_COMMAND = "ssh -o StrictHostKeyChecking=accept-new";
           serviceConfig = {
             Type = "oneshot";
-            ExecStart = "/etc/profiles/per-user/ank/bin/gclb-sync";
             Restart = "on-failure";
             RestartSec = 120;
           };
+          script = ''
+            token=$(cat ${config.age.secrets.ghauthToken.path})
+            export GIT_CONFIG_COUNT=1
+            export GIT_CONFIG_KEY_0="url.https://x-access-token:$token@github.com/.insteadOf"
+            export GIT_CONFIG_VALUE_0="git@github.com:"
+            exec /etc/profiles/per-user/ank/bin/gclb-sync
+          '';
         };
 
         # ---------------------------------------------------------------- desktop

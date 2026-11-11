@@ -34,9 +34,12 @@ desktop tuning) could be copied into neusis or taken from anvesana.
   systemd service waits up to 30 s for SPARKDATA, mounts it read-only and copies the key to
   `/sysroot/etc/ssh` before switch-root, so agenix and sshd find it where they always do.
   Without the drive the boot continues without secrets.
-- ank's home `secrets` bundle decrypts with ank's own key; on curiosity that key is read from
-  SPARKDATA (`config/curiosity/ank/id_ed25519`) only if Ank puts it there.
-- `gclb-sync` (ank's bootstrap-repos list) runs as a user service, so neusis is checked out at
+- ank's own key never comes to curiosity: he connects over the tailnet with `ssh -A`. The
+  secrets ank needs there (GitHub token, rc2s2 node token) are system secrets owned by ank,
+  decrypted with the host key; ank's home `secrets` bundle (which decrypts with his key) is not
+  on curiosity.
+- `gclb-sync` (ank's bootstrap-repos list) runs as a user service, cloning over https with the
+  GitHub token while the remotes stay ssh, so neusis is checked out at
   `~/workspace/repos/leoank/neusis` for changing curiosity from a session on it.
 - The N1X support is the `anvesana` flake input (`nixosModules.n1x` and `n1x-desktop`), one
   source of truth; it boots with `acpi_osi="!Windows 2022"`, which needs no vendor ACPI tables.
@@ -44,10 +47,10 @@ desktop tuning) could be copied into neusis or taken from anvesana.
   not hold back canary or stable.
 
 ## Consequences
-- Whoever has the SPARKDATA drive has curiosity's host key (and ank's key, if he puts it
-  there): the drive is now as sensitive as the machine's identity. Losing it means
-  `agenix rekey` with a new key.
+- Whoever has the SPARKDATA drive has curiosity's host key, and with it every secret rekeyed
+  for curiosity (the tailnet key, the GitHub token): the drive is as sensitive as the
+  machine's identity. Losing it means `agenix rekey` with a new key.
 - Tailscale state does not persist; the cslab profile re-authenticates each boot and
   force-claims the hostname.
 - Building curiosity (and CI's `live` gate) compiles NVIDIA's kernel on aarch64-linux.
-- anvesana's `exp/nvpcf-throttle` branch is pinned until it is merged to main.
+- The anvesana input follows anvesana's main.
