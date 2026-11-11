@@ -38,6 +38,14 @@
               pollPeriod = 60;
               machines = [ "ghost001" ];
             };
+            # curiosity alone, so its kernel build never holds back canary or stable
+            live = {
+              branch = "deploy/live";
+              after = null;
+              soakHours = 0;
+              pollPeriod = 60;
+              machines = [ "curiosity" ];
+            };
           };
         };
 
@@ -60,6 +68,16 @@
               checks = [
                 "darwin-rogue"
                 "home-ank@rogue"
+              ];
+            }
+            # groups in name order: canary, live, stable
+            {
+              host = "curiosity";
+              group = "live";
+              system = "aarch64-linux";
+              checks = [
+                "home-ank@curiosity"
+                "nixos-curiosity"
               ];
             }
             {

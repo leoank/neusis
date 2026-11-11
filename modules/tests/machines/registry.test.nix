@@ -26,8 +26,12 @@
               "rogue"
               "darwin001"
             ];
-            nixos = [ "ghost001" ];
+            nixos = [
+              "ghost001"
+              "curiosity"
+            ];
             declared = [
+              "curiosity"
               "darwin001"
               "ghost001"
               "rogue"
@@ -36,7 +40,10 @@
               "darwin001"
               "rogue"
             ];
-            nixosOutputs = [ "ghost001" ];
+            nixosOutputs = [
+              "curiosity"
+              "ghost001"
+            ];
           };
         };
 
@@ -152,6 +159,7 @@
           };
           expected = {
             ank = [
+              "curiosity"
               "ghost001"
               "rogue"
             ];

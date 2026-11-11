@@ -57,6 +57,7 @@
         test-home-configurations-exist-for-registered-users = {
           expr = builtins.attrNames self.homeConfigurations;
           expected = [
+            "ank@curiosity"
             "ank@ghost001"
             "ank@rogue"
             "kumarank@darwin001"

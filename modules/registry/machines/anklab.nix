@@ -7,6 +7,7 @@
     ];
     nixos = [
       self.neusis.machines.ghost001
+      self.neusis.machines.curiosity
     ];
   };
 }

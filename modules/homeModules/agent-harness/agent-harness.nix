@@ -13,9 +13,10 @@
 #   neusis.agent-harness.tools.<x>.enable
 #                                    → configure a specific agent.
 #
-# On Linux every agent CLI is wrapped via `jail-nix` so it can only
-# read/write its own config dir + the current working tree. On Darwin
-# the unwrapped packages are used (no jail support).
+# On Linux every agent CLI except claude is wrapped via `jail-nix` so it can
+# only read/write its own config dir + the current working tree. On Darwin
+# the unwrapped packages are used (no jail support). claude is unwrapped on
+# both until it moves to mxc confinement (saarthi launch profiles).
 { ... }:
 {
   flake-file.inputs = {
@@ -87,11 +88,11 @@
 
       # --- per-agent wrapped packages ---
 
-      claudePkg = mkJailed "claude" llmPkgs.claude-code [
-        "~/.claude"
-        "~/.claude.json"
-        "~/.claude.json.backup"
-      ] cfg.tools.claude.extraPkgs;
+      # claude is no longer jailed on Linux (Ank, 2026-11-11): it is to move to mxc confinement
+      # through saarthi's launch profiles, which have no Linux (bubblewrap) backend yet, and
+      # `saarthi run` cannot pick a profile; until then the plain package, as on Darwin. The other
+      # agents keep their jails.
+      claudePkg = llmPkgs.claude-code;
 
       # `claude` under `saarthi run` (tools.claude.saarthi): the session gets a
       # PTY the saarthi node daemon can interrupt and kill from the phone, and
@@ -190,11 +191,6 @@
         tools = {
           claude = {
             enable = lib.mkEnableOption "Claude Code CLI";
-            extraPkgs = lib.mkOption {
-              type = lib.types.listOf lib.types.package;
-              default = [ ];
-              description = "Extra packages added to claude's jail (Linux only).";
-            };
             saarthi = {
               enable = lib.mkEnableOption ''
                 running `claude` at a terminal under `saarthi run`, a PTY the saarthi

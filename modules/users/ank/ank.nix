@@ -377,6 +377,33 @@
       };
     };
 
+  # saarthi node on curiosity (the N1X live disk), as on rogue minus what is macOS-only: no
+  # seatbelt sandbox profile, no keepAwake (documented as `caffeinate` on Darwin). The module
+  # puts `saarthi` on PATH.
+  flake.neusis.users.ank.hmBundles.saarthi-node-curiosity =
+    {
+      config,
+      inputs,
+      ...
+    }:
+    {
+      imports = [ inputs.saarthi.homeModules.saarthi-node ];
+
+      services.saarthi-node = {
+        enable = true;
+        hub = "http://ghost001:7700";
+        # A system secret of curiosity's, owned by ank and decrypted with the host key
+        # (machines/curiosity.nix): ank's own key never comes to this machine.
+        # PLACEHOLDER value until curiosity has a node token on the hub: then
+        # `agenix edit modules/secrets/ank/saarthiCuriosityNodeToken.age` and `agenix rekey`.
+        tokenFile = "/run/agenix/saarthiCuriosityNodeToken";
+        name = "curiosity";
+        ignoreCwd = [ "*/target/live-work-*" ];
+        spawnRoots = [ "${config.home.homeDirectory}/workspace" ];
+        claudeUsage = true;
+      };
+    };
+
   # Configuring user for neusisOS
   flake.neusis.users.ank.neusisOS = {
     username = "ank";
@@ -415,6 +442,18 @@
         self.neusis.users.ank.hmBundles.kalam-ide
         self.neusis.users.ank.hmBundles.neusis-cli
         self.neusis.users.ank.hmBundles.terminal-life
+      ];
+      # N1X laptop live disk (GNOME): the workstation bundles for sessions on the machine. No
+      # `secrets` bundle: it decrypts with ank's own key, which stays off this machine; the
+      # secrets ank needs here are system secrets owned by him (machines/curiosity.nix).
+      curiosity = [
+        self.neusis.features.agnostic.nix-pkgs
+        self.neusis.users.ank.hmBundles.kalam-ide
+        self.neusis.users.ank.hmBundles.neusis-cli
+        self.neusis.users.ank.hmBundles.yajna
+        self.neusis.users.ank.hmBundles.terminal-life
+        self.neusis.users.ank.hmBundles.agent-harness
+        self.neusis.users.ank.hmBundles.saarthi-node-curiosity
       ];
     };
   };
