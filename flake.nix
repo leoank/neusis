@@ -12,6 +12,10 @@
       url = "github:oddlama/agenix-rekey";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    anvesana = {
+      url = "github:leoank/anvesana/exp/nvpcf-throttle";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     brew-api = {
       url = "github:BatteredBunny/brew-api";
       flake = false;

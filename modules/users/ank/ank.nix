@@ -419,6 +419,17 @@
         self.neusis.users.ank.hmBundles.neusis-cli
         self.neusis.users.ank.hmBundles.terminal-life
       ];
+      # N1X laptop live disk (GNOME): the workstation bundles for sessions on the machine, with
+      # ank's secrets (needs ank's key on SPARKDATA, see machines/curiosity.nix).
+      curiosity = [
+        self.neusis.features.agnostic.nix-pkgs
+        self.neusis.users.ank.hmBundles.kalam-ide
+        self.neusis.users.ank.hmBundles.neusis-cli
+        self.neusis.users.ank.hmBundles.yajna
+        self.neusis.users.ank.hmBundles.terminal-life
+        self.neusis.users.ank.hmBundles.agent-harness
+        self.neusis.users.ank.hmBundles.secrets
+      ];
     };
   };
 }

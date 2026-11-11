@@ -45,6 +45,27 @@
         "type": "github"
       }
     },
+    "anvesana": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1794409047,
+        "narHash": "sha256-fijc8tNej1p3AEHPQxOANUqDfcDqQkRKniKeO3nshqs=",
+        "owner": "leoank",
+        "repo": "anvesana",
+        "rev": "b2bb0aaa26cc06b023467971af5ef94b119cc9db",
+        "type": "github"
+      },
+      "original": {
+        "owner": "leoank",
+        "ref": "exp/nvpcf-throttle",
+        "repo": "anvesana",
+        "type": "github"
+      }
+    },
     "base16": {
       "inputs": {
         "fromYaml": "fromYaml"
@@ -1128,6 +1149,7 @@
       "inputs": {
         "agenix": "agenix",
         "agenix-rekey": "agenix-rekey",
+        "anvesana": "anvesana",
         "brew-api": "brew-api",
         "brew-nix": "brew-nix",
         "comin": "comin",

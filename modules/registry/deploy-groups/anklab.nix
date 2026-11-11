@@ -21,5 +21,10 @@ in
       after = "canary";
       soakHours = 24;
     };
+    # curiosity (the N1X live disk) alone: its build compiles the N1X kernel, so a slow or
+    # failing build must not hold back canary or stable.
+    live = {
+      machines = [ m.curiosity ];
+    };
   };
 }
