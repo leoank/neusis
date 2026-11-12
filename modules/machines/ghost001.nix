@@ -58,6 +58,8 @@
         # running with nobody logged in. Its hub token is a system secret owned by ank,
         # decrypted with the host key (no personal key on this host).
         users.users.ank.linger = true;
+        # The node's spawn root: saarthi refuses to start when a spawn root is missing.
+        systemd.tmpfiles.rules = [ "d /home/ank/workspace 0755 ank users -" ];
         age.secrets.saarthiGhost001NodeToken = {
           rekeyFile = ../secrets/ank/saarthiGhost001NodeToken.age;
           owner = "ank";

@@ -155,6 +155,8 @@
               token = lib.hasInfix "--token-file /run/agenix/saarthiGhost001NodeToken" line;
               tokenOwner = cfg.age.secrets.saarthiGhost001NodeToken.owner;
               linger = cfg.users.users.ank.linger;
+              # saarthi refuses to start without its spawn root
+              spawnRoot = lib.elem "d /home/ank/workspace 0755 ank users -" cfg.systemd.tmpfiles.rules;
               claude = home.programs.claude-code.enable;
             };
           expected = {
@@ -163,6 +165,7 @@
             token = true;
             tokenOwner = "ank";
             linger = true;
+            spawnRoot = true;
             claude = true;
           };
         };
