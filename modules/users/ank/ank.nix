@@ -425,6 +425,26 @@
     neusis.supercharged-git.signingKey = "/run/agenix/curiositySigningKey";
   };
 
+  # gh on curiosity logs in with the ghauthToken system secret (machines/curiosity.nix), read
+  # by gh itself at each run: a login that survives the live disk's reboots, without the token
+  # in every shell's environment. git's https credential helper goes through gh too.
+  flake.neusis.users.ank.hmBundles.gh-curiosity =
+    { pkgs, ... }:
+    {
+      programs.gh.package = pkgs.symlinkJoin {
+        name = "gh-${pkgs.gh.version}";
+        inherit (pkgs.gh) version meta;
+        paths = [ pkgs.gh ];
+        nativeBuildInputs = [ pkgs.makeWrapper ];
+        postBuild = ''
+          wrapProgram $out/bin/gh --run '
+            if [ -z "''${GH_TOKEN-}" ] && [ -r /run/agenix/ghauthToken ]; then
+              GH_TOKEN=$(</run/agenix/ghauthToken); export GH_TOKEN
+            fi'
+        '';
+      };
+    };
+
   # saarthi node on ghost001, the hub's own host: headless sessions in ~/workspace there,
   # under the Claude account picked or the node's default set from the app (ghost has no
   # Claude login of its own, so no claudeUsage). A systemd user service, with linger on
@@ -508,6 +528,7 @@
         self.neusis.users.ank.hmBundles.yajna
         self.neusis.users.ank.hmBundles.terminal-life
         self.neusis.users.ank.hmBundles.git-signing-curiosity
+        self.neusis.users.ank.hmBundles.gh-curiosity
         self.neusis.users.ank.hmBundles.agent-harness
         self.neusis.users.ank.hmBundles.saarthi-node-curiosity
       ];
