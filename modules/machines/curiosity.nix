@@ -173,6 +173,25 @@ in
           rekeyFile = ../secrets/ank/saarthiCuriosityClientToken.age;
           owner = "ank";
         };
+        # ank's commit-signing key here (users/ank: git-signing-curiosity), curiosity's own since
+        # his id_ed25519 stays away: made by `agenix generate`, which writes the public half to
+        # curiositySigningKey.pub beside the secret. Also a signing key on ank's GitHub account.
+        age.secrets.curiositySigningKey = {
+          rekeyFile = ../secrets/ank/curiositySigningKey.age;
+          owner = "ank";
+          generator.script =
+            { lib, pkgs, file, ... }:
+            ''
+              (
+                umask 077
+                d=$(mktemp -d)
+                trap 'rm -rf "$d"' EXIT
+                ${pkgs.openssh}/bin/ssh-keygen -q -t ed25519 -N "" -C "ank@leoank.me curiosity" -f "$d/key"
+                cp "$d/key.pub" ${lib.escapeShellArg (lib.removeSuffix ".age" file + ".pub")}
+                cat "$d/key"
+              )
+            '';
+        };
         # neusis checked out at ~/workspace/repos/leoank/neusis (ank's bootstrap-repos list,
         # `gclb-sync`), for changing curiosity from a session on it. Cloned over https with the
         # GitHub token: git@github.com: URLs are rewritten for this run only (GIT_CONFIG_*), so
@@ -223,6 +242,17 @@ in
         # ---------------------------------------------------------------- neusis services
         age.secrets.autoUpdateNotify.rekeyFile = ../secrets/common/auto-update-notify.age;
         neusis.services.auto-update.notify.environmentFile = config.age.secrets.autoUpdateNotify.path;
+        # comin here also deploys heads signed on curiosity (pushed to testing-curiosity); added to
+        # the registry signers, which are all every other host trusts. CI promotes only heads the
+        # registry signers signed, so deploy/live never moves to a commit signed here.
+        neusis.services.auto-update.signers = [
+          {
+            principal = "ank@leoank.me";
+            key = lib.concatStringsSep " " (
+              lib.take 2 (lib.splitString " " (lib.fileContents ../secrets/ank/curiositySigningKey.pub))
+            );
+          }
+        ];
         neusis.services.secrets = {
           enable = true;
           hostPubkey = self.neusis.machines.curiosity.hostPubkey;

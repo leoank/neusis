@@ -290,7 +290,9 @@
               branch = r.branches.main.name;
               period = r.poller.period;
             }) cfg.services.comin.remotes;
-            signers = cfg.services.comin.sshAllowedSignersPath != null;
+            signers =
+              cfg.services.comin.sshAllowedSignersPath != null
+              && cfg.neusis.services.auto-update.signers == self.neusis.registry.signers.anklab;
             notify = cfg.neusis.services.auto-update.notify.environmentFile;
             emailTo = cfg.neusis.services.auto-update.notify.emailTo;
             # comin's daemon has no App Management permission (2026-11-01).

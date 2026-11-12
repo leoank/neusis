@@ -419,6 +419,12 @@
       '';
     };
 
+  # Commits on curiosity are signed with curiosity's own key, a system secret owned by ank
+  # (machines/curiosity.nix): his id_ed25519 never comes to that machine.
+  flake.neusis.users.ank.hmBundles.git-signing-curiosity = {
+    neusis.supercharged-git.signingKey = "/run/agenix/curiositySigningKey";
+  };
+
   # saarthi node on ghost001, the hub's own host: headless sessions in ~/workspace there,
   # under the Claude account picked or the node's default set from the app (ghost has no
   # Claude login of its own, so no claudeUsage). A systemd user service, with linger on
@@ -501,6 +507,7 @@
         self.neusis.users.ank.hmBundles.neusis-cli
         self.neusis.users.ank.hmBundles.yajna
         self.neusis.users.ank.hmBundles.terminal-life
+        self.neusis.users.ank.hmBundles.git-signing-curiosity
         self.neusis.users.ank.hmBundles.agent-harness
         self.neusis.users.ank.hmBundles.saarthi-node-curiosity
       ];
