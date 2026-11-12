@@ -40,8 +40,9 @@
         enable = true;
         builders = self.neusis.registry.builders.anklab;
         # private key delivered by agenix (the remoteBuildKey secret,
-        # declared by the machine's secrets module).
+        # declared by the machine's secrets module from the key named here).
         sshKey = config.age.secrets.remoteBuildKey.path;
       };
+      neusis.services.secrets.remoteBuildKeyFile = ../../secrets/common/remote-build-key.age;
     };
 }

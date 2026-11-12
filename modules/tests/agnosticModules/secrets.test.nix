@@ -14,11 +14,13 @@
         pubkey = f.hostPubkey;
       };
 
+      # A consumer's minimal setup: its own key, master identity and storage dir.
       enabled = extra: {
         neusis.services.secrets = {
           enable = true;
           hostPubkey = f.hostPubkey;
           masterIdentities = [ master ];
+          storageBaseDir = /tmp/consumer/rekeyed;
         }
         // extra;
       };
@@ -54,13 +56,10 @@
         hostPubkey = cfg.age.rekey.hostPubkey;
         masters = map (m: m.pubkey) cfg.age.rekey.masterIdentities;
         storageMode = cfg.age.rekey.storageMode;
-        storageDir = lib.last (lib.splitString "/" (toString cfg.age.rekey.localStorageDir));
-        storageParent = lib.hasSuffix "/secrets/rekeyed" (
-          toString (builtins.dirOf (toString cfg.age.rekey.localStorageDir))
-        );
-        buildKey = {
-          inherit (cfg.age.secrets.remoteBuildKey) path mode owner;
-        };
+        storageDir = toString cfg.age.rekey.localStorageDir;
+        # None of neusis's own secrets unless named (its build key comes with the
+        # distributed-builds feature).
+        buildKey = cfg.age.secrets ? remoteBuildKey;
       };
     in
     {
@@ -73,13 +72,8 @@
             hostPubkey = f.hostPubkey;
             masters = [ f.hostPubkey ];
             storageMode = "local";
-            storageDir = "fixture-darwin";
-            storageParent = true;
-            buildKey = {
-              path = "/etc/nix/remote-build-key";
-              mode = "0400";
-              owner = "root";
-            };
+            storageDir = "/tmp/consumer/rekeyed/fixture-darwin";
+            buildKey = false;
             failed = [ ];
           };
         };
@@ -92,13 +86,8 @@
             hostPubkey = f.hostPubkey;
             masters = [ f.hostPubkey ];
             storageMode = "local";
-            storageDir = "fixture";
-            storageParent = true;
-            buildKey = {
-              path = "/etc/nix/remote-build-key";
-              mode = "0400";
-              owner = "root";
-            };
+            storageDir = "/tmp/consumer/rekeyed/fixture";
+            buildKey = false;
             failed = [ ];
           };
         };
@@ -120,14 +109,45 @@
           };
         };
 
-        test-remote-build-key-can-be-opted-out = {
-          expr = (darwinWith { remoteBuildKeyFile = null; }).age.secrets ? remoteBuildKey;
-          expected = false;
+        test-remote-build-key-only-when-named = {
+          expr =
+            let
+              key = (darwinWith { remoteBuildKeyFile = f.machines.fixture.initialHashedPassword; }).age.secrets.remoteBuildKey;
+            in
+            {
+              rekeyFile = key.rekeyFile;
+              inherit (key) path mode owner;
+            };
+          expected = {
+            rekeyFile = f.machines.fixture.initialHashedPassword;
+            path = "/etc/nix/remote-build-key";
+            mode = "0400";
+            owner = "root";
+          };
         };
 
-        test-storage-base-dir-is-overridable = {
-          expr = toString (darwinWith { storageBaseDir = /tmp/consumer/rekeyed; }).age.rekey.localStorageDir;
-          expected = "/tmp/consumer/rekeyed/fixture-darwin";
+        # No default storage dir: one would point into neusis's own source.
+        test-storage-base-dir-has-no-default = {
+          expr = toString
+            (t.evalDarwin {
+              modules = [
+                inputs.agenix.darwinModules.default
+                inputs.agenix-rekey.darwinModules.default
+                self.darwinModules.secrets
+                { networking.hostName = "fixture-darwin"; }
+                {
+                  neusis.services.secrets = {
+                    enable = true;
+                    hostPubkey = f.hostPubkey;
+                    masterIdentities = [ master ];
+                  };
+                }
+              ];
+            }).age.rekey.localStorageDir;
+          expectedError = {
+            type = "ThrownError";
+            msg = "storageBaseDir";
+          };
         };
 
         test-disabled-sets-nothing = {

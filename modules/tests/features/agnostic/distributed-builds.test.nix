@@ -48,6 +48,8 @@
             client = rogue.neusis.services.build-client.enable;
             machines = map (m: m.hostName) rogue.nix.buildMachines;
             sshKey = lib.unique (map (m: m.sshKey) rogue.nix.buildMachines);
+            # the feature names neusis's build key; the secrets module has no default
+            buildKeyFile = baseNameOf rogue.age.secrets.remoteBuildKey.rekeyFile;
             knownHosts = builtins.attrNames (lib.filterAttrs (_: _: true) rogue.programs.ssh.knownHosts);
             failed = t.failedAssertions rogue;
           };
@@ -64,6 +66,7 @@
               "ghost001"
             ];
             sshKey = [ "/etc/nix/remote-build-key" ];
+            buildKeyFile = "remote-build-key.age";
             knownHosts = [
               "ghost001"
               "oppy"

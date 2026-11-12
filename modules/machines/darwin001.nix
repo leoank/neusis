@@ -41,6 +41,7 @@
         neusis.services.secrets = {
           enable = true;
           hostPubkey = self.neusis.machines.darwin001.hostPubkey;
+          storageBaseDir = ../secrets/rekeyed;
           masterIdentities = [
             {
               # STRING path → read at `agenix rekey` time, never copied

@@ -178,6 +178,9 @@ which surfaced four issues in neusis core. All fixed here.
    distributed-build key to neusis's `secrets/` tree. Parameterized via
    `storageBaseDir` and `remoteBuildKeyFile` (defaults preserve neusis
    behavior; `remoteBuildKeyFile = null` opts out). (`main-fk4`)
+   Since 2026-11-12 neither defaults to neusis's tree any more:
+   `storageBaseDir` must be set, `remoteBuildKeyFile` defaults to `null`,
+   and neusis's machines and distributed-builds feature name their own.
 
 3. **`initialHashedPassword` had a hidden, harmful default.** It
    defaulted to `../secrets/common/hashedInitialPassword.age` — *neusis's*

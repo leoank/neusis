@@ -9,7 +9,7 @@
 #   inputs.agenix.darwinModules.default
 #   inputs.agenix-rekey.darwinModules.default
 #   self.darwinModules.secrets           (or the nixos equivalents)
-# and sets `neusis.services.secrets.{enable,hostPubkey}`.
+# and sets `neusis.services.secrets.{enable,hostPubkey,masterIdentities,storageBaseDir}`.
 { ... }:
 {
   flake.agnosticModules.secrets =
@@ -59,29 +59,28 @@
 
         storageBaseDir = mkOption {
           type = types.path;
-          default = ../secrets/rekeyed;
+          example = literalExpression "../secrets/rekeyed";
           description = ''
             Base directory under which agenix-rekey stores each host's
             rekeyed secrets (`storageMode = "local"`). The effective
             `age.rekey.localStorageDir` is `storageBaseDir/<hostname>`.
 
-            Defaults to neusis's own `secrets/rekeyed`. Downstream
-            consumers override this with a path inside their own repo so
-            rekeyed outputs land in their tree, not neusis's.
+            No default: a path inside the consumer's own repo, so rekeyed
+            outputs land in their tree (a default would point into
+            neusis's source).
           '';
         };
 
         remoteBuildKeyFile = mkOption {
           type = types.nullOr types.path;
-          default = ../secrets/common/remote-build-key.age;
+          default = null;
+          example = literalExpression "../secrets/common/remote-build-key.age";
           description = ''
             rekeyFile for the shared distributed-build SSH key, exposed
             as `age.secrets.remoteBuildKey` at `/etc/nix/remote-build-key`
-            (consumed by the build-client feature).
-
-            Defaults to neusis's own key. Set to `null` to disable this
-            secret entirely — appropriate for consumers that don't use
-            neusis distributed builds.
+            (consumed by the build-client feature). `null` (the default)
+            declares no such secret: a consumer names its own key, and
+            neusis's distributed-builds feature sets neusis's.
           '';
         };
       };
@@ -97,8 +96,7 @@
         }
 
         # Shared build-user private key for nix distributed builds
-        # (consumed by build-client's `sshKey`). Opt-out by setting
-        # `remoteBuildKeyFile = null`.
+        # (consumed by build-client's `sshKey`), when one is named.
         (mkIf (cfg.remoteBuildKeyFile != null) {
           age.secrets.remoteBuildKey = {
             rekeyFile = cfg.remoteBuildKeyFile;

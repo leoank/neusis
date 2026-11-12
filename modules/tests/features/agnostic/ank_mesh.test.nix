@@ -61,7 +61,6 @@
             enabled = true;
             default = "leoank";
             secrets = [
-              "remoteBuildKey"
               "tsAuthKeyLeoank"
               "tsClientId"
               "tsClientSecret"

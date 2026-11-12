@@ -86,6 +86,7 @@
         neusis.services.secrets = {
           enable = true;
           hostPubkey = self.neusis.machines.ghost001.hostPubkey;
+          storageBaseDir = ../secrets/rekeyed;
           masterIdentities = [
             {
               # STRING path → read at `agenix rekey` time, never copied
