@@ -78,7 +78,7 @@
 
               [repos]
               manthan = "/Users/ank/workspace/chaos/manthan/main"
-              saarthi = "/Users/ank/workspace/hub/leoank/rc2s2"
+              saarthi = "/Users/ank/workspace/hub/leoank/saarthi"
               yajna = "/Users/ank/workspace/chaos/yajna/main"
             '';
           };

@@ -40,7 +40,7 @@
 
         [repos]
         manthan = "${config.home.homeDirectory}/workspace/chaos/manthan/main"
-        saarthi = "${config.home.homeDirectory}/workspace/hub/leoank/rc2s2"
+        saarthi = "${config.home.homeDirectory}/workspace/hub/leoank/saarthi"
         yajna = "${config.home.homeDirectory}/workspace/chaos/yajna/main"
       '';
     };
