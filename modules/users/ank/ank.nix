@@ -425,6 +425,19 @@
     neusis.supercharged-git.signingKey = "/run/agenix/curiositySigningKey";
   };
 
+  # ssh to GitHub from curiosity with curiosity's own key, a system secret owned by ank
+  # (machines/curiosity.nix); IdentitiesOnly so a key forwarded with `ssh -A` is not offered.
+  flake.neusis.users.ank.hmBundles.github-ssh-curiosity = {
+    programs.ssh = {
+      enable = true;
+      enableDefaultConfig = false;
+      settings."github.com" = {
+        IdentityFile = "/run/agenix/curiosityGithubSshKey";
+        IdentitiesOnly = true;
+      };
+    };
+  };
+
   # gh on curiosity logs in with the ghauthToken system secret (machines/curiosity.nix), read
   # by gh itself at each run: a login that survives the live disk's reboots, without the token
   # in every shell's environment. git's https credential helper goes through gh too.
@@ -529,6 +542,7 @@
         self.neusis.users.ank.hmBundles.terminal-life
         self.neusis.users.ank.hmBundles.git-signing-curiosity
         self.neusis.users.ank.hmBundles.gh-curiosity
+        self.neusis.users.ank.hmBundles.github-ssh-curiosity
         self.neusis.users.ank.hmBundles.agent-harness
         self.neusis.users.ank.hmBundles.saarthi-node-curiosity
       ];

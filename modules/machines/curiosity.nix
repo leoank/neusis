@@ -22,6 +22,21 @@
 { self, ... }:
 let
   sparkdata = "/dev/disk/by-label/SPARKDATA";
+  # agenix-rekey generator for ank's per-machine SSH keys: `agenix generate` encrypts the private
+  # half as the secret and writes the public half beside it (<name>.pub).
+  sshKeyGenerator =
+    comment:
+    { lib, pkgs, file, ... }:
+    ''
+      (
+        umask 077
+        d=$(mktemp -d)
+        trap 'rm -rf "$d"' EXIT
+        ${pkgs.openssh}/bin/ssh-keygen -q -t ed25519 -N "" -C ${lib.escapeShellArg comment} -f "$d/key"
+        cp "$d/key.pub" ${lib.escapeShellArg (lib.removeSuffix ".age" file + ".pub")}
+        cat "$d/key"
+      )
+    '';
 in
 {
   flake-file.inputs.anvesana = {
@@ -179,19 +194,18 @@ in
         age.secrets.curiositySigningKey = {
           rekeyFile = ../secrets/ank/curiositySigningKey.age;
           owner = "ank";
-          generator.script =
-            { lib, pkgs, file, ... }:
-            ''
-              (
-                umask 077
-                d=$(mktemp -d)
-                trap 'rm -rf "$d"' EXIT
-                ${pkgs.openssh}/bin/ssh-keygen -q -t ed25519 -N "" -C "ank@leoank.me curiosity" -f "$d/key"
-                cp "$d/key.pub" ${lib.escapeShellArg (lib.removeSuffix ".age" file + ".pub")}
-                cat "$d/key"
-              )
-            '';
+          generator.script = sshKeyGenerator "ank@leoank.me curiosity";
         };
+        # ank's SSH login to GitHub from here (users/ank: github-ssh-curiosity), curiosity's own
+        # key like the signing key: an authentication key on ank's GitHub account.
+        age.secrets.curiosityGithubSshKey = {
+          rekeyFile = ../secrets/ank/curiosityGithubSshKey.age;
+          owner = "ank";
+          generator.script = sshKeyGenerator "ank@leoank.me curiosity github";
+        };
+        # GitHub's published host key, so the first `git@github.com` connection does not prompt.
+        programs.ssh.knownHosts."github.com".publicKey =
+          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl";
         # neusis checked out at ~/workspace/repos/leoank/neusis (ank's bootstrap-repos list,
         # `gclb-sync`), for changing curiosity from a session on it. Cloned over https with the
         # GitHub token: git@github.com: URLs are rewritten for this run only (GIT_CONFIG_*), so
