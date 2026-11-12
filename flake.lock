@@ -1184,11 +1184,11 @@
         "yajna": "yajna"
       },
       "locked": {
-        "lastModified": 1794447330,
-        "narHash": "sha256-fHyrJLglV3Nt5lmwQbVvRnGddBcvJfokecXb4CzKW2E=",
+        "lastModified": 1794449901,
+        "narHash": "sha256-I1t1ug5JKGNy/yrqEskDiDJEjB+D4NlPajrjJvyx4u4=",
         "owner": "leoank",
         "repo": "saarthi",
-        "rev": "86b4c7b6ff74af47f7a0cd7efe77df8492e32de7",
+        "rev": "f6476d1d4eba5e3b38f500b6471568d0aeb120d7",
         "type": "github"
       },
       "original": {
