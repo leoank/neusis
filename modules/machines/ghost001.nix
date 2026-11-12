@@ -54,6 +54,15 @@
 
         programs.zsh.enable = true;
 
+        # saarthi node (ank's saarthi-node-ghost001 bundle): a systemd user service, kept
+        # running with nobody logged in. Its hub token is a system secret owned by ank,
+        # decrypted with the host key (no personal key on this host).
+        users.users.ank.linger = true;
+        age.secrets.saarthiGhost001NodeToken = {
+          rekeyFile = ../secrets/ank/saarthiGhost001NodeToken.age;
+          owner = "ank";
+        };
+
         # The 150 GB block volume from the `oci-anklab` stack (formatted
         # once by hand: `mkfs.ext4 -L data /dev/sdb`), for application
         # state that must survive reprovisioning. `nofail` so a missing

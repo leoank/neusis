@@ -393,14 +393,38 @@
         enable = true;
         hub = "http://ghost001:7700";
         # A system secret of curiosity's, owned by ank and decrypted with the host key
-        # (machines/curiosity.nix): ank's own key never comes to this machine.
-        # PLACEHOLDER value until curiosity has a node token on the hub: then
-        # `agenix edit modules/secrets/ank/saarthiCuriosityNodeToken.age` and `agenix rekey`.
+        # (machines/curiosity.nix): ank's own key never comes to this machine. The hub's
+        # node tokens file has the same token under `curiosity`.
         tokenFile = "/run/agenix/saarthiCuriosityNodeToken";
         name = "curiosity";
         ignoreCwd = [ "*/target/live-work-*" ];
         spawnRoots = [ "${config.home.homeDirectory}/workspace" ];
         claudeUsage = true;
+      };
+    };
+
+  # saarthi node on ghost001, the hub's own host: headless sessions in ~/workspace there,
+  # under the Claude account picked or the node's default set from the app (ghost has no
+  # Claude login of its own, so no claudeUsage). A systemd user service, with linger on
+  # (machines/ghost001.nix).
+  flake.neusis.users.ank.hmBundles.saarthi-node-ghost001 =
+    {
+      config,
+      inputs,
+      ...
+    }:
+    {
+      imports = [ inputs.saarthi.homeModules.saarthi-node ];
+
+      services.saarthi-node = {
+        enable = true;
+        hub = "http://127.0.0.1:7700";
+        # A system secret of ghost001's, owned by ank (machines/ghost001.nix); the hub's
+        # node tokens file has the same token under `ghost001`.
+        tokenFile = "/run/agenix/saarthiGhost001NodeToken";
+        name = "ghost001";
+        ignoreCwd = [ "*/target/live-work-*" ];
+        spawnRoots = [ "${config.home.homeDirectory}/workspace" ];
       };
     };
 
@@ -442,6 +466,9 @@
         self.neusis.users.ank.hmBundles.kalam-ide
         self.neusis.users.ank.hmBundles.neusis-cli
         self.neusis.users.ank.hmBundles.terminal-life
+        # Claude Code and the hooks for the saarthi node's sessions.
+        self.neusis.users.ank.hmBundles.agent-harness
+        self.neusis.users.ank.hmBundles.saarthi-node-ghost001
       ];
       # N1X laptop live disk (GNOME): the workstation bundles for sessions on the machine. No
       # `secrets` bundle: it decrypts with ank's own key, which stays off this machine; the

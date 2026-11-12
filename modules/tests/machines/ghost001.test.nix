@@ -141,6 +141,32 @@
           };
         };
 
+        # ank's saarthi node on ghost001: a user service pointed at the hub on the same
+        # host, its token a system secret owned by ank, kept running by linger.
+        test-saarthi-node = {
+          expr =
+            let
+              s = home.systemd.user.services.saarthi-node;
+              line = lib.concatStringsSep " " (lib.toList s.Service.ExecStart);
+            in
+            {
+              hub = lib.hasInfix "--hub http://127.0.0.1:7700" line;
+              name = lib.hasInfix "--name ghost001" line;
+              token = lib.hasInfix "--token-file /run/agenix/saarthiGhost001NodeToken" line;
+              tokenOwner = cfg.age.secrets.saarthiGhost001NodeToken.owner;
+              linger = cfg.users.users.ank.linger;
+              claude = home.programs.claude-code.enable;
+            };
+          expected = {
+            hub = true;
+            name = true;
+            token = true;
+            tokenOwner = "ank";
+            linger = true;
+            claude = true;
+          };
+        };
+
         # The saarthi hub records on the data volume and pushes through a
         # self-hosted ntfy, reachable over the tailnet only.
         test-saarthi-hub = {
@@ -158,6 +184,7 @@
                 && lib.hasInfix "--client-tokens ${cfg.age.secrets.saarthiClientTokens.path}" e;
               ntfy = cfg.services.ntfy-sh.enable;
               ntfyLocalTopic = lib.hasInfix "--ntfy http://127.0.0.1:2586/saarthi" e;
+              claudeTokens = lib.hasInfix "--claude-tokens ${cfg.age.secrets.saarthiClaudeTokens.path}" e;
               # Neither the hub nor ntfy opens a host port: tailnet only.
               noOpenPorts =
                 !(builtins.elem 7700 (cfg.networking.firewall.allowedTCPPorts or [ ]))
@@ -171,6 +198,7 @@
             tokensFromAgenix = true;
             ntfy = true;
             ntfyLocalTopic = true;
+            claudeTokens = true;
             noOpenPorts = true;
           };
         };
