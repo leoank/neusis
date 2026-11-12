@@ -315,6 +315,16 @@
         rekeyFile = ../../secrets/ank/saarthiSandboxClaudeToken.age;
         path = "${config.home.homeDirectory}/.config/saarthi/sandbox-claude-token";
       };
+      # `saarthi ctl` and `saarthi tui` on this machine: the hub and this client's token
+      # (`rogue-ctl` in the hub's saarthiClientTokens), read from ctl.toml.
+      age.secrets.saarthiRogueClientToken = {
+        rekeyFile = ../../secrets/ank/saarthiRogueClientToken.age;
+        path = "${config.home.homeDirectory}/.config/saarthi/client-token";
+      };
+      xdg.configFile."saarthi/ctl.toml".text = ''
+        hub = "http://ghost001:7700"
+        token_file = "${config.age.secrets.saarthiRogueClientToken.path}"
+      '';
 
       services.saarthi-node = {
         enable = true;

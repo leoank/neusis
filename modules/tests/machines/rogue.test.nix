@@ -143,6 +143,8 @@
               onPath = t.hasPkg "saarthi" home.home.packages;
               tokenPath = home.age.secrets.saarthiRogueNodeToken.path;
               oldAgent = home.launchd.agents ? rc2s2-node;
+              # `saarthi ctl` and `saarthi tui` find the hub and their own client token
+              ctl = home.xdg.configFile."saarthi/ctl.toml".text;
             };
           expected = {
             enabled = true;
@@ -160,6 +162,10 @@
             onPath = true;
             tokenPath = "/Users/ank/.config/saarthi/node-token";
             oldAgent = false;
+            ctl = ''
+              hub = "http://ghost001:7700"
+              token_file = "/Users/ank/.config/saarthi/client-token"
+            '';
           };
         };
 
