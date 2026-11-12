@@ -212,7 +212,7 @@ in
             export GIT_CONFIG_COUNT=1
             export GIT_CONFIG_KEY_0="url.https://x-access-token:$token@github.com/.insteadOf"
             export GIT_CONFIG_VALUE_0="git@github.com:"
-            exec /etc/profiles/per-user/ank/bin/gclb-sync
+            exec ${config.home-manager.users.ank.home.profileDirectory}/bin/gclb-sync
           '';
         };
 
