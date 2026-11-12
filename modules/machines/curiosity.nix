@@ -28,6 +28,11 @@ in
     url = "github:leoank/anvesana";
     inputs.nixpkgs.follows = "nixpkgs";
   };
+  # bootvine: a live tree of the systemd jobs on the boot console, in place of scrolling logs.
+  flake-file.inputs.bootvine = {
+    url = "git+https://codeberg.org/wvhulle/bootvine";
+    inputs.nixpkgs.follows = "nixpkgs";
+  };
 
   flake.neusis.machines.curiosity = {
     system = "aarch64-linux";
@@ -62,6 +67,7 @@ in
           inputs.comin.nixosModules.comin
           self.nixosModules.auto-update
           self.neusis.features.agnostic.auto-update
+          inputs.bootvine.nixosModules.default
         ];
 
         # ---------------------------------------------------------------- live disk
@@ -74,7 +80,11 @@ in
         };
         # The firmware hides SSPM (NVDA8400) from _OSI("Windows 2022"); without it the USB and I2C
         # controllers do not probe. acpi_osi brings it back with no vendor tables involved.
-        boot.kernelParams = [ ''acpi_osi="!Windows 2022"'' ];
+        # `quiet` keeps kernel messages off the console under bootvine (below).
+        boot.kernelParams = [
+          ''acpi_osi="!Windows 2022"''
+          "quiet"
+        ];
         # NVIDIA's kernel config lacks some modules the NixOS initrd lists (as in anvesana).
         nixpkgs.overlays = [
           (final: prev: {
@@ -83,6 +93,12 @@ in
         ];
         boot.supportedFilesystems = [ "exfat" ];
         boot.initrd.supportedFilesystems = [ "exfat" ];
+        # supportedFilesystems.exfat only adds exfatprogs; the driver itself must be in the initrd
+        # and loaded for the host-key script's mount (without it, no key and no secrets).
+        boot.initrd.kernelModules = [ "exfat" ];
+
+        # Boot screen: bootvine (systemd initrd, so it starts there) instead of kernel messages.
+        services.bootvine.enable = true;
 
         # The host key from SPARKDATA, before switch-root: agenix installs secrets in early boot
         # (activation or sysinit), before stage 2 could mount the drive. USB storage enumerates
@@ -188,6 +204,19 @@ in
           enable = true;
           user = "ank";
         };
+        # rogue's wallpaper (ank's theming bundle; stylix's gnome target is off, so set it here).
+        services.desktopManager.gnome.extraGSettingsOverrides =
+          let
+            wallpaper = "file://${../users/ank/_assets/wallpaper.jpg}";
+          in
+          ''
+            [org.gnome.desktop.background]
+            picture-uri='${wallpaper}'
+            picture-uri-dark='${wallpaper}'
+
+            [org.gnome.desktop.screensaver]
+            picture-uri='${wallpaper}'
+          '';
         networking.networkmanager.enable = true;
         programs.zsh.enable = true;
 

@@ -16,6 +16,10 @@
       url = "github:leoank/anvesana";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    bootvine = {
+      url = "git+https://codeberg.org/wvhulle/bootvine";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     brew-api = {
       url = "github:BatteredBunny/brew-api";
       flake = false;
