@@ -258,6 +258,32 @@
           };
         };
 
+        # The initial password goes through agenix-rekey on a host that imports it, so
+        # `agenix rekey` encrypts it for a new host's key; a classic agenix `.file` otherwise.
+        test-mk-neusis-os-initial-password-through-agenix-rekey = {
+          expr =
+            let
+              secretWith =
+                extra:
+                (os.mkNeusisOS {
+                  machineName = "fixture";
+                  userModule = {
+                    imports = [ f.machines.fixture.module ] ++ extra;
+                  };
+                  userRegistries = [ f.lab ];
+                  inherit (f.machines.fixture) initialHashedPassword;
+                }).config.age.secrets.commonInitialHashedPassword;
+            in
+            {
+              rekeyFile = (secretWith [ inputs.agenix-rekey.nixosModules.default ]).rekeyFile;
+              classicFile = (secretWith [ ]).file;
+            };
+          expected = {
+            rekeyFile = f.machines.fixture.initialHashedPassword;
+            classicFile = f.machines.fixture.initialHashedPassword;
+          };
+        };
+
         test-mk-neusis-os-wires-home-manager-from-bundles-map = {
           expr = {
             # alice maps bundles to `fixture`; bob maps nothing.

@@ -236,9 +236,19 @@ in
         { networking.hostName = lib.mkDefault machineName; }
       ]
       ++ lib.optional (system != null) { nixpkgs.hostPlatform = lib.mkDefault system; }
-      ++ lib.optional (initialHashedPassword != null) {
-        age.secrets.commonInitialHashedPassword.file = initialHashedPassword;
-      }
+      ++ lib.optional (initialHashedPassword != null) (
+        # Through agenix-rekey where the host imports it (then `agenix rekey` encrypts the
+        # secret for each host key, so a new host needs no hand re-encryption); a classic
+        # agenix `.file` otherwise, which must be encrypted to the host key directly.
+        { options, ... }:
+        {
+          age.secrets.commonInitialHashedPassword =
+            if options.age ? rekey then
+              { rekeyFile = initialHashedPassword; }
+            else
+              { file = initialHashedPassword; };
+        }
+      )
       ++ mkUserAccountModules userRegistries
       ++ mkHmInitModules {
         platform = "nixos";

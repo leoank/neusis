@@ -50,23 +50,15 @@ Done once per tenancy; details and the exact IAM policy are in
    `features.nixos.oci-guest`, nix settings, agenix + `nixosModules.secrets`,
    distributed builds and a mesh (`cslab_mesh`). Add it to
    `registry/machines/anklab.nix`; optionally to the builders registry.
-3. **Classic-agenix secrets need the new host as a recipient.**
-   `initialHashedPassword` is an `age.secrets.<n>.file` secret (not
-   rekeyed): add the host key to its recipients *before* the first
+3. `agenix rekey`, then **`git add` the new `modules/secrets/rekeyed/<host>/`
+   files** — a git flake only sees tracked files; an untracked rekeyed
+   dir fails eval with "Rekeyed secret … not found". This covers
+   `initialHashedPassword` too: on a host that imports agenix-rekey,
+   `mkNeusisOS` declares it as a `rekeyFile`. Rekey *before* the first
    switch, or the seeded password never lands and the account stays
    locked (`passwd -S` → `L`; NixOS keeps an existing shadow entry when
-   `users.mutableUsers = true`). Re-encrypt without ever writing the
-   plaintext to disk:
-
-   ```bash
-   age -d -i ~/.ssh/id_ed25519 modules/secrets/common/hashedInitialPassword.age \
-     | age -R recipients.txt -o /tmp/x.age && mv -f /tmp/x.age modules/secrets/common/hashedInitialPassword.age
-   ```
-   (`recipients.txt` = master pubkey + every host pubkey, one per line.)
-4. `agenix rekey`, then **`git add` the new `modules/secrets/rekeyed/<host>/`
-   files** — a git flake only sees tracked files; an untracked rekeyed
-   dir fails eval with "Rekeyed secret … not found".
-5. Verify: `nix run .#neusis-test`, `nix eval .#checks.aarch64-linux.nixos-<host>.drvPath`.
+   `users.mutableUsers = true`).
+4. Verify: `nix run .#neusis-test`, `nix eval .#checks.aarch64-linux.nixos-<host>.drvPath`.
 
 ## 3. Bake and import the base image (`oci-images`)
 
