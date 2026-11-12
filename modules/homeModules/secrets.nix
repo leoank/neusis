@@ -82,8 +82,9 @@
             masterIdentities = cfg.masterIdentities;
             storageMode = "local";
             # Home configs have no `networking.hostName`; key the store by
-            # user instead (works in both integrated and standalone HM).
-            localStorageDir = ../secrets/rekeyed + "/hm/${config.home.username}";
+            # user instead (works in both integrated and standalone HM). A
+            # second home of the same user with its own key sets its own dir.
+            localStorageDir = lib.mkDefault (../secrets/rekeyed + "/hm/${config.home.username}");
           };
         })
       ];

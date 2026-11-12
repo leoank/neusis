@@ -247,13 +247,14 @@
 
   # Secrets bundle — agenix-rekey home secrets (personal tokens).
   flake.neusis.users.ank.hmBundles.secrets =
-    { config, ... }:
+    { config, lib, ... }:
     {
       imports = [ self.homeModules.secrets ];
 
       neusis.service.secrets = {
         enable = true;
-        userPubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFH40XzfXPtcTwJ8FHxHXCaEteylFOwtuw5TaY5CZ5NS ank@leoank.me";
+        # ank's own key; a machine with a user key of its own sets it (secrets-curiosity).
+        userPubkey = lib.mkDefault "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFH40XzfXPtcTwJ8FHxHXCaEteylFOwtuw5TaY5CZ5NS ank@leoank.me";
         masterIdentities = [
           {
             # STRING path → read at `agenix rekey` time, never stored.
@@ -399,50 +400,89 @@
     {
       imports = [ inputs.saarthi.homeModules.saarthi-node ];
 
+      # Home-manager secrets (secrets-curiosity); the hub's node tokens file has the same
+      # token under `curiosity`, and `curiosity-ctl` is in its client tokens.
+      age.secrets.saarthiCuriosityNodeToken.rekeyFile = ../../secrets/ank/saarthiCuriosityNodeToken.age;
+      age.secrets.saarthiCuriosityClientToken.rekeyFile = ../../secrets/ank/saarthiCuriosityClientToken.age;
+
       services.saarthi-node = {
         enable = true;
         hub = "http://ghost001:7700";
-        # A system secret of curiosity's, owned by ank and decrypted with the host key
-        # (machines/curiosity.nix): ank's own key never comes to this machine. The hub's
-        # node tokens file has the same token under `curiosity`.
-        tokenFile = "/run/agenix/saarthiCuriosityNodeToken";
+        tokenFile = config.age.secrets.saarthiCuriosityNodeToken.path;
         name = "curiosity";
         ignoreCwd = [ "*/target/live-work-*" ];
         spawnRoots = [ "${config.home.homeDirectory}/workspace" ];
         claudeUsage = true;
       };
-      # `saarthi ctl` and `saarthi tui`: the hub and this machine's client token, a system
-      # secret owned by ank (machines/curiosity.nix).
+      # The token is decrypted by the agenix user unit; start after it.
+      systemd.user.services.saarthi-node.Unit = {
+        Wants = [ "agenix.service" ];
+        After = [ "agenix.service" ];
+      };
+      # `saarthi ctl` and `saarthi tui`: the hub and this machine's client token.
       xdg.configFile."saarthi/ctl.toml".text = ''
         hub = "http://ghost001:7700"
-        token_file = "/run/agenix/saarthiCuriosityClientToken"
+        token_file = "${config.age.secrets.saarthiCuriosityClientToken.path}"
       '';
     };
 
-  # Commits on curiosity are signed with curiosity's own key, a system secret owned by ank
-  # (machines/curiosity.nix): his id_ed25519 never comes to that machine.
-  flake.neusis.users.ank.hmBundles.git-signing-curiosity = {
-    neusis.supercharged-git.signingKey = "/run/agenix/curiositySigningKey";
-  };
+  # ank's home secrets on curiosity: decrypted with curiosity's own user key, a system secret
+  # owned by ank (machines/curiosity.nix) linked as ~/.ssh/id_ed25519 (agenix's default
+  # identity, and the key ssh logs in to his other machines with: it is in the registry's
+  # sshKeys). Rekeyed to that key under rekeyed/hm/ank-curiosity, apart from rogue's. Decrypted
+  # into ~/.config/agenix so the paths are fixed (the default lives under $XDG_RUNTIME_DIR).
+  flake.neusis.users.ank.hmBundles.secrets-curiosity =
+    { config, lib, ... }:
+    {
+      imports = [ self.neusis.users.ank.hmBundles.secrets ];
 
-  # ssh to GitHub from curiosity with curiosity's own key, a system secret owned by ank
-  # (machines/curiosity.nix); IdentitiesOnly so a key forwarded with `ssh -A` is not offered.
-  flake.neusis.users.ank.hmBundles.github-ssh-curiosity = {
-    programs.ssh = {
-      enable = true;
-      enableDefaultConfig = false;
-      settings."github.com" = {
-        IdentityFile = "/run/agenix/curiosityGithubSshKey";
-        IdentitiesOnly = true;
+      neusis.service.secrets.userPubkey = lib.fileContents ../../secrets/ank/curiosityUserKey.pub;
+      age.rekey.localStorageDir = ../../secrets/rekeyed + "/hm/ank-curiosity";
+      age.secretsDir = "${config.home.homeDirectory}/.config/agenix";
+
+      home.file.".ssh/id_ed25519".source = config.lib.file.mkOutOfStoreSymlink "/run/agenix/curiosityUserKey";
+      home.file.".ssh/id_ed25519.pub".source = ../../secrets/ank/curiosityUserKey.pub;
+    };
+
+  # Commits on curiosity are signed with curiosity's own key, a home secret (secrets-curiosity);
+  # the public half is a signing key on ank's GitHub account and in curiosity's comin signers.
+  flake.neusis.users.ank.hmBundles.git-signing-curiosity =
+    { config, ... }:
+    {
+      age.secrets.curiositySigningKey = {
+        rekeyFile = ../../secrets/ank/curiositySigningKey.age;
+        generator.script = self.neusis.lib.agenixGenerators.sshKey "ank@leoank.me curiosity";
+      };
+      neusis.supercharged-git.signingKey = config.age.secrets.curiositySigningKey.path;
+    };
+
+  # ssh to GitHub from curiosity with curiosity's own key, a home secret (secrets-curiosity) and
+  # an authentication key on ank's GitHub account; IdentitiesOnly so no other key is offered.
+  flake.neusis.users.ank.hmBundles.github-ssh-curiosity =
+    { config, ... }:
+    {
+      age.secrets.curiosityGithubSshKey = {
+        rekeyFile = ../../secrets/ank/curiosityGithubSshKey.age;
+        generator.script = self.neusis.lib.agenixGenerators.sshKey "ank@leoank.me curiosity github";
+      };
+      programs.ssh = {
+        enable = true;
+        enableDefaultConfig = false;
+        settings."github.com" = {
+          IdentityFile = config.age.secrets.curiosityGithubSshKey.path;
+          IdentitiesOnly = true;
+        };
       };
     };
-  };
 
-  # gh on curiosity logs in with the ghauthToken system secret (machines/curiosity.nix), read
-  # by gh itself at each run: a login that survives the live disk's reboots, without the token
-  # in every shell's environment. git's https credential helper goes through gh too.
+  # gh on curiosity logs in with the ghauthToken home secret (secrets-curiosity), read by gh
+  # itself at each run: a login that survives the live disk's reboots, without the token in
+  # every shell's environment. git's https credential helper goes through gh too.
   flake.neusis.users.ank.hmBundles.gh-curiosity =
-    { pkgs, ... }:
+    { config, pkgs, ... }:
+    let
+      token = config.age.secrets.ghauthToken.path;
+    in
     {
       programs.gh.package = pkgs.symlinkJoin {
         name = "gh-${pkgs.gh.version}";
@@ -451,8 +491,8 @@
         nativeBuildInputs = [ pkgs.makeWrapper ];
         postBuild = ''
           wrapProgram $out/bin/gh --run '
-            if [ -z "''${GH_TOKEN-}" ] && [ -r /run/agenix/ghauthToken ]; then
-              GH_TOKEN=$(</run/agenix/ghauthToken); export GH_TOKEN
+            if [ -z "''${GH_TOKEN-}" ] && [ -r ${token} ]; then
+              GH_TOKEN=$(<${token}); export GH_TOKEN
             fi'
         '';
       };
@@ -499,6 +539,8 @@
       ./id_rsa.pub
       ./id_ed25519.pub
       ./id2_ed25519.pub
+      # curiosity's user key (machines/curiosity.nix), so ank logs in from there.
+      ../../secrets/ank/curiosityUserKey.pub
     ];
     # Mapping hm feature bundles to machines
     machineToBundlesMap = {
@@ -531,15 +573,15 @@
         self.neusis.users.ank.hmBundles.agent-harness
         self.neusis.users.ank.hmBundles.saarthi-node-ghost001
       ];
-      # N1X laptop live disk (GNOME): the workstation bundles for sessions on the machine. No
-      # `secrets` bundle: it decrypts with ank's own key, which stays off this machine; the
-      # secrets ank needs here are system secrets owned by him (machines/curiosity.nix).
+      # N1X laptop live disk (GNOME): the workstation bundles for sessions on the machine. Its
+      # home secrets decrypt with curiosity's own user key (secrets-curiosity), not ank's.
       curiosity = [
         self.neusis.features.agnostic.nix-pkgs
         self.neusis.users.ank.hmBundles.kalam-ide
         self.neusis.users.ank.hmBundles.neusis-cli
         self.neusis.users.ank.hmBundles.yajna
         self.neusis.users.ank.hmBundles.terminal-life
+        self.neusis.users.ank.hmBundles.secrets-curiosity
         self.neusis.users.ank.hmBundles.git-signing-curiosity
         self.neusis.users.ank.hmBundles.gh-curiosity
         self.neusis.users.ank.hmBundles.github-ssh-curiosity

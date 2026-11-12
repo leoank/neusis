@@ -13,30 +13,16 @@
 #                                           sshd/tailscale keep one identity. The public half is
 #                                           `hostPubkey`; an age copy for the master identity is
 #                                           in secrets/bootstrap/curiosity/.
-# ank's own key stays on his machines: he connects over the tailnet with `ssh -A`, and the
-# secrets ank needs here (GitHub token, saarthi node token) are system secrets owned by ank,
-# decrypted with the host key.
+# ank's own key (the master identity) stays off this machine. curiosity has a user key of its
+# own instead (curiosityUserKey, ank's ~/.ssh/id_ed25519 here): a system secret owned by ank,
+# decrypted with the host key, that decrypts ank's home-manager secrets (users/ank:
+# secrets-curiosity) and logs in to his other machines (it is in his registry sshKeys).
 # Build: nix build .#curiosity-live (aarch64-linux); write the ISO to a stick directly (not
 # Ventoy). After changing secrets or this host's key: `agenix rekey` on a machine with the
 # master identity.
 { self, ... }:
 let
   sparkdata = "/dev/disk/by-label/SPARKDATA";
-  # agenix-rekey generator for ank's per-machine SSH keys: `agenix generate` encrypts the private
-  # half as the secret and writes the public half beside it (<name>.pub).
-  sshKeyGenerator =
-    comment:
-    { lib, pkgs, file, ... }:
-    ''
-      (
-        umask 077
-        d=$(mktemp -d)
-        trap 'rm -rf "$d"' EXIT
-        ${pkgs.openssh}/bin/ssh-keygen -q -t ed25519 -N "" -C ${lib.escapeShellArg comment} -f "$d/key"
-        cp "$d/key.pub" ${lib.escapeShellArg (lib.removeSuffix ".age" file + ".pub")}
-        cat "$d/key"
-      )
-    '';
 in
 {
   flake-file.inputs.anvesana = {
@@ -167,54 +153,30 @@ in
           fsType = "exfat";
           options = [ "nofail" "x-systemd.automount" "uid=0" "gid=0" "fmask=0077" "dmask=0077" ];
         };
-        # ank's secrets on curiosity are system secrets owned by ank, decrypted with the host key
-        # (ank's own key never comes to this machine: he works here over ssh with agent
-        # forwarding): GitHub, atuin and saarthi tokens. Same rekeyFiles as ank's home bundles;
-        # `agenix rekey` encrypts them for curiosity's host key.
-        age.secrets.ghauthToken = {
-          rekeyFile = ../secrets/ank/ghauthToken.age;
+        # ank's user key here, the one system secret his home needs: ~/.ssh/id_ed25519 links to it
+        # (users/ank: secrets-curiosity), so it decrypts his home-manager secrets (GitHub, atuin and
+        # saarthi tokens, the signing and GitHub keys) and logs him in to his other machines.
+        age.secrets.curiosityUserKey = {
+          rekeyFile = ../secrets/ank/curiosityUserKey.age;
           owner = "ank";
-        };
-        age.secrets.atuinToken = {
-          rekeyFile = ../secrets/ank/atuinToken.age;
-          owner = "ank";
-        };
-        age.secrets.saarthiCuriosityNodeToken = {
-          rekeyFile = ../secrets/ank/saarthiCuriosityNodeToken.age;
-          owner = "ank";
-        };
-        # ank's `saarthi ctl` and `saarthi tui` here: `curiosity-ctl` in the hub's client tokens.
-        age.secrets.saarthiCuriosityClientToken = {
-          rekeyFile = ../secrets/ank/saarthiCuriosityClientToken.age;
-          owner = "ank";
-        };
-        # ank's commit-signing key here (users/ank: git-signing-curiosity), curiosity's own since
-        # his id_ed25519 stays away: made by `agenix generate`, which writes the public half to
-        # curiositySigningKey.pub beside the secret. Also a signing key on ank's GitHub account.
-        age.secrets.curiositySigningKey = {
-          rekeyFile = ../secrets/ank/curiositySigningKey.age;
-          owner = "ank";
-          generator.script = sshKeyGenerator "ank@leoank.me curiosity";
-        };
-        # ank's SSH login to GitHub from here (users/ank: github-ssh-curiosity), curiosity's own
-        # key like the signing key: an authentication key on ank's GitHub account.
-        age.secrets.curiosityGithubSshKey = {
-          rekeyFile = ../secrets/ank/curiosityGithubSshKey.age;
-          owner = "ank";
-          generator.script = sshKeyGenerator "ank@leoank.me curiosity github";
+          generator.script = self.neusis.lib.agenixGenerators.sshKey "ank@curiosity";
         };
         # GitHub's published host key, so the first `git@github.com` connection does not prompt.
         programs.ssh.knownHosts."github.com".publicKey =
           "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl";
         # neusis checked out at ~/workspace/repos/leoank/neusis (ank's bootstrap-repos list,
         # `gclb-sync`), for changing curiosity from a session on it. Cloned over https with the
-        # GitHub token: git@github.com: URLs are rewritten for this run only (GIT_CONFIG_*), so
-        # the remotes stay ssh and pushing works through a forwarded agent. Retries until the
-        # network is up.
+        # GitHub token (a home-manager secret, so after ank's agenix unit): git@github.com: URLs
+        # are rewritten for this run only (GIT_CONFIG_*), so the remotes stay ssh. Retries until
+        # the network is up.
         systemd.user.services.neusis-checkout = {
           description = "Clone ank's repos (gclb-sync)";
           wantedBy = [ "default.target" ];
-          after = [ "network-online.target" ];
+          wants = [ "agenix.service" ];
+          after = [
+            "network-online.target"
+            "agenix.service"
+          ];
           unitConfig.ConditionUser = "ank";
           serviceConfig = {
             Type = "oneshot";
@@ -222,7 +184,7 @@ in
             RestartSec = 120;
           };
           script = ''
-            token=$(cat ${config.age.secrets.ghauthToken.path})
+            token=$(cat ${config.home-manager.users.ank.age.secrets.ghauthToken.path})
             export GIT_CONFIG_COUNT=1
             export GIT_CONFIG_KEY_0="url.https://x-access-token:$token@github.com/.insteadOf"
             export GIT_CONFIG_VALUE_0="git@github.com:"
