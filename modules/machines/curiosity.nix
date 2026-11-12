@@ -152,6 +152,11 @@ in
           rekeyFile = ../secrets/ank/saarthiCuriosityNodeToken.age;
           owner = "ank";
         };
+        # ank's `saarthi ctl` and `saarthi tui` here: `curiosity-ctl` in the hub's client tokens.
+        age.secrets.saarthiCuriosityClientToken = {
+          rekeyFile = ../secrets/ank/saarthiCuriosityClientToken.age;
+          owner = "ank";
+        };
         # neusis checked out at ~/workspace/repos/leoank/neusis (ank's bootstrap-repos list,
         # `gclb-sync`), for changing curiosity from a session on it. Cloned over https with the
         # GitHub token: git@github.com: URLs are rewritten for this run only (GIT_CONFIG_*), so

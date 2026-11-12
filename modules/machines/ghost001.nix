@@ -64,6 +64,11 @@
           rekeyFile = ../secrets/ank/saarthiGhost001NodeToken.age;
           owner = "ank";
         };
+        # ank's `saarthi ctl` and `saarthi tui` here: `ghost001-ctl` in the hub's client tokens.
+        age.secrets.saarthiGhost001ClientToken = {
+          rekeyFile = ../secrets/ank/saarthiGhost001ClientToken.age;
+          owner = "ank";
+        };
 
         # The 150 GB block volume from the `oci-anklab` stack (formatted
         # once by hand: `mkfs.ext4 -L data /dev/sdb`), for application

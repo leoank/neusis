@@ -158,6 +158,9 @@
               # saarthi refuses to start without its spawn root
               spawnRoot = lib.elem "d /home/ank/workspace 0755 ank users -" cfg.systemd.tmpfiles.rules;
               claude = home.programs.claude-code.enable;
+              # `saarthi ctl` and `saarthi tui` reach the local hub with their own token
+              ctl = home.xdg.configFile."saarthi/ctl.toml".text;
+              ctlTokenOwner = cfg.age.secrets.saarthiGhost001ClientToken.owner;
             };
           expected = {
             hub = true;
@@ -167,6 +170,11 @@
             linger = true;
             spawnRoot = true;
             claude = true;
+            ctl = ''
+              hub = "http://127.0.0.1:7700"
+              token_file = "/run/agenix/saarthiGhost001ClientToken"
+            '';
+            ctlTokenOwner = "ank";
           };
         };
 

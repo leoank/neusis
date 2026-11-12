@@ -411,6 +411,12 @@
         spawnRoots = [ "${config.home.homeDirectory}/workspace" ];
         claudeUsage = true;
       };
+      # `saarthi ctl` and `saarthi tui`: the hub and this machine's client token, a system
+      # secret owned by ank (machines/curiosity.nix).
+      xdg.configFile."saarthi/ctl.toml".text = ''
+        hub = "http://ghost001:7700"
+        token_file = "/run/agenix/saarthiCuriosityClientToken"
+      '';
     };
 
   # saarthi node on ghost001, the hub's own host: headless sessions in ~/workspace there,
@@ -436,6 +442,12 @@
         ignoreCwd = [ "*/target/live-work-*" ];
         spawnRoots = [ "${config.home.homeDirectory}/workspace" ];
       };
+      # `saarthi ctl` and `saarthi tui`: the hub on this host and this machine's client
+      # token, a system secret owned by ank (machines/ghost001.nix).
+      xdg.configFile."saarthi/ctl.toml".text = ''
+        hub = "http://127.0.0.1:7700"
+        token_file = "/run/agenix/saarthiGhost001ClientToken"
+      '';
     };
 
   # Configuring user for neusisOS
