@@ -214,6 +214,11 @@ in
           '';
         networking.networkmanager.enable = true;
         programs.zsh.enable = true;
+        # Accounts and passwords come from the config at every activation: with mutable users, a
+        # password that failed to decrypt at boot (an ISO older than its secrets) stays locked even
+        # after a deploy that decrypts it. Nothing here outlives a reboot anyway; revisit for the
+        # full install.
+        users.mutableUsers = false;
 
         # ---------------------------------------------------------------- neusis services
         age.secrets.autoUpdateNotify.rekeyFile = ../secrets/common/auto-update-notify.age;
