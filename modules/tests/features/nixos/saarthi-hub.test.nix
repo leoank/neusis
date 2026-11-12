@@ -67,6 +67,8 @@
             db = lib.hasInfix "--db /srv/saarthi/hub.db" e;
             nodeTokens = lib.hasInfix "--node-tokens /run/agenix/saarthiNodeTokens" e;
             clientTokens = lib.hasInfix "--client-tokens /run/agenix/saarthiClientTokens" e;
+            claudeTokens = lib.hasInfix "--claude-tokens /run/agenix/saarthiClaudeTokens" e;
+            usageProbe = lib.hasInfix "--usage-probe-node ghost001 --usage-probe-minutes 30" e;
             ntfyFlag = lib.hasInfix "--ntfy http://127.0.0.1:2586/saarthi" e;
             secretOwner = cfg.age.secrets.saarthiNodeTokens.owner;
             # the copy from /srv/rc2s2 runs as root before the hub starts
@@ -83,6 +85,8 @@
             db = true;
             nodeTokens = true;
             clientTokens = true;
+            claudeTokens = true;
+            usageProbe = true;
             ntfyFlag = true;
             secretOwner = "saarthi-hub";
             migrateAsRoot = true;

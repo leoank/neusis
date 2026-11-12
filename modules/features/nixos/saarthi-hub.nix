@@ -11,6 +11,8 @@
 # `agenix rekey`):
 #   saarthiNodeTokens    file of `<node name> <token>` lines
 #   saarthiClientTokens  file of `<client name> <token>` lines
+#   saarthiClaudeTokens  file of `<name> <token>` lines: `claude setup-token` tokens,
+#                        one per Claude account sessions may run under (saarthi ADR-0039)
 #
 # ntfy is self-hosted and reachable over the tailnet only (its port is not
 # opened on the host firewall or the OCI security list). The hub posts to the
@@ -57,6 +59,11 @@
         owner = "saarthi-hub";
         group = "saarthi-hub";
       };
+      age.secrets.saarthiClaudeTokens = {
+        rekeyFile = ../../secrets/ank/saarthiClaudeTokens.age;
+        owner = "saarthi-hub";
+        group = "saarthi-hub";
+      };
 
       services.saarthi-hub = {
         enable = true;
@@ -67,6 +74,11 @@
         openFirewall = false;
         nodeTokensFile = config.age.secrets.saarthiNodeTokens.path;
         clientTokensFile = config.age.secrets.saarthiClientTokens.path;
+        claudeTokensFile = config.age.secrets.saarthiClaudeTokens.path;
+        # a throwaway Haiku turn per Claude account about every half hour keeps
+        # every account's usage fresh (saarthi ADR-0043); ghost001 allows headless
+        # sessions and has no Claude login of its own
+        usageProbeNode = "ghost001";
         ntfy = "http://127.0.0.1:2586/saarthi";
       };
 
