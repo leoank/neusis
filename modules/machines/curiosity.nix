@@ -89,7 +89,7 @@ in
         # late on N1X (after power_wrap), so wait for it; without the drive the boot goes on with
         # a fresh key and no secrets.
         # (Same shape as anvesana's initrd diagnostics: a script in the initrd's /etc run by its
-        # /bin/sh, with the tools it needs in initrdBin.)
+        # /bin/sh; seq, install and mount come from the default coreutils and util-linux-minimal.)
         boot.initrd.systemd.contents."/etc/curiosity-host-key.sh".text = ''
           for _ in $(seq 60); do [ -e ${sparkdata} ] && break; sleep 0.5; done
           if [ ! -e ${sparkdata} ]; then echo "SPARKDATA not found; no host key"; exit 0; fi
@@ -106,7 +106,6 @@ in
           fi
           umount /run/sparkdata
         '';
-        boot.initrd.systemd.initrdBin = [ pkgs.coreutils pkgs.util-linux ];
         boot.initrd.systemd.services.curiosity-host-key = {
           description = "Copy curiosity's SSH host key from SPARKDATA";
           wantedBy = [ "initrd.target" ];
