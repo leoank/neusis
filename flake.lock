@@ -52,11 +52,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1794409047,
-        "narHash": "sha256-fijc8tNej1p3AEHPQxOANUqDfcDqQkRKniKeO3nshqs=",
+        "lastModified": 1794532613,
+        "narHash": "sha256-Xd8izbbqyik7ptT2VMPbfTbL0ler2gLDsbc7s0yNic8=",
         "owner": "leoank",
         "repo": "anvesana",
-        "rev": "b2bb0aaa26cc06b023467971af5ef94b119cc9db",
+        "rev": "ca3009cc593ac5653f4a6f427f8e85fb5235ca33",
         "type": "github"
       },
       "original": {
