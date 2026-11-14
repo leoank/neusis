@@ -167,11 +167,11 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1794514597,
-        "narHash": "sha256-UAa1DPXj6zjwqN0TbXySsbkGarLXS8P6Zc/8DyYeArU=",
+        "lastModified": 1794652164,
+        "narHash": "sha256-47+MgKwFUErTiop+xab4F4AY0HqOZHCZy/OSoUo5Eqs=",
         "ref": "refs/heads/main",
-        "rev": "61869df79775d07568d3cd4fff820a7890f57142",
-        "revCount": 102,
+        "rev": "bc0674ef7820d680a62bac04259bd140de3c3f27",
+        "revCount": 119,
         "type": "git",
         "url": "https://codeberg.org/wvhulle/bootvine"
       },
@@ -183,11 +183,11 @@
     "brew-api": {
       "flake": false,
       "locked": {
-        "lastModified": 1794545362,
-        "narHash": "sha256-Opyb6MUG2/kEnGALwMjJBMxc/vaYVRzX1nNo3EvH72Y=",
+        "lastModified": 1794645393,
+        "narHash": "sha256-IxscvpW98LYyDzLTxL79P+efS+PulwWbxNQnLBowoLc=",
         "owner": "BatteredBunny",
         "repo": "brew-api",
-        "rev": "8507511cf9ec76d72f4532f1edcbfaefc1532c79",
+        "rev": "33063508d6f3c45bd8446058b224db8e20539bfd",
         "type": "github"
       },
       "original": {
@@ -676,11 +676,11 @@
         "treefmt-nix": "treefmt-nix_3"
       },
       "locked": {
-        "lastModified": 1794556519,
-        "narHash": "sha256-qDClrYbNFDBVOVZb0iOjNgBtYTXh1kNqcwmrFxVw0FA=",
+        "lastModified": 1794641859,
+        "narHash": "sha256-lF+knES2YvlfU+EuN+ethRxEBVkrbXtg8j/T2wvYmto=",
         "owner": "leoank",
         "repo": "fresh-apps.nix",
-        "rev": "dbb0393ddd5d357552d0c33226adf52edf4fe69d",
+        "rev": "7863bc217bf502bbd48e3deb996a607cc5867163",
         "type": "github"
       },
       "original": {
@@ -768,11 +768,11 @@
     "homebrew-cask": {
       "flake": false,
       "locked": {
-        "lastModified": 1794567261,
-        "narHash": "sha256-Sk4zS0wxT5zwu3A/fuZVAoW+FWpz/VxWSvrjIPHRA/s=",
+        "lastModified": 1794650121,
+        "narHash": "sha256-uxiYDMNNEhWSc4OocMHPqkL57mo29mdv74lN7xLbXOA=",
         "owner": "homebrew",
         "repo": "homebrew-cask",
-        "rev": "00badb509e2b381f7624672e7014cd3137d1a29d",
+        "rev": "01b15ffb035727c704d16b3ca961e436486cd62d",
         "type": "github"
       },
       "original": {
@@ -784,11 +784,11 @@
     "homebrew-core": {
       "flake": false,
       "locked": {
-        "lastModified": 1794567163,
-        "narHash": "sha256-gPqkYOcuAsdYR8JzABysiQyNVsrgRwHMjHL1//0qr0I=",
+        "lastModified": 1794648926,
+        "narHash": "sha256-78+Tj7aZjRiMzvLxvDQ90J+eWsfv7QOISCW6DslbNfk=",
         "owner": "homebrew",
         "repo": "homebrew-core",
-        "rev": "f3756358aef6cf4b82302d0efa5c68614b60661e",
+        "rev": "43bfcc9b54eeb568071438e38eeab760b8177366",
         "type": "github"
       },
       "original": {
@@ -853,11 +853,11 @@
         "treefmt-nix": "treefmt-nix_4"
       },
       "locked": {
-        "lastModified": 1794551759,
-        "narHash": "sha256-kL6q4ItZT++IjrrDlcUOL9L0XNzTLb2+4xQgpHBzx/I=",
+        "lastModified": 1794634844,
+        "narHash": "sha256-8HlfWrlXejz26+kK2XQuNvhO6wpQ3g+JOONywNf8d1E=",
         "owner": "numtide",
         "repo": "llm-agents.nix",
-        "rev": "860075d959fc68c31fd405989daf85c1b1f0db38",
+        "rev": "ee05b5abb7c7f4af84a5ad5420f8a6e662774f2b",
         "type": "github"
       },
       "original": {
@@ -1057,11 +1057,11 @@
     },
     "nixpkgs_7": {
       "locked": {
-        "lastModified": 1794165970,
-        "narHash": "sha256-XuAV2cUwaod3Bt4XFVqiXz3v1w2ex16W6Sv4S7EWres=",
+        "lastModified": 1794552581,
+        "narHash": "sha256-qXFIqA6FCcx7XeDzw0ZNlkDT9UiCzrNDwK8RuU8RcHM=",
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "ac588ef1c914865dad517b337ea0eb9694a4021c",
+        "rev": "f1e5c356f35d07e7b71a6b5e6c9338e0b029e0c0",
         "type": "github"
       },
       "original": {
@@ -1145,11 +1145,11 @@
     "pumas-tap": {
       "flake": false,
       "locked": {
-        "lastModified": 1794351972,
-        "narHash": "sha256-Qm5Aa8fTFNwNIrPSsngyxmE7RBPTZP0ddGrEJx+wqIU=",
+        "lastModified": 1794616605,
+        "narHash": "sha256-nj4pTylkRY8+vEfzOnyFIkDdVQzlKNHIWhvqqnxwyaM=",
         "owner": "graelo",
         "repo": "homebrew-tap",
-        "rev": "203a10de0da2f1bbf5ca678ff663b5a700b2ca32",
+        "rev": "203b3cfe0e04f023d8176941df9ce0217d6d02cc",
         "type": "github"
       },
       "original": {
