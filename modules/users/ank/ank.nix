@@ -318,6 +318,15 @@
         rekeyFile = ../../secrets/ank/saarthiSandboxClaudeToken.age;
         path = "${config.home.homeDirectory}/.config/saarthi/sandbox-claude-token";
       };
+      # The node's own identity on the cslab tailnet, where ghost001's hub is (saarthi
+      # ADR-0048), so it reaches the hub whatever tailnet this Mac is on. The auth key is
+      # the one ghost001 joins cslab with (cslab_mesh), used for the first join and if the
+      # tailnet logs the identity out; the identity's state is kept in
+      # ~/.local/state/saarthi/tailnet.
+      age.secrets.saarthiNodeTailnetKey = {
+        rekeyFile = ../../secrets/cslab/tsAuthKeyCslab.age;
+        path = "${config.home.homeDirectory}/.config/saarthi/tailnet-authkey";
+      };
       # `saarthi ctl` and `saarthi tui` on this machine: the hub and this client's token
       # (`rogue-ctl` in the hub's saarthiClientTokens), read from ctl.toml.
       age.secrets.saarthiRogueClientToken = {
@@ -334,6 +343,11 @@
         hub = "http://ghost001:7700";
         tokenFile = config.age.secrets.saarthiRogueNodeToken.path;
         name = "rogue";
+        # As `saarthi-rogue` on cslab; `hub` is ghost001's name there.
+        tailnet = {
+          enable = true;
+          authKeyFile = config.age.secrets.saarthiNodeTailnetKey.path;
+        };
         # The saarthi live checks start throwaway sessions here; the live hub must not
         # list them or push their turns to the phone (saarthi ADR-0028).
         ignoreCwd = [ "*/target/live-work-*" ];
@@ -406,12 +420,21 @@
       # token under `curiosity`, and `curiosity-ctl` is in its client tokens.
       age.secrets.saarthiCuriosityNodeToken.rekeyFile = ../../secrets/ank/saarthiCuriosityNodeToken.age;
       age.secrets.saarthiCuriosityClientToken.rekeyFile = ../../secrets/ank/saarthiCuriosityClientToken.age;
+      # The node's own identity on the cslab tailnet, where ghost001's hub is (saarthi
+      # ADR-0048), whatever network this laptop is on; the auth key is the one ghost001
+      # joins cslab with (cslab_mesh), for the first join and if the identity is logged out.
+      age.secrets.saarthiNodeTailnetKey.rekeyFile = ../../secrets/cslab/tsAuthKeyCslab.age;
 
       services.saarthi-node = {
         enable = true;
         hub = "http://ghost001:7700";
         tokenFile = config.age.secrets.saarthiCuriosityNodeToken.path;
         name = "curiosity";
+        # As `saarthi-curiosity` on cslab; `hub` is ghost001's name there.
+        tailnet = {
+          enable = true;
+          authKeyFile = config.age.secrets.saarthiNodeTailnetKey.path;
+        };
         ignoreCwd = [ "*/target/live-work-*" ];
         spawnRoots = [ "${config.home.homeDirectory}/workspace" ];
         claudeUsage = true;

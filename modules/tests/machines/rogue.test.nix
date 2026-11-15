@@ -129,6 +129,10 @@
               hub = lib.hasInfix "--hub http://ghost001:7700" line;
               name = lib.hasInfix "--name rogue" line;
               tokenFromSecret = lib.hasInfix "--token-file ${home.age.secrets.saarthiRogueNodeToken.path}" line;
+              # its own identity on cslab, joined with ghost001's key (saarthi ADR-0048)
+              tailnet = lib.hasInfix "--tailnet --tailnet-authkey-file ${home.age.secrets.saarthiNodeTailnetKey.path}" line;
+              tailnetKeyPath = home.age.secrets.saarthiNodeTailnetKey.path;
+              tailnetKey = home.age.secrets.saarthiNodeTailnetKey.rekeyFile;
               spawnRoot = lib.hasInfix "--spawn-root /Users/ank/workspace" line;
               profiles = lib.hasInfix "--profiles /nix/store/" line;
               sandbox =
@@ -152,6 +156,9 @@
             hub = true;
             name = true;
             tokenFromSecret = true;
+            tailnet = true;
+            tailnetKeyPath = "/Users/ank/.config/saarthi/tailnet-authkey";
+            tailnetKey = ../../secrets/cslab/tsAuthKeyCslab.age;
             spawnRoot = true;
             profiles = true;
             sandbox = {
