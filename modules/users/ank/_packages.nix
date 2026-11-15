@@ -27,7 +27,6 @@
       statix
       bat
       eza
-      glances
       gping
       procs
       bandwhich
