@@ -12,7 +12,11 @@
 #   saarthiNodeTokens    file of `<node name> <token>` lines
 #   saarthiClientTokens  file of `<client name> <token>` lines
 #   saarthiClaudeTokens  file of `<name> <token>` lines: `claude setup-token` tokens,
-#                        one per Claude account sessions may run under (saarthi ADR-0039)
+#                        one per Claude account sessions may run under (saarthi ADR-0039).
+#                        They never leave the hub: nodes relay their sessions' Claude API
+#                        requests to it and it adds the token (saarthi ADR-0051), so the hub
+#                        reaches api.anthropic.com for every turn under them, and
+#                        revoking a node's line in saarthiNodeTokens cuts it off.
 #
 # ntfy is self-hosted and reachable over the tailnet only (its port is not
 # opened on the host firewall or the OCI security list). The hub posts to the

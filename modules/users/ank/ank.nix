@@ -309,9 +309,11 @@
         rekeyFile = ../../secrets/ank/saarthiRogueNodeToken.age;
         path = "${config.home.homeDirectory}/.config/saarthi/node-token";
       };
-      # The Claude login of sandboxed sessions: a long-lived token from
-      # `claude setup-token`, which the node passes in as CLAUDE_CODE_OAUTH_TOKEN,
-      # so the keychain login stays out of the sandbox (saarthi ADR-0038).
+      # The Claude login of sandboxed sessions that run under none of the hub's
+      # tokens: a long-lived token from `claude setup-token`. It never goes inside:
+      # the sandbox holds a dummy and the node's proxy adds this token to its API
+      # requests (saarthi ADR-0038, ADR-0050). Under a hub token the hub adds its own
+      # and this file is not read (saarthi ADR-0051).
       age.secrets.saarthiSandboxClaudeToken = {
         rekeyFile = ../../secrets/ank/saarthiSandboxClaudeToken.age;
         path = "${config.home.homeDirectory}/.config/saarthi/sandbox-claude-token";
