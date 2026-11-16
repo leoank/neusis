@@ -213,6 +213,11 @@ in
           '';
         };
 
+        # A builder for the others (registry/builders/anklab.nix), but its own builds stay here:
+        # Nix sends a derivation to any remote with a free slot before building locally, and its
+        # only aarch64-linux peer is ghost001's two slow slots.
+        neusis.services.build-client.enable = lib.mkForce false;
+
         # ---------------------------------------------------------------- desktop
         services.desktopManager.gnome.enable = true;
         services.displayManager.gdm.enable = true;

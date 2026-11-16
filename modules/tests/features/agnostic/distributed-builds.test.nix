@@ -63,11 +63,13 @@
             machines = [
               "spirit"
               "oppy"
+              "curiosity"
               "ghost001"
             ];
             sshKey = [ "/etc/nix/remote-build-key" ];
             buildKeyFile = "remote-build-key.age";
             knownHosts = [
+              "curiosity"
               "ghost001"
               "oppy"
               "spirit"
@@ -82,6 +84,7 @@
             "spirit:12:10"
             "oppy:12:10"
             "rogue:8:2"
+            "curiosity:8:4"
             "ghost001:2:1"
           ];
         };
@@ -92,6 +95,7 @@
             "spirit"
             "oppy"
             "rogue"
+            "curiosity"
             "ghost001"
           ];
         };

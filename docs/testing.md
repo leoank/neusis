@@ -319,13 +319,14 @@ the same agnostic modules on their NixOS side here.
 
 - **On the lab builders (preferred)**: `spirit` and `oppy` (anklab
   builders registry; NixOS, 384 cores each, `/dev/kvm`, `kvm` +
-  `nixos-test` features, x86_64 and aarch64) run the tests under KVM:
+  `nixos-test` features, x86_64 only since 2026-11-16; aarch64-linux builds go
+  to curiosity, then ghost001, neither offering `kvm`) run the tests under KVM:
   `nix build .#checks.x86_64-linux.vm-<name>` from a host whose applied
   config lists them. Measured test-script times: neusis-os ~100 s under
   emulation vs kanata 33 s, home-bundle 24 s, packages 36 s under KVM; the
   wall-clock is dominated by fetching the x86_64 closure the first time.
   Until a host has applied the registry, the same builders can be used
-  with an explicit `--builders 'ssh-ng://ank@spirit x86_64-linux,aarch64-linux
+  with an explicit `--builders 'ssh-ng://ank@spirit x86_64-linux
   /etc/nix/remote-build-key 300 10 big-parallel,benchmark,kvm,nixos-test - <base64 host key>'`
   (trusted users only). The shared build key
   (`modules/secrets/common/remote-build.pub`) must be in `ank`'s

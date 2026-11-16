@@ -92,9 +92,9 @@
           };
         };
 
-        # spirit and oppy are dedicated Linux builders (not neusis-managed
-        # machines); rogue and ghost001 (low priority) are offered to their
-        # peers; darwin001 deliberately is not (Nix would prefer its slow
+        # spirit and oppy are dedicated x86_64 Linux builders (not neusis-managed
+        # machines); curiosity is the aarch64-linux builder, ahead of ghost001 (low
+        # priority); rogue is offered to its peers; darwin001 deliberately is not (Nix would prefer its slow
         # slots over building on rogue).
         test-builders-are-the-linux-builders-plus-rogue = {
           expr = {
@@ -114,6 +114,14 @@
               b.hostName == "rogue" && b.hostPubkey == self.neusis.machines.rogue.hostPubkey && b.systems == [ "aarch64-darwin" ]
             ) r.builders.anklab;
             darwin001Absent = !(lib.any (b: b.hostName == "darwin001") r.builders.anklab);
+            curiosity =
+              let
+                b = lib.findFirst (b: b.hostName == "curiosity") null r.builders.anklab;
+              in
+              {
+                inherit (b) sshUser systems maxJobs speedFactor;
+                keyMirrored = b.hostPubkey == self.neusis.machines.curiosity.hostPubkey;
+              };
             ghost001 =
               let
                 b = lib.findFirst (b: b.hostName == "ghost001") null r.builders.anklab;
@@ -128,20 +136,25 @@
               "spirit"
               "oppy"
               "rogue"
+              "curiosity"
               "ghost001"
             ];
             linuxBuilders = lib.genAttrs [ "spirit" "oppy" ] (_: {
               sshUser = "ank";
-              systems = [
-                "x86_64-linux"
-                "aarch64-linux"
-              ];
+              systems = [ "x86_64-linux" ];
               # their daemons run cores = 0, so concurrency is capped here
               maxJobs = 12;
               vmCapable = true;
             });
             rogueMirrored = true;
             darwin001Absent = true;
+            curiosity = {
+              sshUser = "nixremote";
+              systems = [ "aarch64-linux" ];
+              maxJobs = 8;
+              speedFactor = 4;
+              keyMirrored = true;
+            };
             ghost001 = {
               sshUser = "nixremote";
               systems = [ "aarch64-linux" ];

@@ -85,7 +85,7 @@ nix run .#neusis-test                                 # T0: nix-unit eval tests 
 NEUSIS_TEST_SYSTEM=x86_64-linux nix run .#neusis-test # T0 for the Linux variants
 nix flake check --no-build --all-systems              # T1: every machine/home/package check instantiates
 nix flake check                                       # T2: build them all (slow)
-nix build .#checks.aarch64-linux.vm-neusis-os -L      # T3: a NixOS VM test on spirit/oppy (minutes)
+nix build .#checks.x86_64-linux.vm-neusis-os -L       # T3: a NixOS VM test on spirit/oppy (minutes)
 ```
 
 Verification ladder before claiming something works (details in

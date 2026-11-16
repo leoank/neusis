@@ -83,6 +83,7 @@
               "spirit"
               "oppy"
               "rogue"
+              "curiosity"
               "ghost001"
             ];
             tailscale = true;

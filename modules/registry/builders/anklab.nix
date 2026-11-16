@@ -26,10 +26,8 @@ in
     {
       hostName = "spirit";
       sshUser = "ank";
-      systems = [
-        "x86_64-linux"
-        "aarch64-linux"
-      ];
+      # x86_64 only: aarch64-linux builds go to curiosity (then ghost001).
+      systems = [ "x86_64-linux" ];
       # Their daemons run `cores = 0` (every build may use all 384
       # threads), so cap concurrency here instead: a dozen jobs keep the
       # box busy without parallel-internal builds fighting each other.
@@ -47,10 +45,8 @@ in
     {
       hostName = "oppy";
       sshUser = "ank";
-      systems = [
-        "x86_64-linux"
-        "aarch64-linux"
-      ];
+      # x86_64 only: aarch64-linux builds go to curiosity (then ghost001).
+      systems = [ "x86_64-linux" ];
       # Their daemons run `cores = 0` (every build may use all 384
       # threads), so cap concurrency here instead: a dozen jobs keep the
       # box busy without parallel-internal builds fighting each other.
@@ -78,9 +74,25 @@ in
       mandatoryFeatures = [ ];
       hostPubkey = m.rogue.hostPubkey;
     }
+    # curiosity (N1X, 20 Arm cores): the aarch64-linux builder, ahead of ghost001. Eight jobs
+    # on 20 cores: its daemon runs `cores = 0`, so a parallel build spreads over the idle cores.
+    # A live disk for now, so its store and builds live in RAM and are gone at reboot.
+    {
+      hostName = m.curiosity.hostname;
+      sshUser = "nixremote";
+      systems = [ m.curiosity.system ];
+      maxJobs = 8;
+      speedFactor = 4;
+      supportedFeatures = [
+        "big-parallel"
+        "benchmark"
+      ];
+      mandatoryFeatures = [ ];
+      hostPubkey = m.curiosity.hostPubkey;
+    }
     # ghost001 (OCI A1, 4 OCPUs): offered mainly to exercise the builder
     # stack on a NixOS host; low priority and two slots so real work still
-    # lands on spirit/oppy. Reached over the tailnet.
+    # lands on curiosity. Reached over the tailnet.
     {
       hostName = m.ghost001.hostname;
       sshUser = "nixremote";

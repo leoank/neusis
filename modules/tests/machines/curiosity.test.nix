@@ -37,6 +37,23 @@
           };
         };
 
+        # A builder for the others, but its own builds stay local (its only aarch64-linux peer
+        # is ghost001's two slow slots).
+        test-serves-builds-but-keeps-its-own-local = {
+          expr = {
+            server = cfg.neusis.services.build-server.enable;
+            client = cfg.neusis.services.build-client.enable;
+            distributed = cfg.nix.distributedBuilds;
+            buildMachines = cfg.nix.buildMachines;
+          };
+          expected = {
+            server = true;
+            client = false;
+            distributed = false;
+            buildMachines = [ ];
+          };
+        };
+
         # Immutable users: ank's password comes from the agenix secret at every activation.
         test-password-from-the-host-key-secret = {
           expr = {

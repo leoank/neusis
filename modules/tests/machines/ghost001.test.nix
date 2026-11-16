@@ -187,6 +187,7 @@
               "spirit"
               "oppy"
               "rogue"
+              "curiosity"
             ];
             sshd = true;
             flakes = true;

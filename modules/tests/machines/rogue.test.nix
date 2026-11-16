@@ -105,6 +105,7 @@
             buildsOffloadTo = [
               "spirit"
               "oppy"
+              "curiosity"
               "ghost001"
             ];
             tailscale = false;
