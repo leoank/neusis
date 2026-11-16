@@ -23,6 +23,22 @@
             lib.hasPrefix "/nix/store/" img.qcow2 && lib.hasSuffix "/nixos-image-${img.nixosConfig.system.nixos.label}-aarch64-linux.qcow2" img.qcow2;
           expected = true;
         };
+
+        # 1 GiB ESP (lib/cloud.nix), EFI layout as nixpkgs's OCIImage makes it.
+        test-esp-is-one-gibibyte = {
+          expr =
+            let
+              preVM = self.packages.aarch64-linux.oci-base-image.drvAttrs.preVM;
+            in
+            {
+              size = lib.hasInfix "numfmt --from=iec '1024M'" preVM;
+              esp = lib.hasInfix "mkpart ESP fat32 8MiB $bootSizeMiB" preVM;
+            };
+          expected = {
+            size = true;
+            esp = true;
+          };
+        };
       };
     };
 }

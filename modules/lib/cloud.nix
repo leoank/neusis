@@ -36,6 +36,27 @@
                 # Release the image was created under; hosts set their own.
                 system.stateVersion = "26.05";
               }
+              # nixpkgs's OCIImage, with a 1 GiB ESP instead of make-disk-image's 256 MiB:
+              # GRUB copies every kept generation's kernel and initrd onto it (~90 MB each
+              # on aarch64), and 249 MB left ghost001 room for one entry (oci-guest).
+              # Hosts made from earlier images keep their partitions.
+              (
+                { config, lib, pkgs, ... }:
+                {
+                  system.build.OCIImage = lib.mkForce (
+                    import (inputs.nixpkgs + "/nixos/lib/make-disk-image.nix") {
+                      inherit config lib pkgs;
+                      inherit (config.virtualisation) diskSize;
+                      name = "oci-image";
+                      baseName = config.image.baseName;
+                      configFile = inputs.nixpkgs + "/nixos/modules/virtualisation/oci-config-user.nix";
+                      format = "qcow2";
+                      partitionTableType = if config.oci.efi then "efi" else "legacy";
+                      bootSize = "1024M";
+                    }
+                  );
+                }
+              )
             ]
             ++ extraModules;
           }).config;
