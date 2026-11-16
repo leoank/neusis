@@ -193,6 +193,19 @@
                 "q = :close<Enter>"
                 "| = :pipe<space>"
               ];
+              # <C-r>: sync the selected account now, through its own mbsync channel
+              syncKey = lib.hasInfix "[messages]\n# ank: sync the selected account now" binds
+                && lib.hasInfix "<C-r> = :check-mail<Enter>" binds;
+              syncCmd = lib.mapAttrs (
+                name: a:
+                let
+                  x = a.aerc.extraAccounts;
+                in
+                lib.hasInfix "/bin/mbsync ${name}; s=$?; " x.check-mail-cmd
+                && lib.hasSuffix "/bin/notmuch new; exit $s" x.check-mail-cmd
+                && x.check-mail-timeout == "5m"
+                && !(x ? check-mail)
+              ) home.accounts.email.accounts;
               nvimView = lib.hasInfix "[view]\n# ank: open the current part in nvim" binds
                 && lib.hasInfix "<C-e> = :pipe -s -p nvim -R '+setlocal ft=mail nomodified' -<Enter>" binds;
             };
@@ -200,6 +213,13 @@
             version = "0.21.0";
             defaults = true;
             nvimView = true;
+            syncKey = true;
+            syncCmd = {
+              cam = true;
+              gmail = true;
+              leoank = true;
+              mrclmb = true;
+            };
           };
         };
 

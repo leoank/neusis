@@ -295,7 +295,17 @@
                   extraConfig.account = lib.mkIf (name != "cam") { AuthMechs = "PLAIN"; };
                 };
                 notmuch.enable = true;
-                aerc.enable = true;
+                aerc = {
+                  enable = true;
+                  # `:check-mail` (<C-r> in the message list) syncs this account now, its
+                  # mbsync channel being named after it, then indexes even if the sync
+                  # failed, as mail-sync does, and reports mbsync's status. aerc's own
+                  # timer stays off (check-mail unset): mail-sync's schedule does the rest.
+                  extraAccounts = {
+                    check-mail-cmd = "${config.programs.mbsync.package}/bin/mbsync ${name}; s=$?; ${config.programs.notmuch.package}/bin/notmuch new; exit $s";
+                    check-mail-timeout = "5m";
+                  };
+                };
               });
         }
       ];
