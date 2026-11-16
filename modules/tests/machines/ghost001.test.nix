@@ -172,6 +172,12 @@
             gc = {
               inherit (cfg.nix.gc) automatic dates options;
             };
+            # alerts through auto-update's channels
+            diskAlert = {
+              inherit (cfg.neusis.services.disk-alert) enable mounts;
+              sameCredentials =
+                cfg.neusis.services.disk-alert.notify.environmentFile == cfg.age.secrets.autoUpdateNotify.path;
+            };
           };
           expected = {
             tailscale = true;
@@ -195,6 +201,15 @@
               automatic = true;
               dates = [ "daily" ];
               options = "--delete-older-than 3d";
+            };
+            diskAlert = {
+              enable = true;
+              mounts = {
+                "/" = 85;
+                "/boot" = 60;
+                "/srv" = 85;
+              };
+              sameCredentials = true;
             };
           };
         };

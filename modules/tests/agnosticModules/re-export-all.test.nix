@@ -16,6 +16,7 @@
             "build-client"
             "build-server"
             "cloudflare-tunnel"
+            "disk-alert"
             "hm-system-init"
             "kanata"
             "secrets"

@@ -52,10 +52,26 @@
           inputs.comin.nixosModules.comin
           self.nixosModules.auto-update
           self.neusis.features.agnostic.auto-update
+          self.nixosModules.disk-alert
         ];
 
         age.secrets.autoUpdateNotify.rekeyFile = ../secrets/common/auto-update-notify.age;
         neusis.services.auto-update.notify.environmentFile = config.age.secrets.autoUpdateNotify.path;
+
+        # Warn before a disk fills, through the same channels as deploy failures. /boot at
+        # 60%: with one GRUB entry it holds one ~90 MB kernel (36%), and a switch to a new
+        # kernel needs room for a second one, so past ~64% that switch would fail.
+        neusis.services.disk-alert = {
+          enable = true;
+          mounts = {
+            "/" = 85;
+            "/boot" = 60;
+            "/srv" = 85;
+          };
+          notify = {
+            inherit (config.neusis.services.auto-update.notify) environmentFile ntfyUrl emailFrom emailTo;
+          };
+        };
 
         programs.zsh.enable = true;
 
