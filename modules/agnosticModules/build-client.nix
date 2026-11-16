@@ -12,8 +12,10 @@
 #   };
 #
 # It turns each builder EXCEPT the local host (matched by hostName) into a
-# `nix.buildMachines` entry, enables distributed builds, and pins each
-# builder's SSH host key via `programs.ssh.knownHosts`. Self-contained —
+# `nix.buildMachines` entry, enables distributed builds, pins each
+# builder's SSH host key via `programs.ssh.knownHosts`, and gives the
+# builders a short SSH connect timeout so an unreachable one is skipped in
+# seconds rather than stalling the build. Self-contained —
 # the builder list is passed in, so the module is reusable on its own.
 #
 # Each builder entry is an attrset:
@@ -78,6 +80,18 @@
           '';
         };
 
+        connectTimeout = lib.mkOption {
+          type = lib.types.nullOr lib.types.ints.positive;
+          default = 10;
+          description = ''
+            Seconds SSH waits to connect to a builder (`ConnectTimeout`) before Nix
+            gives up on it and tries the next builder, or builds locally when this
+            host can. Without it an unreachable builder holds each derivation for the
+            system's TCP timeout. Keepalives also drop a builder that vanishes
+            mid-build within about a minute. `null` leaves SSH's defaults.
+          '';
+        };
+
         excludeLocalhost = lib.mkOption {
           type = lib.types.bool;
           default = true;
@@ -108,6 +122,14 @@
         programs.ssh.knownHosts = builtins.listToAttrs (
           map (b: lib.nameValuePair b.hostName { publicKey = b.hostPubkey; }) active
         );
+
+        # nix-daemon runs ssh as root, which reads the system ssh_config.
+        programs.ssh.extraConfig = lib.mkIf (cfg.connectTimeout != null && active != [ ]) ''
+          Host ${lib.concatMapStringsSep " " (b: b.hostName) active}
+            ConnectTimeout ${toString cfg.connectTimeout}
+            ServerAliveInterval 15
+            ServerAliveCountMax 4
+        '';
       };
     };
 }

@@ -126,6 +126,33 @@
           };
         };
 
+        # An unreachable builder is skipped after the connect timeout instead of the TCP
+        # one; the block lists the remote builders only, on both platforms.
+        test-builders-get-a-short-ssh-connect-timeout = {
+          expr = {
+            darwin = darwin.programs.ssh.extraConfig;
+            nixos = nixos.programs.ssh.extraConfig;
+            custom = lib.hasInfix "ConnectTimeout 3" (darwinWith { connectTimeout = 3; }).programs.ssh.extraConfig;
+            off = (nixosWith { connectTimeout = null; }).programs.ssh.extraConfig;
+          };
+          expected = {
+            darwin = ''
+              Host other-builder
+                ConnectTimeout 10
+                ServerAliveInterval 15
+                ServerAliveCountMax 4
+            '';
+            nixos = ''
+              Host other-builder
+                ConnectTimeout 10
+                ServerAliveInterval 15
+                ServerAliveCountMax 4
+            '';
+            custom = true;
+            off = "";
+          };
+        };
+
         test-disabled-adds-no-builders = {
           expr =
             let
