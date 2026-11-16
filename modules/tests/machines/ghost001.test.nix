@@ -112,6 +112,47 @@
           };
         };
 
+        # ank's `server` bundle: no toolchains, TeX, terminal GUIs, extra agent CLIs or
+        # Playwright on the 50 GB root; kitty's terminfo stays for SSH from kitty.
+        test-lean-server-home = {
+          expr =
+            let
+              h = cfg.home-manager.users.ank;
+              names = t.pkgNames h.home.packages;
+            in
+            {
+              workstationOnly = lib.filter (n: builtins.elem n names) [
+                "cargo"
+                "rustc"
+                "clang"
+                "clang-tools"
+                "texlive"
+                "sioyek"
+                "wezterm"
+                "gemini"
+                "agy"
+                "opencode"
+                "pi"
+              ];
+              kittyApp = h.programs.kitty.enable;
+              kittyTerminfo = lib.any (p: lib.getName p == "kitty" && p.outputName or "" == "terminfo") h.home.packages;
+              playwright = h.neusis.agent-harness.tools.claude.mcpServers ? playwright;
+              claude = h.neusis.agent-harness.tools.claude.enable;
+              cli = lib.all (n: builtins.elem n names) [
+                "bat"
+                "ripgrep"
+              ];
+            };
+          expected = {
+            workstationOnly = [ ];
+            kittyApp = false;
+            kittyTerminfo = true;
+            playwright = false;
+            claude = true;
+            cli = true;
+          };
+        };
+
         test-services = {
           expr = {
             tailscale = cfg.neusis.services.tailscale.enable;

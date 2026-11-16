@@ -554,6 +554,30 @@
       '';
     };
 
+  # A lean home for a headless server with a small root disk (ghost001: 50 GB, which holds
+  # the store). Applied after terminal-life and agent-harness, it leaves out what only a
+  # workstation uses: the language toolchains and TeX, the kitty and wezterm GUIs, the
+  # agent CLIs other than Claude Code, and the Playwright MCP server, whose browsers are
+  # most of claude-code's closure. Together they were most of the 18 GB home on ghost001.
+  flake.neusis.users.ank.hmBundles.server =
+    { lib, pkgs, ... }:
+    {
+      neusis.supercharged-shell.toolchains.enable = false;
+      neusis.terminal-velocity.tools = {
+        kitty.enable = lib.mkForce false;
+        wezterm.enable = lib.mkForce false;
+      };
+      # SSH from kitty sets TERM=xterm-kitty, which the kitty package brought until now.
+      home.packages = [ pkgs.kitty.terminfo ];
+      neusis.agent-harness.tools = {
+        claude.mcpServers = lib.mkForce { };
+        opencode.enable = lib.mkForce false;
+        gemini.enable = lib.mkForce false;
+        antigravity.enable = lib.mkForce false;
+        pi.enable = lib.mkForce false;
+      };
+    };
+
   # Configuring user for neusisOS
   flake.neusis.users.ank.neusisOS = {
     username = "ank";
@@ -597,6 +621,7 @@
         # Claude Code and the hooks for the saarthi node's sessions.
         self.neusis.users.ank.hmBundles.agent-harness
         self.neusis.users.ank.hmBundles.saarthi-node-ghost001
+        self.neusis.users.ank.hmBundles.server
       ];
       # N1X laptop live disk (GNOME): the workstation bundles for sessions on the machine. Its
       # home secrets decrypt with curiosity's own user key (secrets-curiosity), not ank's.
