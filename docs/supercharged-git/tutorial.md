@@ -715,7 +715,7 @@ What `ank` on `rogue` might actually run:
 neusis.supercharged-git = {
   enable = true;
   userName = "Ankur Kumar";
-  userEmail = "ank@bodygram.com";
+  userEmail = "ank@example.com";
   allowedSignersPubkey = "ssh-ed25519 AAAA…";
 
   tools = {
