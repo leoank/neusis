@@ -105,33 +105,54 @@ in
         # (activation or sysinit), before stage 2 could mount the drive. USB storage enumerates
         # late on N1X (after power_wrap), so wait for it; without the drive the boot goes on with
         # a fresh key and no secrets.
+        # Without the key the boot stops in the initrd's emergency shell, with the reason on the
+        # console: a boot with a fresh key decrypts no secret, so ank has no password (sudo
+        # fails), no home secrets and a new SSH identity, which is worse than not booting.
+        # Plug SPARKDATA in and reboot, or boot anyway by adding `curiosity.nohostkey` to the
+        # kernel command line (e in the boot menu).
         # (Same shape as anvesana's initrd diagnostics: a script in the initrd's /etc run by its
         # /bin/sh; seq, install and mount come from the default coreutils and util-linux-minimal.)
         boot.initrd.systemd.contents."/etc/curiosity-host-key.sh".text = ''
+          fail() {
+            echo "curiosity: $1. No host key, so no secrets: no password, no home secrets."
+            echo "curiosity: plug in SPARKDATA and reboot, or boot with curiosity.nohostkey."
+            for p in $(cat /proc/cmdline); do
+              if [ "$p" = curiosity.nohostkey ]; then echo "curiosity.nohostkey: booting anyway"; exit 0; fi
+            done
+            exit 1
+          }
           for _ in $(seq 60); do [ -e ${sparkdata} ] && break; sleep 0.5; done
-          if [ ! -e ${sparkdata} ]; then echo "SPARKDATA not found; no host key"; exit 0; fi
+          [ -e ${sparkdata} ] || fail "SPARKDATA not found"
           mkdir -p /run/sparkdata
-          mount -t exfat -o ro,fmask=0077,dmask=0077 ${sparkdata} /run/sparkdata || exit 0
+          mount -t exfat -o ro,fmask=0077,dmask=0077 ${sparkdata} /run/sparkdata || fail "SPARKDATA did not mount"
           k=/run/sparkdata/config/curiosity/ssh_host_ed25519_key
           if [ -f "$k" ]; then
             mkdir -p /sysroot/etc/ssh
             install -m 0600 "$k" /sysroot/etc/ssh/ssh_host_ed25519_key
             install -m 0644 "$k.pub" /sysroot/etc/ssh/ssh_host_ed25519_key.pub
             echo "host key copied"
+            umount /run/sparkdata
           else
-            echo "no $k"
+            umount /run/sparkdata
+            fail "no $k on SPARKDATA"
           fi
-          umount /run/sparkdata
         '';
         boot.initrd.systemd.services.curiosity-host-key = {
           description = "Copy curiosity's SSH host key from SPARKDATA";
-          wantedBy = [ "initrd.target" ];
+          # Required by and ordered before initrd.target, so its failure fails that target, whose
+          # OnFailure is the emergency shell.
+          requiredBy = [ "initrd.target" ];
           after = [ "sysroot.mount" ];
-          before = [ "initrd-switch-root.target" "initrd-nixos-activation.service" ];
+          before = [
+            "initrd.target"
+            "initrd-switch-root.target"
+            "initrd-nixos-activation.service"
+          ];
           unitConfig.DefaultDependencies = false;
           serviceConfig = {
             Type = "oneshot";
             ExecStart = "/bin/sh /etc/curiosity-host-key.sh";
+            StandardOutput = "journal+console";
           };
         };
         # Keys only: ank comes in with `ssh -A` over the tailnet, and port 22 is open on whatever
