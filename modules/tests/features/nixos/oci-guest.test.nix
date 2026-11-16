@@ -24,6 +24,8 @@
             grow = cfg.boot.growPartition;
             grub = {
               inherit (cfg.boot.loader.grub) device efiSupport efiInstallAsRemovable;
+              # the 249 MB ESP holds two ~90 MB kernels at most
+              inherit (cfg.boot.loader.grub) configurationLimit;
             };
             efiVars = cfg.boot.loader.efi.canTouchEfiVariables;
           };
@@ -42,6 +44,7 @@
               device = "nodev";
               efiSupport = true;
               efiInstallAsRemovable = true;
+              configurationLimit = 1;
             };
             efiVars = false;
           };

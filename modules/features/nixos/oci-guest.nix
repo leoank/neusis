@@ -13,6 +13,16 @@
     {
       imports = [ "${modulesPath}/virtualisation/oci-common.nix" ];
 
+      # The image's ESP is /boot (249 MB) and GRUB copies each generation's kernel and
+      # initrd onto it, about 90 MB a kernel on aarch64. GRUB's installer copies the new
+      # kernel before it removes the ones no entry needs, so a switch to a new kernel needs
+      # room for the kept ones plus the new one: with one entry, two kernels at most. More
+      # entries filled /boot on ghost001 (2026-11-14: a 6.18.62 switch stopped at a partial
+      # copy and left the menu on the previous generation). Rolling back is still
+      # `nixos-rebuild switch --rollback` from the running system; only the boot menu loses
+      # the older generations.
+      boot.loader.grub.configurationLimit = 1;
+
       services.openssh.settings = {
         PermitRootLogin = "prohibit-password";
         PasswordAuthentication = false;
