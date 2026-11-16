@@ -19,7 +19,12 @@
     userRegistries = [ self.neusis.registry.users.anklab ];
     initialHashedPassword = ../secrets/common/hashedInitialPassword.age;
     module =
-      { inputs, config, ... }:
+      {
+        inputs,
+        config,
+        lib,
+        ...
+      }:
       {
         imports = [
           # OCI hardware profile — the same one the base image boots with.
@@ -60,6 +65,20 @@
         nix.settings = {
           min-free = 5 * 1024 * 1024 * 1024;
           max-free = 15 * 1024 * 1024 * 1024;
+          # Builds (ghost001's own and other hosts') unpack and compile on the 150 GB data
+          # volume rather than the root. If /srv is not mounted the directory is made on
+          # the root and builds still run.
+          build-dir = "/srv/nix-build";
+        };
+        systemd.services.nix-daemon = {
+          after = [ "srv.mount" ];
+          preStart = "mkdir -p -m 0755 /srv/nix-build";
+        };
+        # Collect daily, keeping 3 days rather than nix-settings' weekly 15: comin redeploys
+        # from git, so an old generation is cheap to rebuild and costs GBs to keep here.
+        nix.gc = {
+          dates = lib.mkForce "daily";
+          options = lib.mkForce "--delete-older-than 3d";
         };
 
         # saarthi node (ank's saarthi-node-ghost001 bundle): a systemd user service, kept

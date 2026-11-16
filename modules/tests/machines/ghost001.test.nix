@@ -166,7 +166,12 @@
             tunnel = cfg.neusis.services.cloudflare-tunnel.enable;
             tunnelToken = cfg.neusis.services.cloudflare-tunnel.tokenFile == cfg.age.secrets.cfTunnelToken.path;
             # GC during builds on the 50 GB root
-            inherit (cfg.nix.settings) min-free max-free;
+            inherit (cfg.nix.settings) min-free max-free build-dir;
+            buildDirMade = lib.hasInfix "mkdir -p -m 0755 /srv/nix-build" cfg.systemd.services.nix-daemon.preStart;
+            buildDirAfterSrv = builtins.elem "srv.mount" cfg.systemd.services.nix-daemon.after;
+            gc = {
+              inherit (cfg.nix.gc) automatic dates options;
+            };
           };
           expected = {
             tailscale = true;
@@ -183,6 +188,14 @@
             tunnelToken = true;
             min-free = 5 * 1024 * 1024 * 1024;
             max-free = 15 * 1024 * 1024 * 1024;
+            build-dir = "/srv/nix-build";
+            buildDirMade = true;
+            buildDirAfterSrv = true;
+            gc = {
+              automatic = true;
+              dates = [ "daily" ];
+              options = "--delete-older-than 3d";
+            };
           };
         };
 
