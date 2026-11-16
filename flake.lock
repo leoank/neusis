@@ -1243,11 +1243,11 @@
         "yajna": "yajna"
       },
       "locked": {
-        "lastModified": 1794844331,
-        "narHash": "sha256-WNEZfJZewl2TFXdifFgLQUpQUKXOTvso6E6AuMPLmrU=",
+        "lastModified": 1794847593,
+        "narHash": "sha256-daEVKksozKda3b7stKsDOYE7CXRaeFjjvPyFHridAXI=",
         "owner": "leoank",
         "repo": "saarthi",
-        "rev": "c4cb8570abb882a2f9e89ad2f0d325a50ea0d1ee",
+        "rev": "c086b5eac20038ec4622c1e3ce441ab3de7e113f",
         "type": "github"
       },
       "original": {
