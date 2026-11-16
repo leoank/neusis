@@ -62,6 +62,39 @@
           expected = true;
         };
 
+        # A server keeps the CLI utilities without the toolchains and TeX.
+        test-toolchains-can-be-left-out = {
+          expr =
+            let
+              lean = t.pkgNames
+                (shellHome {
+                  neusis.supercharged-shell = {
+                    enable = true;
+                    toolchains.enable = false;
+                  };
+                }).home.packages;
+            in
+            {
+              cli = lib.all (n: builtins.elem n lean) [
+                "bat"
+                "ripgrep"
+                "lua"
+              ];
+              toolchains = lib.any (n: builtins.elem n lean) [
+                "cargo"
+                "rustc"
+                "clang"
+                "texlive"
+                "sioyek"
+                "python3"
+              ];
+            };
+          expected = {
+            cli = true;
+            toolchains = false;
+          };
+        };
+
         test-all-tools-declared-and-off-by-default = {
           expr = lib.mapAttrs (_: tool: tool.enable) home.neusis.supercharged-shell.tools;
           expected = lib.genAttrs [

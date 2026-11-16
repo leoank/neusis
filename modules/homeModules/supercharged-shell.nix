@@ -12,8 +12,9 @@
 # Setting `neusis.supercharged-shell.enable = true` adds a curated
 # bundle of CLI utilities and dev tools (eza, bat, ripgrep, htop,
 # language toolchains, …) to `home.packages`. Use `extraPackages`
-# to extend, or skip the umbrella `enable` if you only want the
-# tool sub-modules.
+# to extend, `toolchains.enable = false` to leave out the toolchains
+# and TeX (most of its size), or skip the umbrella `enable` if you
+# only want the tool sub-modules.
 #
 # Sister module to `supercharged-git` and `terminal-velocity`: same
 # opt-in shape, no overlap.
@@ -54,26 +55,30 @@
         wget
         xclip
 
-        # Programming / build toolchains. Drop or pin per-host via
-        # `home.packages` if you don't need them all.
-        cargo
-        clang
-        clang-tools
-        cmake
-        deno
-        gnumake
-        ninja
-        nodejs_22
-        python3
-        rustc
-        texliveFull
-
         # Lua (used by yazi plugins, wezterm config, neovim configs).
         lua51Packages.lua
         lua51Packages.luarocks
-      ]
-      # Linux-only PDF viewer (sioyek doesn't build on Darwin).
-      ++ lib.optionals (!pkgs.stdenv.isDarwin) [ pkgs.sioyek ];
+      ];
+
+      # Programming / build toolchains and TeX: most of the bundle's size
+      # (texliveFull alone is ~6 GB), so `toolchains.enable` can leave them out.
+      toolchainPackages =
+        with pkgs;
+        [
+          cargo
+          clang
+          clang-tools
+          cmake
+          deno
+          gnumake
+          ninja
+          nodejs_22
+          python3
+          rustc
+          texliveFull
+        ]
+        # Linux-only PDF viewer (sioyek doesn't build on Darwin).
+        ++ lib.optionals (!pkgs.stdenv.isDarwin) [ pkgs.sioyek ];
     in
     {
       imports = [
@@ -97,6 +102,18 @@
           and vice versa
         '';
 
+        toolchains.enable = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = ''
+            Whether the bundle includes the language toolchains and TeX
+            (cargo, rustc, clang, clang-tools, cmake, deno, gnumake,
+            ninja, nodejs_22, python3, texliveFull) and, on Linux, the
+            sioyek PDF viewer. Turn off on hosts with little disk, such
+            as servers: they are most of the bundle's size.
+          '';
+        };
+
         extraPackages = lib.mkOption {
           type = lib.types.listOf lib.types.package;
           default = [ ];
@@ -110,7 +127,8 @@
       };
 
       config = lib.mkIf cfg.enable {
-        home.packages = defaultPackages ++ cfg.extraPackages;
+        home.packages =
+          defaultPackages ++ lib.optionals cfg.toolchains.enable toolchainPackages ++ cfg.extraPackages;
       };
     };
 }

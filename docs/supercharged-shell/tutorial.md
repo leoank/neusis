@@ -55,6 +55,17 @@ neusis.supercharged-shell = {
 };
 ```
 
+The toolchains, TeX and sioyek are most of the bundle's size
+(`texliveFull` alone is about 6 GB). On a host with little disk, such
+as a server, keep the CLI utilities and leave them out:
+
+```nix
+neusis.supercharged-shell = {
+  enable = true;
+  toolchains.enable = false;
+};
+```
+
 Want fewer than the curated set? Leave the umbrella `enable` off and
 manage `home.packages` yourself; cherry-pick the tool sub-modules
 below for the program-level config.
