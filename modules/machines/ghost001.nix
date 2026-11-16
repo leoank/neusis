@@ -54,6 +54,14 @@
 
         programs.zsh.enable = true;
 
+        # The root disk is 50 GB and holds the store, and this host also builds for others
+        # (distributed-builds): collect garbage during a build when less than 5 GB is free,
+        # up to 15 GB free, on top of the weekly collection in nix-settings.
+        nix.settings = {
+          min-free = 5 * 1024 * 1024 * 1024;
+          max-free = 15 * 1024 * 1024 * 1024;
+        };
+
         # saarthi node (ank's saarthi-node-ghost001 bundle): a systemd user service, kept
         # running with nobody logged in. Its hub token is a system secret owned by ank,
         # decrypted with the host key (no personal key on this host).

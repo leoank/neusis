@@ -124,6 +124,8 @@
             # cloudflared connector fed by the agenix tunnel token
             tunnel = cfg.neusis.services.cloudflare-tunnel.enable;
             tunnelToken = cfg.neusis.services.cloudflare-tunnel.tokenFile == cfg.age.secrets.cfTunnelToken.path;
+            # GC during builds on the 50 GB root
+            inherit (cfg.nix.settings) min-free max-free;
           };
           expected = {
             tailscale = true;
@@ -138,6 +140,8 @@
             flakes = true;
             tunnel = true;
             tunnelToken = true;
+            min-free = 5 * 1024 * 1024 * 1024;
+            max-free = 15 * 1024 * 1024 * 1024;
           };
         };
 
