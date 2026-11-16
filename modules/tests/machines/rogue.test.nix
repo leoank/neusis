@@ -177,6 +177,32 @@
           };
         };
 
+        # binds.conf is aerc's vendored default plus ank's keys: aerc reads no defaults once
+        # the file exists. A new aerc fails `version` until users/ank/aerc-binds.conf is
+        # refreshed from its share/aerc/binds.conf.
+        test-aerc-binds-keep-the-defaults = {
+          expr =
+            let
+              binds = home.programs.aerc.extraBinds;
+            in
+            {
+              version = home.programs.aerc.package.version;
+              defaults = lib.all (l: lib.hasInfix l binds) [
+                "[messages]"
+                "[compose]"
+                "q = :close<Enter>"
+                "| = :pipe<space>"
+              ];
+              nvimView = lib.hasInfix "[view]\n# ank: open the current part in nvim" binds
+                && lib.hasInfix "<C-e> = :pipe -s -p nvim -R '+setlocal ft=mail nomodified' -<Enter>" binds;
+            };
+          expected = {
+            version = "0.21.0";
+            defaults = true;
+            nvimView = true;
+          };
+        };
+
         # Mail (ADR-0019): four accounts synced by mbsync, indexed by notmuch,
         # read in aerc. Passwords come from agenix secrets at stable paths;
         # the Microsoft 365 account signs in with an oama access token.

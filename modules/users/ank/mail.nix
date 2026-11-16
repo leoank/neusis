@@ -128,6 +128,8 @@
           programs.notmuch.enable = true;
           programs.aerc = {
             enable = true;
+            # The whole binds.conf: aerc's defaults plus ank's keys (see the file's header).
+            extraBinds = builtins.readFile ./aerc-binds.conf;
             extraConfig = {
               # accounts.conf holds only credential commands, never a password.
               general.unsafe-accounts-conf = true;
