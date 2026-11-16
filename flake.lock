@@ -1243,11 +1243,11 @@
         "yajna": "yajna"
       },
       "locked": {
-        "lastModified": 1794705783,
-        "narHash": "sha256-SHmbHRVWOAcuaeFI1JQcoDhZNtg1lx2dBymlzEUPMYQ=",
+        "lastModified": 1794830338,
+        "narHash": "sha256-CfbkhgM90nF9f5B4coUq0iRLU2qtaEnYljx+bUdD208=",
         "owner": "leoank",
         "repo": "saarthi",
-        "rev": "5d42156c8479f9da075e31291edbeb534061f6c1",
+        "rev": "18a0020b04ebc2248f63a86d83e1f95140ecbad5",
         "type": "github"
       },
       "original": {
@@ -1643,11 +1643,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1794449271,
-        "narHash": "sha256-u/JOjWshYqUTCvEZAqnJnwieEjt6twmkOl860JZB2So=",
+        "lastModified": 1794833310,
+        "narHash": "sha256-pp1TkfKi88rU7ad0mwUrsLj7/imv3LU3gseLG22Zqd4=",
         "owner": "leoank",
         "repo": "yajna",
-        "rev": "dd7c9777efd61c70c527bc1485fdaebdc006adc8",
+        "rev": "699fbb44ac0225d68a4ae53c13def14de04c0d6b",
         "type": "github"
       },
       "original": {

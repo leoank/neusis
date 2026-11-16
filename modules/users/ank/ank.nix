@@ -297,6 +297,8 @@
     {
       config,
       inputs,
+      lib,
+      pkgs,
       ...
     }:
     {
@@ -351,6 +353,23 @@
         # The saarthi live checks start throwaway sessions here; the live hub must not
         # list them or push their turns to the phone (saarthi ADR-0028).
         ignoreCwd = [ "*/target/live-work-*" ];
+        # Every notebook in this Mac's yajna registry, reached from the phone through the
+        # hub (saarthi ADR-0052, yajna ADR-0036): the node starts `yajna serve --socket` on
+        # the first request and stops it after ten idle minutes.
+        services.yajna =
+          let
+            socket = "~/.local/state/yajna/serve.sock";
+          in
+          {
+            inherit socket;
+            start = [
+              (lib.getExe inputs.yajna.packages.${pkgs.stdenv.hostPlatform.system}.yajna)
+              "serve"
+              "--socket"
+              socket
+            ];
+            idle = "10m";
+          };
         # Hold the machine out of idle sleep while a session is busy, so a turn
         # finishes and the hub link holds when the screen turns off (saarthi ADR-0031).
         keepAwake = true;
