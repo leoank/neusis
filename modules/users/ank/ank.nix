@@ -247,7 +247,12 @@
 
   # Secrets bundle — agenix-rekey home secrets (personal tokens).
   flake.neusis.users.ank.hmBundles.secrets =
-    { config, lib, ... }:
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
     {
       imports = [ self.homeModules.secrets ];
 
@@ -267,7 +272,31 @@
       # Placeholder tokens — fill real values with
       # `agenix edit modules/secrets/ank/<name>.age`.
       age.secrets.ghauthToken.rekeyFile = ../../secrets/ank/ghauthToken.age;
-      age.secrets.atuinToken.rekeyFile = ../../secrets/ank/atuinToken.age;
+
+      # atuin sync (atuin 18.15): every machine shares one account session and one
+      # encryption key, or history synced from one cannot be decrypted on another.
+      # Both go where atuin looks for them, so no setting points at the agenix
+      # directory (on Darwin that path holds a $(getconf …) atuin cannot expand):
+      # - the key at the default key_path, read on every start;
+      # - the session as the legacy `session` file, which atuin imports into
+      #   meta.db the first time it opens it (18.15 no longer reads `session_path`,
+      #   though the docs still list it). A home whose meta.db was made before the
+      #   secret existed (curiosity's first boot) needs `rm ~/.local/share/atuin/meta.db`
+      #   once; `atuin store purge` then drops records written with a stray key.
+      # Taken from rogue's working login (the key and its meta.db session token).
+      age.secrets.atuinKey = {
+        rekeyFile = ../../secrets/ank/atuinKey.age;
+        path = "${config.xdg.dataHome}/atuin/key";
+      };
+      age.secrets.atuinSession = {
+        rekeyFile = ../../secrets/ank/atuinSession.age;
+        path = "${config.xdg.dataHome}/atuin/session";
+      };
+      # Before agenix links the key, atuin would make a key of its own there.
+      systemd.user.services.atuin-daemon.Unit = lib.mkIf pkgs.stdenv.isLinux {
+        Wants = [ "agenix.service" ];
+        After = [ "agenix.service" ];
+      };
 
       # Oracle Cloud operator credentials for the terranix stacks
       # (docs/cloud-terranix-plan.md, "Operator prerequisites"): the API

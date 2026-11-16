@@ -54,6 +54,32 @@
           };
         };
 
+        # atuin sync: the shared key and session at atuin's own paths (18.15 reads the key
+        # from key_path and imports the legacy session file into meta.db), and the daemon
+        # waits for agenix, so atuin never makes a key of its own first.
+        test-atuin-shares-the-key-and-session = {
+          expr =
+            let
+              h = cfg.home-manager.users.ank;
+            in
+            {
+              key = h.age.secrets.atuinKey.path;
+              session = h.age.secrets.atuinSession.path;
+              keyFile = baseNameOf h.age.secrets.atuinKey.rekeyFile;
+              sessionFile = baseNameOf h.age.secrets.atuinSession.rekeyFile;
+              keyPathSetting = h.programs.atuin.settings ? key_path;
+              daemonAfterAgenix = builtins.elem "agenix.service" h.systemd.user.services.atuin-daemon.Unit.After;
+            };
+          expected = {
+            key = "/home/ank/.local/share/atuin/key";
+            session = "/home/ank/.local/share/atuin/session";
+            keyFile = "atuinKey.age";
+            sessionFile = "atuinSession.age";
+            keyPathSetting = false;
+            daemonAfterAgenix = true;
+          };
+        };
+
         # Immutable users: ank's password comes from the agenix secret at every activation.
         test-password-from-the-host-key-secret = {
           expr = {
