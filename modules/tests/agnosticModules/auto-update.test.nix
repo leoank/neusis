@@ -60,6 +60,7 @@
           period = r.poller.period;
         }) cfg.services.comin.remotes;
         signersChecked = cfg.services.comin.sshAllowedSignersPath != null;
+        buildTimeout = cfg.services.comin.buildTimeout;
         hook = lib.hasSuffix "/bin/neusis-auto-update-hook" cfg.services.comin.postDeploymentCommand;
         version = lib.getVersion cfg.services.comin.package;
         warnings = cfg.warnings;
@@ -78,6 +79,8 @@
           }
         ];
         signersChecked = true;
+        # an hour, not comin's 30 minutes
+        buildTimeout = 3600;
         hook = true;
         version = "0.14.0";
         warnings = [ ];
@@ -111,6 +114,11 @@
           expected = expected // {
             unit = true;
           };
+        };
+
+        test-build-timeout-reaches-comin = {
+          expr = (nixos { neusis.services.auto-update.buildTimeout = 7200; }).services.comin.buildTimeout;
+          expected = 7200;
         };
 
         test-darwin-comin-follows-the-branch = {

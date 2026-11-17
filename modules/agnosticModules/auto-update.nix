@@ -179,6 +179,16 @@
           description = "Seconds between polls of `branch`.";
         };
 
+        buildTimeout = lib.mkOption {
+          type = lib.types.ints.positive;
+          default = 3600;
+          description = ''
+            Seconds comin lets a build run before cancelling it. comin's own
+            default (1800) is shorter than a cold build of a custom kernel
+            (curiosity's NVIDIA kernel on a fresh live-disk store).
+          '';
+        };
+
         signers = lib.mkOption {
           type = lib.types.listOf (
             lib.types.submodule {
@@ -273,6 +283,7 @@
                   poller.period = cfg.pollPeriod;
                 }
               ];
+              inherit (cfg) buildTimeout;
               sshAllowedSignersPath = lib.mkIf (cfg.signers != [ ]) "${allowedSignersFile}";
               postDeploymentCommand = lib.getExe hook;
             };
