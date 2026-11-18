@@ -36,6 +36,7 @@
         self.neusis.features.agnostic.ank_mesh
         self.neusis.features.agnostic.cslab_mesh
       ];
+      anklab = mesh [ self.neusis.features.agnostic.anklab_mesh ];
       ts = cfg: cfg.neusis.services.tailscale;
     in
     {
@@ -96,6 +97,75 @@
             oauth = [
               "tsclient.age"
               "tssecret.age"
+            ];
+            failed = [ ];
+          };
+        };
+
+        # anklab_mesh: every profile's three secrets come from secrets/anklab/,
+        # named <profile>Ts<Kind>; the API calls use the OAuth client's own
+        # tailnet ("-"); cslab is the default.
+        test-anklab-mesh-profiles-from-anklab-secrets = {
+          expr =
+            let
+              p = (ts anklab).profiles.cslab;
+            in
+            {
+              enabled = (ts anklab).enable;
+              default = (ts anklab).defaultProfile;
+              profiles = builtins.attrNames (ts anklab).profiles;
+              secrets = lib.mapAttrs (
+                _: s: lib.removePrefix (toString ../../../secrets + "/") (toString s.rekeyFile)
+              ) anklab.age.secrets;
+              files = lib.mapAttrs (_: q: [
+                q.authKeyFile
+                q.clientIdFile
+                q.clientSecretFile
+              ]) (ts anklab).profiles;
+              orgs = lib.mapAttrs (_: q: q.tailnetOrg) (ts anklab).profiles;
+              hostName = p.hostName;
+              forceHostName = p.forceHostName;
+              disableKeyExpiry = p.disableKeyExpiry;
+              scripts = lib.filter (lib.hasPrefix "neusis-ts-") (t.pkgNames anklab.environment.systemPackages);
+              failed = t.failedAssertions anklab;
+            };
+          expected = {
+            enabled = true;
+            default = "cslab";
+            profiles = [
+              "cslab"
+              "leoank"
+            ];
+            secrets = {
+              cslabTsAuthKey = "anklab/cslabTsAuthKey.age";
+              cslabTsClientId = "anklab/cslabTsClientId.age";
+              cslabTsClientSecret = "anklab/cslabTsClientSecret.age";
+              leoankTsAuthKey = "anklab/leoankTsAuthKey.age";
+              leoankTsClientId = "anklab/leoankTsClientId.age";
+              leoankTsClientSecret = "anklab/leoankTsClientSecret.age";
+            };
+            files = {
+              cslab = [
+                "/run/agenix/cslabTsAuthKey"
+                "/run/agenix/cslabTsClientId"
+                "/run/agenix/cslabTsClientSecret"
+              ];
+              leoank = [
+                "/run/agenix/leoankTsAuthKey"
+                "/run/agenix/leoankTsClientId"
+                "/run/agenix/leoankTsClientSecret"
+              ];
+            };
+            orgs = {
+              cslab = "-";
+              leoank = "-";
+            };
+            hostName = "fixture-darwin";
+            forceHostName = true;
+            disableKeyExpiry = true;
+            scripts = [
+              "neusis-ts-cslab"
+              "neusis-ts-leoank"
             ];
             failed = [ ];
           };

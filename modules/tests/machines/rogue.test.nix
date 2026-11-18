@@ -90,8 +90,12 @@
             kanata = cfg.neusis.services.kanata.enable;
             buildServer = cfg.neusis.services.build-server.enable;
             buildsOffloadTo = map (b: b.hostName) cfg.nix.buildMachines;
-            # meshes are commented out on rogue: daemon present, no profiles
-            tailscale = cfg.neusis.services.tailscale.enable;
+            # anklab_mesh: nix-darwin's tailscaled with the cslab (default) and
+            # leoank profiles, in place of the Tailscale app
+            tailscale = {
+              inherit (cfg.neusis.services.tailscale) enable defaultProfile;
+              profiles = builtins.attrNames cfg.neusis.services.tailscale.profiles;
+            };
             homebrew = cfg.homebrew.enable;
             ssh = cfg.services.openssh.enable;
           };
@@ -108,7 +112,14 @@
               "curiosity"
               "ghost001"
             ];
-            tailscale = false;
+            tailscale = {
+              enable = true;
+              defaultProfile = "cslab";
+              profiles = [
+                "cslab"
+                "leoank"
+              ];
+            };
             homebrew = true;
             ssh = true;
           };

@@ -24,12 +24,12 @@
           inputs.agenix-rekey.darwinModules.default
           self.darwinModules.secrets
           self.neusis.features.agnostic.distributed-builds
-          # tailscale mesh: the agnostic tailscale module (daemon +
-          # autoconnect) + the two mesh config features (ank = leoank default,
-          # cslab switchable).
+          # tailscale mesh: the agnostic tailscale module (nix-darwin's
+          # tailscaled + autoconnect) with anklab's profiles (cslab default,
+          # leoank switchable). Replaces the Tailscale app, which must not
+          # run beside it.
           self.darwinModules.tailscale
-          # self.neusis.features.agnostic.ank_mesh
-          # self.neusis.features.agnostic.cslab_mesh
+          self.neusis.features.agnostic.anklab_mesh
           ./_homebrew.nix
           # auto-updates: comin follows rogue's deploy group (canary),
           # deploys signed heads only, and emails failures
