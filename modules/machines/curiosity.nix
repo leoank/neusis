@@ -185,34 +185,6 @@ in
         # GitHub's published host key, so the first `git@github.com` connection does not prompt.
         programs.ssh.knownHosts."github.com".publicKey =
           "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl";
-        # neusis checked out at ~/workspace/repos/leoank/neusis (ank's bootstrap-repos list,
-        # `gclb-sync`), for changing curiosity from a session on it. Cloned over https with the
-        # GitHub token (a home-manager secret, so after ank's agenix unit): git@github.com: URLs
-        # are rewritten for this run only (GIT_CONFIG_*), so the remotes stay ssh. Retries until
-        # the network is up.
-        systemd.user.services.neusis-checkout = {
-          description = "Clone ank's repos (gclb-sync)";
-          wantedBy = [ "default.target" ];
-          wants = [ "agenix.service" ];
-          after = [
-            "network-online.target"
-            "agenix.service"
-          ];
-          unitConfig.ConditionUser = "ank";
-          serviceConfig = {
-            Type = "oneshot";
-            Restart = "on-failure";
-            RestartSec = 120;
-          };
-          script = ''
-            token=$(cat ${config.home-manager.users.ank.age.secrets.ghauthToken.path})
-            export GIT_CONFIG_COUNT=1
-            export GIT_CONFIG_KEY_0="url.https://x-access-token:$token@github.com/.insteadOf"
-            export GIT_CONFIG_VALUE_0="git@github.com:"
-            exec ${config.home-manager.users.ank.home.profileDirectory}/bin/gclb-sync
-          '';
-        };
-
         # A builder for the others (registry/builders/anklab.nix), but its own builds stay here:
         # Nix sends a derivation to any remote with a free slot before building locally, and its
         # only aarch64-linux peer is ghost001's two slow slots.
