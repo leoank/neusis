@@ -295,6 +295,28 @@
             system.activationScripts.preActivation.text = lib.mkIf (githubRepo != null) (
               lib.mkBefore "${switchCheck}\n"
             );
+
+            # comin runs the activation as its own child. When the plist
+            # changes (any comin, config or nixpkgs bump), nix-darwin's
+            # activation unloads comin first, and launchd then kills comin's
+            # whole process group, the activation with it: the new plist is
+            # never loaded and comin stays down (rogue, 2026-11-17). With the
+            # group abandoned only comin stops; the activation, writing to
+            # comin's log file, goes on to copy and load the new plist,
+            # which starts the new comin, as systemd does on NixOS.
+            launchd.daemons.comin.serviceConfig = {
+              AbandonProcessGroup = true;
+              # nix-darwin's activate-user calls grep (comin's module puts
+              # only nix, git and openssh on PATH).
+              EnvironmentVariables.PATH = lib.mkForce (
+                lib.makeBinPath [
+                  config.nix.package
+                  pkgs.git
+                  pkgs.openssh
+                  pkgs.gnugrep
+                ]
+              );
+            };
           }
         )
       );

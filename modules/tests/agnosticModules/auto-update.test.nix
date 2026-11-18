@@ -130,6 +130,29 @@
           };
         };
 
+        # A plist change unloads comin mid-activation; with its process group
+        # abandoned the activation survives to load the new plist (see the
+        # module comment). grep is on PATH for activate-user.
+        test-darwin-comin-survives-its-own-reload = {
+          expr =
+            let
+              sc = (darwin { }).launchd.daemons.comin.serviceConfig;
+              path = lib.splitString ":" sc.EnvironmentVariables.PATH;
+            in
+            {
+              abandon = sc.AbandonProcessGroup;
+              grep = lib.any (p: lib.hasInfix "gnugrep" p) path;
+              git = lib.any (p: lib.hasInfix "-git-" p) path;
+              keepAlive = sc.KeepAlive;
+            };
+          expected = {
+            abandon = true;
+            grep = true;
+            git = true;
+            keepAlive = true;
+          };
+        };
+
         # The hook's Homebrew delta reads `homebrew.brewPrefix` and the
         # primary user; instantiating it proves those resolve.
         test-darwin-hook-with-homebrew = {
