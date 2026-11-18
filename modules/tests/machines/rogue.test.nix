@@ -177,6 +177,19 @@
           };
         };
 
+        # gclb-sync clones ank's own repos side by side under ~/workspace/repos/leoank.
+        test-bootstrap-repos-clone-ank-projects = {
+          expr = map (r: r.dest or null) home.neusis.supercharged-git.tools.bootstrap-repos.repos;
+          expected = [
+            "leoank/neusis"
+            "leoank/yajna"
+            "leoank/saarthi"
+            "leoank/manthan"
+            "leoank/anvesana"
+            null
+          ];
+        };
+
         # binds.conf is aerc's vendored default plus ank's keys: aerc reads no defaults once
         # the file exists. A new aerc fails `version` until users/ank/aerc-binds.conf is
         # refreshed from its share/aerc/binds.conf.

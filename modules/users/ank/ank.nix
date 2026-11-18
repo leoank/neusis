@@ -166,6 +166,23 @@
                 dest = "leoank/neusis";
               }
               {
+                url = "git@github.com:leoank/yajna";
+                dest = "leoank/yajna";
+              }
+              {
+                url = "git@github.com:leoank/saarthi";
+                dest = "leoank/saarthi";
+              }
+              # private: the lab notebook, cloned with ank's key like the rest
+              {
+                url = "git@github.com:leoank/manthan";
+                dest = "leoank/manthan";
+              }
+              {
+                url = "git@github.com:leoank/anvesana";
+                dest = "leoank/anvesana";
+              }
+              {
                 url = "git@github.com:nixos/nixpkgs";
                 # Around ~3GB as of june 2026, so only cloning with depth 1
                 extraGitArgs = [
