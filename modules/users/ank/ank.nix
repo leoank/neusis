@@ -419,6 +419,8 @@
         # Hold the machine out of idle sleep while a session is busy, so a turn
         # finishes and the hub link holds when the screen turns off (saarthi ADR-0031).
         keepAwake = true;
+        # A shell on this machine from the app, through the hub (saarthi ADR-0054).
+        terminal = true;
         # The phone may start sessions in any repo under ~/workspace (saarthi
         # ADR-0034). `claude` is the login shell's, the profile's wrapper with the
         # plugins, which runs claude directly when its input is not a terminal.
@@ -495,6 +497,8 @@
         hub = "http://ghost001:7700";
         tokenFile = config.age.secrets.saarthiCuriosityNodeToken.path;
         name = "curiosity";
+        # A shell on this machine from the app, through the hub (saarthi ADR-0054).
+        terminal = true;
         # As `saarthi-curiosity` on cslab; `hub` is ghost001's name there.
         tailnet = {
           enable = true;
@@ -608,6 +612,8 @@
         # node tokens file has the same token under `ghost001`.
         tokenFile = "/run/agenix/saarthiGhost001NodeToken";
         name = "ghost001";
+        # A shell on this machine from the app, through the hub (saarthi ADR-0054).
+        terminal = true;
         ignoreCwd = [ "*/target/live-work-*" ];
         spawnRoots = [ "${config.home.homeDirectory}/workspace" ];
       };

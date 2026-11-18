@@ -129,6 +129,8 @@
               keepAlive = agent.config.KeepAlive;
               hub = lib.hasInfix "--hub http://ghost001:7700" line;
               name = lib.hasInfix "--name rogue" line;
+              # a shell from the app (saarthi ADR-0054)
+              terminal = lib.hasInfix "--terminal" line;
               tokenFromSecret = lib.hasInfix "--token-file ${home.age.secrets.saarthiRogueNodeToken.path}" line;
               # its own identity on cslab, joined with ghost001's key (saarthi ADR-0048)
               tailnet = lib.hasInfix "--tailnet --tailnet-authkey-file ${home.age.secrets.saarthiNodeTailnetKey.path}" line;
@@ -156,6 +158,7 @@
             keepAlive = true;
             hub = true;
             name = true;
+            terminal = true;
             tokenFromSecret = true;
             tailnet = true;
             tailnetKeyPath = "/Users/ank/.config/saarthi/tailnet-authkey";

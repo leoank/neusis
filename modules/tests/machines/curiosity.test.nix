@@ -8,11 +8,31 @@
     let
       t = self.neusis.lib.tests;
       cfg = self.nixosConfigurations.curiosity.config;
+      home = self.homeConfigurations."ank@curiosity".config;
       unit = cfg.boot.initrd.systemd.services.curiosity-host-key;
       script = cfg.boot.initrd.systemd.contents."/etc/curiosity-host-key.sh".text;
     in
     {
       tests.machine-curiosity = {
+        # ank's saarthi node: a user service pointed at ghost001's hub, offering the app a
+        # shell on this machine (saarthi ADR-0054).
+        test-saarthi-node = {
+          expr =
+            let
+              line = lib.concatStringsSep " " (lib.toList home.systemd.user.services.saarthi-node.Service.ExecStart);
+            in
+            {
+              hub = lib.hasInfix "--hub http://ghost001:7700" line;
+              name = lib.hasInfix "--name curiosity" line;
+              terminal = lib.hasInfix "--terminal" line;
+            };
+          expected = {
+            hub = true;
+            name = true;
+            terminal = true;
+          };
+        };
+
         test-missing-host-key-stops-the-boot = {
           expr = {
             requiredBy = unit.requiredBy;

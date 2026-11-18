@@ -226,6 +226,8 @@
             {
               hub = lib.hasInfix "--hub http://127.0.0.1:7700" line;
               name = lib.hasInfix "--name ghost001" line;
+              # a shell from the app (saarthi ADR-0054)
+              terminal = lib.hasInfix "--terminal" line;
               token = lib.hasInfix "--token-file /run/agenix/saarthiGhost001NodeToken" line;
               tokenOwner = cfg.age.secrets.saarthiGhost001NodeToken.owner;
               linger = cfg.users.users.ank.linger;
@@ -239,6 +241,7 @@
           expected = {
             hub = true;
             name = true;
+            terminal = true;
             token = true;
             tokenOwner = "ank";
             linger = true;
