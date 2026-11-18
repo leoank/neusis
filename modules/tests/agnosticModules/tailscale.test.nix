@@ -185,6 +185,44 @@
           ];
         };
 
+        # force-claim renames a conflicting device unless the profile asks it to delete
+        # an offline one (a live disk's previous boot).
+        test-force-claim-deletes-offline-conflicts-on-request = {
+          expr =
+            let
+              claim =
+                extra:
+                let
+                  cfg = t.evalNixos {
+                    modules = [
+                      self.nixosModules.tailscale
+                      enabled
+                      {
+                        neusis.services.tailscale.profiles.leoank = {
+                          forceHostName = true;
+                          tailnetOrg = "-";
+                          clientIdFile = "/run/agenix/id";
+                          clientSecretFile = "/run/agenix/secret";
+                        } // extra;
+                      }
+                    ];
+                  };
+                  script = builtins.head (
+                    builtins.filter (p: (p.name or "") == "neusis-ts-leoank") cfg.environment.systemPackages
+                  );
+                in
+                builtins.unsafeDiscardStringContext script.text;
+            in
+            {
+              renames = lib.hasInfix "DELETE_OFFLINE_CONFLICTS=0" (claim { });
+              deletes = lib.hasInfix "DELETE_OFFLINE_CONFLICTS=1" (claim { deleteOfflineConflicts = true; });
+            };
+          expected = {
+            renames = true;
+            deletes = true;
+          };
+        };
+
         test-profile-option-defaults = {
           expr = {
             inherit (darwin.neusis.services.tailscale.profiles.cslab)
@@ -192,6 +230,7 @@
               extraUpFlags
               ephemeral
               forceHostName
+              deleteOfflineConflicts
               disableKeyExpiry
               tailnetOrg
               ;
@@ -201,6 +240,7 @@
             extraUpFlags = [ ];
             ephemeral = false;
             forceHostName = false;
+            deleteOfflineConflicts = false;
             disableKeyExpiry = false;
             tailnetOrg = null;
           };

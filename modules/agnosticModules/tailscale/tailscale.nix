@@ -100,6 +100,17 @@ let
             `clientSecretFile`.
           '';
         };
+        deleteOfflineConflicts = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = ''
+            With `forceHostName`: delete a conflicting device that is offline
+            instead of renaming it to `<name>-old-<timestamp>` (an online one
+            is still renamed). For a machine that joins as a new device on
+            every boot (a live disk), whose previous selves would otherwise
+            pile up in the tailnet.
+          '';
+        };
         tailnetOrg = lib.mkOption {
           type = lib.types.nullOr lib.types.str;
           default = null;
@@ -185,6 +196,7 @@ let
           TS_CLIENT_SECRET_FILE=${profile.clientSecretFile} \
           TAILNET_ORG=${profile.tailnetOrg} \
           NODE_NAME=${profile.hostName} \
+          DELETE_OFFLINE_CONFLICTS=${if profile.deleteOfflineConflicts then "1" else "0"} \
             bash ${forceClaimScript}
         ''}
         ${lib.optionalString profile.disableKeyExpiry ''

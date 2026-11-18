@@ -190,6 +190,10 @@ in
         # only aarch64-linux peer is ghost001's two slow slots.
         neusis.services.build-client.enable = lib.mkForce false;
 
+        # A live disk joins tailscale as a new device on every boot: the previous one, now
+        # offline, is deleted rather than kept as curiosity-old-<timestamp>.
+        neusis.services.tailscale.profiles.cslab.deleteOfflineConflicts = true;
+
         # ---------------------------------------------------------------- desktop
         services.desktopManager.gnome.enable = true;
         services.displayManager.gdm.enable = true;

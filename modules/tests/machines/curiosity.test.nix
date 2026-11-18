@@ -33,6 +33,18 @@
           };
         };
 
+        # A live disk joins tailscale as a new device each boot; its offline predecessor is
+        # deleted, not kept as curiosity-old-<timestamp>.
+        test-tailscale-deletes-its-previous-boot = {
+          expr = {
+            inherit (cfg.neusis.services.tailscale.profiles.cslab) forceHostName deleteOfflineConflicts;
+          };
+          expected = {
+            forceHostName = true;
+            deleteOfflineConflicts = true;
+          };
+        };
+
         test-missing-host-key-stops-the-boot = {
           expr = {
             requiredBy = unit.requiredBy;

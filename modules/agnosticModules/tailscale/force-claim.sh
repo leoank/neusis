@@ -6,7 +6,9 @@ set -euo pipefail
 # 1. Checking if the DNS name already matches exactly (exits if it does)
 # 2. Renaming any conflicting devices to hostname-old-<timestamp>
 # 3. Setting the current device to the exact desired hostname
-# This preserves all devices (nothing gets deleted) while ensuring the current device gets the exact name.
+# This preserves all devices (nothing gets deleted) while ensuring the current device gets the exact name,
+# unless DELETE_OFFLINE_CONFLICTS=1: then a conflicting device that is offline is deleted instead
+# (a live disk joins as a new device on every boot).
 # Required environment variables:
 # - TS_CLIENT_ID_FILE: Path to file containing OAuth client ID
 # - TS_CLIENT_SECRET_FILE: Path to file containing OAuth client secret
@@ -95,7 +97,7 @@ if [ -n "${DEVICES_RESPONSE:-}" ]; then
     CONFLICTS=$(echo "$DEVICES_RESPONSE" | jq -r \
         --arg hostname "$NODE_NAME" \
         --arg device_id "$DEVICE_ID" \
-        '.devices[]? | select(.name | split(".")[0] | ascii_downcase == ($hostname | ascii_downcase)) | select(.nodeId != $device_id) | {id: .nodeId, name: .name, hostname: .hostname}' 2>/dev/null | jq -s '.')
+        '.devices[]? | select(.name | split(".")[0] | ascii_downcase == ($hostname | ascii_downcase)) | select(.nodeId != $device_id) | {id: .nodeId, name: .name, hostname: .hostname, online: (.connectedToControl // false)}' 2>/dev/null | jq -s '.')
 
     CONFLICT_COUNT=$(echo "$CONFLICTS" | jq 'length')
 
@@ -105,9 +107,13 @@ if [ -n "${DEVICES_RESPONSE:-}" ]; then
         # Use Unix timestamp for unique suffix (no collisions)
         TIMESTAMP=$(date +%s)
 
-        # Rename each conflicting device
-        echo "$CONFLICTS" | jq -r '.[]? | .id' | while read -r conflict_id; do
-            if [ -n "$conflict_id" ]; then
+        # Rename each conflicting device (or delete it, when offline and asked to)
+        echo "$CONFLICTS" | jq -r '.[]? | "\(.id) \(.online)"' | while read -r conflict_id online; do
+            if [ -n "$conflict_id" ] && [ "${DELETE_OFFLINE_CONFLICTS:-0}" = "1" ] && [ "$online" = "false" ]; then
+                log "  Deleting offline device $conflict_id..."
+                curl -sf -X DELETE "https://api.tailscale.com/api/v2/device/$conflict_id" \
+                    -H "Authorization: Bearer $TOKEN" >/dev/null 2>&1 || log "    Warning: Failed to delete device $conflict_id"
+            elif [ -n "$conflict_id" ]; then
                 # Create unique name with timestamp
                 NEW_NAME="${DESIRED_DNS_SHORT}-old-${TIMESTAMP}"
 
