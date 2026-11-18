@@ -109,6 +109,28 @@
           };
         };
 
+        # A wiped home starts without Claude Code's first-run flag; activation
+        # merges it into the live ~/.claude.json (see the module comment).
+        test-claude-first-run-marked-done = {
+          expr =
+            let
+              cfg = harness { tools.claude.enable = true; };
+              script = cfg.home.activation.claudeOnboarded;
+              data = builtins.unsafeDiscardStringContext script.data;
+            in
+            {
+              after = script.after;
+              merges =
+                lib.hasInfix "/.claude.json" data && lib.hasInfix "'.hasCompletedOnboarding = true'" data;
+              offWithoutClaude = (harness { enable = true; }).home.activation ? claudeOnboarded;
+            };
+          expected = {
+            after = [ "linkGeneration" ];
+            merges = true;
+            offWithoutClaude = false;
+          };
+        };
+
         # A store symlink makes Claude Code watch /nix/store itself (see the
         # module comment), so settings.json is copied in at activation.
         test-claude-settings-installed-as-real-file = {

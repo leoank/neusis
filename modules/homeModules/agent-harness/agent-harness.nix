@@ -383,6 +383,28 @@
           # `~/.claude/`; this is the only place the umbrella's
           # `agentsMd` is bound for claude.
           home.file.".claude/CLAUDE.md".source = cfg.agentsMd;
+
+          # Claude Code's first-run setup (a theme, then how to sign in) is
+          # recorded in ~/.claude.json, its own state file, which a wiped
+          # home (curiosity's live disk) starts without: interactive claude
+          # then asks again even under `saarthi run`, whose account token is
+          # already in its environment. The flag is merged into the live
+          # file, never linked (claude rewrites it); a file that is not
+          # JSON is left for claude to deal with.
+          home.activation.claudeOnboarded = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+            target=${lib.escapeShellArg "${config.home.homeDirectory}/.claude.json"}
+            jq=${lib.getExe pkgs.jq}
+            if [ ! -e "$target" ]; then
+              run ${pkgs.coreutils}/bin/install -Dm600 $VERBOSE_ARG \
+                ${pkgs.writeText "claude-onboarded.json" (builtins.toJSON { hasCompletedOnboarding = true; })} "$target"
+            elif [ ! -L "$target" ] && ! "$jq" -e '.hasCompletedOnboarding == true' "$target" >/dev/null 2>&1 \
+                && "$jq" -e 'type == "object"' "$target" >/dev/null 2>&1; then
+              merged=$(mktemp)
+              "$jq" '.hasCompletedOnboarding = true' "$target" > "$merged"
+              run ${pkgs.coreutils}/bin/install -m600 $VERBOSE_ARG "$merged" "$target"
+              rm -f "$merged"
+            fi
+          '';
         })
 
         # Install claude's settings.json as a real file, not a symlink.
