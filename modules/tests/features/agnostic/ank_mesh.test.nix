@@ -102,13 +102,18 @@
           };
         };
 
-        # anklab_mesh: every profile's three secrets come from secrets/anklab/,
-        # named <profile>Ts<Kind>; the API calls use the OAuth client's own
-        # tailnet ("-"); cslab is the default.
+        # anklab_mesh: one profile per tailnet, its three secrets from secrets/anklab/
+        # named <profile>Ts<Kind>; the API calls use the credential's own tailnet ("-");
+        # runxi is the default.
         test-anklab-mesh-profiles-from-anklab-secrets = {
           expr =
             let
-              p = (ts anklab).profiles.cslab;
+              p = (ts anklab).profiles.runxi;
+              names = [
+                "runxi"
+                "leoank"
+                "shntnu"
+              ];
             in
             {
               enabled = (ts anklab).enable;
@@ -117,12 +122,12 @@
               secrets = lib.mapAttrs (
                 _: s: lib.removePrefix (toString ../../../secrets + "/") (toString s.rekeyFile)
               ) anklab.age.secrets;
-              files = lib.mapAttrs (_: q: [
-                q.authKeyFile
-                q.clientIdFile
-                q.clientSecretFile
-              ]) (ts anklab).profiles;
-              orgs = lib.mapAttrs (_: q: q.tailnetOrg) (ts anklab).profiles;
+              files = lib.genAttrs names (n: [
+                (ts anklab).profiles.${n}.authKeyFile
+                (ts anklab).profiles.${n}.clientIdFile
+                (ts anklab).profiles.${n}.clientSecretFile
+              ]);
+              orgs = lib.unique (lib.mapAttrsToList (_: q: q.tailnetOrg) (ts anklab).profiles);
               hostName = p.hostName;
               forceHostName = p.forceHostName;
               disableKeyExpiry = p.disableKeyExpiry;
@@ -131,41 +136,49 @@
             };
           expected = {
             enabled = true;
-            default = "cslab";
+            default = "runxi";
             profiles = [
-              "cslab"
               "leoank"
+              "runxi"
+              "shntnu"
             ];
+            # the scripts use the devices:core clients where a tailnet has one
             secrets = {
-              cslabTsAuthKey = "anklab/cslabTsAuthKey.age";
-              cslabTsClientId = "anklab/cslabTsClientId.age";
-              cslabTsClientSecret = "anklab/cslabTsClientSecret.age";
+              runxiTsAuthKey = "anklab/runxiTsAuthKey.age";
+              runxiDeviceTsClientId = "anklab/runxiDeviceTsClientId.age";
+              runxiDeviceTsClientSecret = "anklab/runxiDeviceTsClientSecret.age";
               leoankTsAuthKey = "anklab/leoankTsAuthKey.age";
-              leoankTsClientId = "anklab/leoankTsClientId.age";
-              leoankTsClientSecret = "anklab/leoankTsClientSecret.age";
+              leoankDeviceTsClientId = "anklab/leoankDeviceTsClientId.age";
+              leoankDeviceTsClientSecret = "anklab/leoankDeviceTsClientSecret.age";
+              shntnuTsAuthKey = "anklab/shntnuTsAuthKey.age";
+              shntnuTsClientId = "anklab/shntnuTsClientId.age";
+              shntnuTsClientSecret = "anklab/shntnuTsClientSecret.age";
             };
             files = {
-              cslab = [
-                "/run/agenix/cslabTsAuthKey"
-                "/run/agenix/cslabTsClientId"
-                "/run/agenix/cslabTsClientSecret"
+              runxi = [
+                "/run/agenix/runxiTsAuthKey"
+                "/run/agenix/runxiDeviceTsClientId"
+                "/run/agenix/runxiDeviceTsClientSecret"
               ];
               leoank = [
                 "/run/agenix/leoankTsAuthKey"
-                "/run/agenix/leoankTsClientId"
-                "/run/agenix/leoankTsClientSecret"
+                "/run/agenix/leoankDeviceTsClientId"
+                "/run/agenix/leoankDeviceTsClientSecret"
+              ];
+              shntnu = [
+                "/run/agenix/shntnuTsAuthKey"
+                "/run/agenix/shntnuTsClientId"
+                "/run/agenix/shntnuTsClientSecret"
               ];
             };
-            orgs = {
-              cslab = "-";
-              leoank = "-";
-            };
+            orgs = [ "-" ];
             hostName = "fixture-darwin";
             forceHostName = true;
             disableKeyExpiry = true;
             scripts = [
-              "neusis-ts-cslab"
               "neusis-ts-leoank"
+              "neusis-ts-runxi"
+              "neusis-ts-shntnu"
             ];
             failed = [ ];
           };

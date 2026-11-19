@@ -64,7 +64,7 @@ in
           self.nixosModules.secrets
           self.neusis.features.agnostic.distributed-builds
           self.nixosModules.tailscale
-          self.neusis.features.agnostic.cslab_mesh
+          self.neusis.features.agnostic.anklab_mesh
           inputs.comin.nixosModules.comin
           self.nixosModules.auto-update
           self.neusis.features.agnostic.auto-update
@@ -192,7 +192,8 @@ in
 
         # A live disk joins tailscale as a new device on every boot: the previous one, now
         # offline, is deleted rather than kept as curiosity-old-<timestamp>.
-        neusis.services.tailscale.profiles.cslab.deleteOfflineConflicts = true;
+        neusis.services.tailscale.profiles.runxi.deleteOfflineConflicts = true;
+        neusis.services.tailscale.profiles.shntnu.deleteOfflineConflicts = true;
 
         # ---------------------------------------------------------------- desktop
         services.desktopManager.gnome.enable = true;

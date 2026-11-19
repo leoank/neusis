@@ -32,14 +32,15 @@
           self.neusis.features.agnostic.nix-settings
           self.neusis.features.agnostic.nix-pkgs
           # agenix + neusis secrets (remoteBuildKey for distributed
-          # builds, the tailscale credentials via cslab_mesh).
+          # builds, the tailscale credentials via anklab_mesh).
           inputs.agenix.nixosModules.default
           inputs.agenix-rekey.nixosModules.default
           self.nixosModules.secrets
           self.neusis.features.agnostic.distributed-builds
-          # cslab tailnet (the one ank's machines currently use).
+          # anklab's tailnets (cslab default, leoank switchable): the one ank's machines
+          # and their saarthi nodes use.
           self.nixosModules.tailscale
-          self.neusis.features.agnostic.cslab_mesh
+          self.neusis.features.agnostic.anklab_mesh
           # saarthi hub (the saarthi flake's module) + self-hosted ntfy,
           # reachable over the tailnet.
           inputs.saarthi.nixosModules.saarthi-hub

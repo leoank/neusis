@@ -90,8 +90,8 @@
             kanata = cfg.neusis.services.kanata.enable;
             buildServer = cfg.neusis.services.build-server.enable;
             buildsOffloadTo = map (b: b.hostName) cfg.nix.buildMachines;
-            # anklab_mesh: nix-darwin's tailscaled with the cslab (default) and
-            # leoank profiles, in place of the Tailscale app
+            # anklab_mesh: nix-darwin's tailscaled with the runxi (default), leoank
+            # and shntnu profiles, in place of the Tailscale app
             tailscale = {
               inherit (cfg.neusis.services.tailscale) enable defaultProfile;
               profiles = builtins.attrNames cfg.neusis.services.tailscale.profiles;
@@ -114,10 +114,11 @@
             ];
             tailscale = {
               enable = true;
-              defaultProfile = "cslab";
+              defaultProfile = "runxi";
               profiles = [
-                "cslab"
                 "leoank"
+                "runxi"
+                "shntnu"
               ];
             };
             homebrew = true;
@@ -138,7 +139,8 @@
             {
               enabled = agent.enable;
               keepAlive = agent.config.KeepAlive;
-              hub = lib.hasInfix "--hub http://ghost001:7700" line;
+              # the hub's own name on the leoank tailnet
+              hub = lib.hasInfix "--hub http://saarthi-hub:7700" line;
               name = lib.hasInfix "--name rogue" line;
               # a shell from the app (saarthi ADR-0054)
               terminal = lib.hasInfix "--terminal" line;
@@ -173,7 +175,7 @@
             tokenFromSecret = true;
             tailnet = true;
             tailnetKeyPath = "/Users/ank/.config/saarthi/tailnet-authkey";
-            tailnetKey = ../../secrets/cslab/tsAuthKeyCslab.age;
+            tailnetKey = ../../secrets/anklab/leoankTsAuthKey.age;
             spawnRoot = true;
             profiles = true;
             sandbox = {

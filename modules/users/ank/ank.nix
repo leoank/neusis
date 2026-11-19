@@ -366,13 +366,12 @@
         rekeyFile = ../../secrets/ank/saarthiSandboxClaudeToken.age;
         path = "${config.home.homeDirectory}/.config/saarthi/sandbox-claude-token";
       };
-      # The node's own identity on the cslab tailnet, where ghost001's hub is (saarthi
-      # ADR-0048), so it reaches the hub whatever tailnet this Mac is on. The auth key is
-      # the one ghost001 joins cslab with (cslab_mesh), used for the first join and if the
-      # tailnet logs the identity out; the identity's state is kept in
-      # ~/.local/state/saarthi/tailnet.
+      # The node's own identity on ank's leoank tailnet, where the hub has one too
+      # (saarthi-hub, ADR-0048), so it reaches the hub whatever tailnet this Mac is on.
+      # The auth key is anklab's leoank one, used for the first join and if the tailnet
+      # logs the identity out; the identity's state is kept in ~/.local/state/saarthi/tailnet.
       age.secrets.saarthiNodeTailnetKey = {
-        rekeyFile = ../../secrets/cslab/tsAuthKeyCslab.age;
+        rekeyFile = ../../secrets/anklab/leoankTsAuthKey.age;
         path = "${config.home.homeDirectory}/.config/saarthi/tailnet-authkey";
       };
       # `saarthi ctl` and `saarthi tui` on this machine: the hub and this client's token
@@ -388,10 +387,11 @@
 
       services.saarthi-node = {
         enable = true;
-        hub = "http://ghost001:7700";
+        # The hub's own name on the leoank tailnet (its tsnet identity on ghost001).
+        hub = "http://saarthi-hub:7700";
         tokenFile = config.age.secrets.saarthiRogueNodeToken.path;
         name = "rogue";
-        # As `saarthi-rogue` on cslab; `hub` is ghost001's name there.
+        # As `saarthi-rogue` on leoank, where the hub is `saarthi-hub`.
         tailnet = {
           enable = true;
           authKeyFile = config.age.secrets.saarthiNodeTailnetKey.path;
@@ -487,19 +487,20 @@
       # token under `curiosity`, and `curiosity-ctl` is in its client tokens.
       age.secrets.saarthiCuriosityNodeToken.rekeyFile = ../../secrets/ank/saarthiCuriosityNodeToken.age;
       age.secrets.saarthiCuriosityClientToken.rekeyFile = ../../secrets/ank/saarthiCuriosityClientToken.age;
-      # The node's own identity on the cslab tailnet, where ghost001's hub is (saarthi
-      # ADR-0048), whatever network this laptop is on; the auth key is the one ghost001
-      # joins cslab with (cslab_mesh), for the first join and if the identity is logged out.
-      age.secrets.saarthiNodeTailnetKey.rekeyFile = ../../secrets/cslab/tsAuthKeyCslab.age;
+      # The node's own identity on ank's leoank tailnet, where the hub has one too
+      # (saarthi-hub, ADR-0048), whatever network this laptop is on; anklab's leoank key is
+      # for the first join and if the identity is logged out.
+      age.secrets.saarthiNodeTailnetKey.rekeyFile = ../../secrets/anklab/leoankTsAuthKey.age;
 
       services.saarthi-node = {
         enable = true;
-        hub = "http://ghost001:7700";
+        # The hub's own name on the leoank tailnet (its tsnet identity on ghost001).
+        hub = "http://saarthi-hub:7700";
         tokenFile = config.age.secrets.saarthiCuriosityNodeToken.path;
         name = "curiosity";
         # A shell on this machine from the app, through the hub (saarthi ADR-0054).
         terminal = true;
-        # As `saarthi-curiosity` on cslab; `hub` is ghost001's name there.
+        # As `saarthi-curiosity` on leoank, where the hub is `saarthi-hub`.
         tailnet = {
           enable = true;
           authKeyFile = config.age.secrets.saarthiNodeTailnetKey.path;

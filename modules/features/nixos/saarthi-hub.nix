@@ -63,6 +63,13 @@
         owner = "saarthi-hub";
         group = "saarthi-hub";
       };
+      # The hub's own identity on ank's leoank tailnet (`saarthi-hub` there, saarthi
+      # ADR-0048), where the nodes join with the same anklab key; readable by the service.
+      age.secrets.saarthiHubTailnetKey = {
+        rekeyFile = ../../secrets/anklab/leoankTsAuthKey.age;
+        owner = "saarthi-hub";
+        group = "saarthi-hub";
+      };
       age.secrets.saarthiClaudeTokens = {
         rekeyFile = ../../secrets/ank/saarthiClaudeTokens.age;
         owner = "saarthi-hub";
@@ -76,6 +83,8 @@
         inherit dataDir;
         listen = "0.0.0.0:7700";
         openFirewall = false;
+        # and as `saarthi-hub:7700` on the leoank tailnet, where ank's nodes are
+        tailnets.leoank.authKeyFile = config.age.secrets.saarthiHubTailnetKey.path;
         nodeTokensFile = config.age.secrets.saarthiNodeTokens.path;
         clientTokensFile = config.age.secrets.saarthiClientTokens.path;
         claudeTokensFile = config.age.secrets.saarthiClaudeTokens.path;

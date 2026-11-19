@@ -157,6 +157,20 @@
           expr = {
             tailscale = cfg.neusis.services.tailscale.enable;
             defaultMesh = cfg.neusis.services.tailscale.defaultProfile;
+            # anklab_mesh: the runxi key from secrets/anklab
+            meshKey = baseNameOf cfg.age.secrets.runxiTsAuthKey.rekeyFile;
+            # the saarthi hub's own identity on leoank, readable by the service
+            hubTailnets = lib.mapAttrs (_: t: t.authKeyFile) cfg.services.saarthi-hub.tailnets;
+            hubTailnetKey = {
+              file = baseNameOf cfg.age.secrets.saarthiHubTailnetKey.rekeyFile;
+              inherit (cfg.age.secrets.saarthiHubTailnetKey) owner;
+            };
+            hubName = cfg.services.saarthi-hub.tailnetHostname;
+            # the all-permission tailnet clients stay on rogue
+            adminClients = builtins.filter (n: builtins.hasAttr n (cfg.age.secrets // (home.age.secrets or { }))) [
+              "runxiTsClientId"
+              "leoankTsClientId"
+            ];
             buildServer = cfg.neusis.services.build-server.enable;
             # offloads to the lab builders, never to itself
             buildsOffloadTo = map (b: b.hostName) cfg.nix.buildMachines;
@@ -181,7 +195,15 @@
           };
           expected = {
             tailscale = true;
-            defaultMesh = "cslab";
+            defaultMesh = "runxi";
+            meshKey = "runxiTsAuthKey.age";
+            hubTailnets.leoank = "/run/agenix/saarthiHubTailnetKey";
+            hubTailnetKey = {
+              file = "leoankTsAuthKey.age";
+              owner = "saarthi-hub";
+            };
+            hubName = "saarthi-hub";
+            adminClients = [ ];
             buildServer = true;
             buildsOffloadTo = [
               "spirit"

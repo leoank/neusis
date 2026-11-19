@@ -22,7 +22,7 @@
               line = lib.concatStringsSep " " (lib.toList home.systemd.user.services.saarthi-node.Service.ExecStart);
             in
             {
-              hub = lib.hasInfix "--hub http://ghost001:7700" line;
+              hub = lib.hasInfix "--hub http://saarthi-hub:7700" line;
               name = lib.hasInfix "--name curiosity" line;
               terminal = lib.hasInfix "--terminal" line;
             };
@@ -37,11 +37,28 @@
         # deleted, not kept as curiosity-old-<timestamp>.
         test-tailscale-deletes-its-previous-boot = {
           expr = {
-            inherit (cfg.neusis.services.tailscale.profiles.cslab) forceHostName deleteOfflineConflicts;
+            inherit (cfg.neusis.services.tailscale.profiles.runxi) forceHostName deleteOfflineConflicts;
+            shntnuDeletes = cfg.neusis.services.tailscale.profiles.shntnu.deleteOfflineConflicts;
+            default = cfg.neusis.services.tailscale.defaultProfile;
+            # anklab_mesh's runxi key; the saarthi node joins leoank with anklab's leoank key
+            meshKey = baseNameOf cfg.age.secrets.runxiTsAuthKey.rekeyFile;
+            saarthiKey = baseNameOf home.age.secrets.saarthiNodeTailnetKey.rekeyFile;
+            # the scripts use runxi's devices:core client; the all-permission one stays on rogue
+            scriptClient = baseNameOf cfg.neusis.services.tailscale.profiles.runxi.clientSecretFile;
+            adminClients = builtins.filter (n: builtins.hasAttr n (cfg.age.secrets // home.age.secrets)) [
+              "runxiTsClientId"
+              "leoankTsClientId"
+            ];
           };
           expected = {
             forceHostName = true;
             deleteOfflineConflicts = true;
+            shntnuDeletes = true;
+            default = "runxi";
+            meshKey = "runxiTsAuthKey.age";
+            saarthiKey = "leoankTsAuthKey.age";
+            scriptClient = "runxiDeviceTsClientSecret";
+            adminClients = [ ];
           };
         };
 
