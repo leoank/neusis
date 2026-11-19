@@ -73,18 +73,30 @@ fi
 
 log "Current DNS name '$CURRENT_DNS_SHORT' != desired '$DESIRED_DNS_SHORT' - will force claim"
 
-# Get OAuth token
-log "Obtaining OAuth token..."
-OAUTH_RESPONSE=$(curl -sf -X POST https://api.tailscale.com/api/v2/oauth/token \
-    -d "client_id=$(cat "$TS_CLIENT_ID_FILE")" \
-    -d "client_secret=$(cat "$TS_CLIENT_SECRET_FILE")" 2>/dev/null) || error_exit "Failed to obtain OAuth token"
+# Get an API token: the client secret itself when it is an API access token
+# (tskey-api-…), otherwise an OAuth token for the client id + secret.
+[ -r "$TS_CLIENT_ID_FILE" ] && [ -r "$TS_CLIENT_SECRET_FILE" ] || error_exit "Cannot read the API credential files (run as root)"
+CLIENT_SECRET=$(cat "$TS_CLIENT_SECRET_FILE")
+if [[ "$CLIENT_SECRET" == tskey-api-* ]]; then
+    log "Using the API access token"
+    TOKEN=$CLIENT_SECRET
+else
+    log "Obtaining OAuth token..."
+    OAUTH_RESPONSE=$(curl -s -w '\n%{http_code}' -X POST https://api.tailscale.com/api/v2/oauth/token \
+        -d "client_id=$(cat "$TS_CLIENT_ID_FILE")" \
+        -d "client_secret=$CLIENT_SECRET" 2>/dev/null) || error_exit "Could not reach the Tailscale OAuth endpoint"
+    OAUTH_STATUS=${OAUTH_RESPONSE##*$'\n'}
+    OAUTH_RESPONSE=${OAUTH_RESPONSE%$'\n'*}
+    # The refusal names what is wrong (e.g. an unknown client) and never echoes the secret.
+    [ "$OAUTH_STATUS" = 200 ] || error_exit "OAuth token refused (HTTP $OAUTH_STATUS): $(echo "$OAUTH_RESPONSE" | jq -r '.message // .error_description // .error // .' 2>/dev/null | head -c 300)"
 
-TOKEN=$(echo "$OAUTH_RESPONSE" | jq -r '.access_token')
-if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
-    log "OAuth response: $OAUTH_RESPONSE"
-    error_exit "Failed to extract access token from OAuth response"
+    TOKEN=$(echo "$OAUTH_RESPONSE" | jq -r '.access_token')
+    if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+        error_exit "No access token in the OAuth response"
+    fi
+    log "Successfully obtained OAuth token"
 fi
-log "Successfully obtained OAuth token"
+unset CLIENT_SECRET
 
 # Handle conflicting devices by renaming them
 log "Checking for hostname conflicts..."

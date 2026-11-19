@@ -216,10 +216,16 @@
             {
               renames = lib.hasInfix "DELETE_OFFLINE_CONFLICTS=0" (claim { });
               deletes = lib.hasInfix "DELETE_OFFLINE_CONFLICTS=1" (claim { deleteOfflineConflicts = true; });
+              # the OAuth steps read root-only secrets, so the script re-runs itself as root;
+              # a profile without them stays a plain user command
+              asRoot = lib.hasInfix ''exec sudo "$0"'' (claim { });
+              plainWithoutOAuth = lib.hasInfix "exec sudo" (claim { forceHostName = false; });
             };
           expected = {
             renames = true;
             deletes = true;
+            asRoot = true;
+            plainWithoutOAuth = false;
           };
         };
 

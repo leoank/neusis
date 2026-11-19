@@ -164,7 +164,12 @@ let
       text = ''
         # Make "${name}" the active system-wide tailscale profile.
         # Only one profile is active at a time (Tailscale fast switching).
+        ${lib.optionalString (profile.forceHostName || profile.disableKeyExpiry) ''
 
+          # The OAuth steps below read root-only agenix secrets: run as root
+          # (the boot autoconnect already is).
+          if [ "$(id -u)" -ne 0 ]; then exec sudo "$0" "$@"; fi
+        ''}
         # Wait for tailscaled to become reachable (boot ordering is
         # best-effort, especially under Darwin launchd).
         n=0
