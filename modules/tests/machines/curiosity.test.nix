@@ -88,6 +88,17 @@
 
         # A builder for the others, but its own builds stay local (its only aarch64-linux peer
         # is ghost001's two slow slots).
+        # The kernel's -dev output rides on the live image, so building an out-of-tree
+        # module after a fresh boot doesn't recompile the whole kernel to get it back.
+        test-kernel-dev-on-the-image = {
+          expr = map (p: p.outputName or "out") (
+            builtins.filter (
+              p: (p.pname or "") == cfg.boot.kernelPackages.kernel.pname
+            ) cfg.system.extraDependencies
+          );
+          expected = [ "dev" ];
+        };
+
         test-serves-builds-but-keeps-its-own-local = {
           expr = {
             server = cfg.neusis.services.build-server.enable;

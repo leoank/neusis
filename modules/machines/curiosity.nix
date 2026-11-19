@@ -190,6 +190,12 @@ in
         # only aarch64-linux peer is ghost001's two slow slots.
         neusis.services.build-client.enable = lib.mkForce false;
 
+        # The kernel's -dev output (headers and build tree) on the image: an out-of-tree
+        # module (nvidia-open, spi-hid, n1x-lps0) needs it to build, and no cache holds
+        # this kernel, so without it a driver bump on a fresh live boot recompiled the
+        # whole kernel to get -dev back (2026-11-19, nvidia-open 615 -> 620).
+        system.extraDependencies = [ config.boot.kernelPackages.kernel.dev ];
+
         # A live disk joins tailscale as a new device on every boot: the previous one, now
         # offline, is deleted rather than kept as curiosity-old-<timestamp>.
         neusis.services.tailscale.profiles.runxi.deleteOfflineConflicts = true;
