@@ -554,7 +554,8 @@
       age.rekey.localStorageDir = ../../secrets/rekeyed + "/hm/ank-curiosity";
       age.secretsDir = "${config.home.homeDirectory}/.config/agenix";
 
-      home.file.".ssh/id_ed25519".source = config.lib.file.mkOutOfStoreSymlink "/run/agenix/curiosityUserKey";
+      home.file.".ssh/id_ed25519".source =
+        config.lib.file.mkOutOfStoreSymlink "/run/agenix/curiosityUserKey";
       home.file.".ssh/id_ed25519.pub".source = ../../secrets/ank/curiosityUserKey.pub;
     };
 
