@@ -57,6 +57,8 @@
             # the same bundles power the integrated and standalone homes
             kalam = t.hasPkg "nixvim" home.home.packages && t.hasPkg "nixvim" cfg.home-manager.users.ank.home.packages;
             neusisCli = t.hasPkg "neusis" home.home.packages;
+            # comin's builds live in nom, on every machine with the neusis-cli bundle
+            cominWatch = t.hasPkg "comin-watch" home.home.packages;
             yajnaConfig = home.xdg.configFile."yajna/config.toml".text;
             # yajna's zsh completion is sourced in ank's zsh
             yajnaCompletion = lib.hasInfix "yajna-zsh-completion" home.programs.zsh.initContent;
@@ -69,6 +71,7 @@
             ankHome = "/Users/ank";
             standaloneUser = "ank";
             standaloneHome = "/Users/ank";
+            cominWatch = true;
             kalam = true;
             neusisCli = true;
             yajnaCompletion = true;

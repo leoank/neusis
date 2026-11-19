@@ -141,6 +141,8 @@
               cli = lib.all (n: builtins.elem n names) [
                 "bat"
                 "ripgrep"
+                # comin's builds live in nom (journalctl on NixOS)
+                "comin-watch"
               ];
             };
           expected = {

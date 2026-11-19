@@ -58,9 +58,28 @@
   # _packages.nix) because `self` is only in scope at the flake-parts level.
   flake.neusis.users.ank.hmBundles.neusis-cli =
     { pkgs, ... }:
+    let
+      # `comin-watch`: follow this machine's comin builds live in nix-output-monitor.
+      # comin runs `nix build -L`, whose plain lines nom reads into its build graph;
+      # it logs to /var/log/comin.log on Darwin and to the journal on NixOS. Starts at
+      # the end of the log (the build under way); Ctrl-C to leave. Over ssh:
+      # `ssh -t <host> comin-watch`.
+      cominWatch = pkgs.writeShellApplication {
+        name = "comin-watch";
+        runtimeInputs = [ pkgs.nix-output-monitor ];
+        text = ''
+          if [ "$(uname)" = Darwin ]; then
+            tail -n0 -F /var/log/comin.log | nom
+          else
+            journalctl -u comin -f -n0 -o cat | nom
+          fi
+        '';
+      };
+    in
     {
       home.packages = [
         self.packages.${pkgs.stdenv.hostPlatform.system}.neusis
+        cominWatch
       ];
     };
   flake.neusis.users.ank.hmBundles.agent-harness =
