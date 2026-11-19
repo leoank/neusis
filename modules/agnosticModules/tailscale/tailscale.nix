@@ -354,6 +354,16 @@ in
         # SuccessfulExit=false ⇒ retry until it connects, then stop.
         # `optionalAttrs isDarwin` omits `launchd` entirely on NixOS.
         (lib.optionalAttrs isDarwin {
+          # nix-darwin's tailscale module owns /etc/resolver/ts.net and replaces it
+          # only when tailscaled's copy matches a hash it knows. tailscaled (1.104)
+          # now writes an IPv6 nameserver line as well, a copy nix-darwin doesn't know,
+          # so every activation after tailscaled rewrote the file stopped with
+          # "Unexpected files in /etc" (rogue, 2026-11-19).
+          environment.etc."resolver/ts.net".knownSha256Hashes = lib.mkIf cfg.enable [
+            # "# Added by tailscaled\nnameserver 100.100.100.100\nnameserver fd7a:115c:a1e0::53\n"
+            "57960503f4bd6e8afe1c6543597386a5af61efdec1bb5b8b0f42960670c1b352"
+          ];
+
           launchd.daemons.neusis-tailscale-autoconnect = lib.mkIf (cfg.enable && cfg.autoConnect) {
             serviceConfig = {
               Label = "org.neusis.tailscale-autoconnect";

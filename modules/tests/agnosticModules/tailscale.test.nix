@@ -149,6 +149,13 @@
           };
         };
 
+        # tailscaled's own /etc/resolver/ts.net, with its IPv6 line, is one nix-darwin may
+        # replace, or activation stops on "Unexpected files in /etc".
+        test-darwin-takes-over-tailscaleds-resolver-file = {
+          expr = builtins.elem "57960503f4bd6e8afe1c6543597386a5af61efdec1bb5b8b0f42960670c1b352" darwin.environment.etc."resolver/ts.net".knownSha256Hashes;
+          expected = true;
+        };
+
         test-autoconnect-off-defines-no-unit = {
           expr = {
             darwin = darwinNoAuto.launchd.daemons ? neusis-tailscale-autoconnect;
