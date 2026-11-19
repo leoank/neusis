@@ -279,7 +279,17 @@
                 {
                   name = "origin";
                   inherit (cfg) url;
-                  branches.main.name = cfg.branch;
+                  branches = {
+                    main.name = cfg.branch;
+                  }
+                  # Darwin has no `test`: there is no boot entry to leave alone, and
+                  # nix-darwin's activate-system daemon, reloaded during activation,
+                  # re-applies the system profile, so a test deployment put the old
+                  # /etc and user profile back (rogue, 2026-11-19). The testing branch
+                  # deploys with `switch` there.
+                  // lib.optionalAttrs (options ? launchd) {
+                    testing.operation = "switch";
+                  };
                   poller.period = cfg.pollPeriod;
                 }
               ];

@@ -110,9 +110,12 @@
         test-nixos-comin-follows-the-branch = {
           expr = summary (nixos { }) // {
             unit = (nixos { }).systemd.services ? comin;
+            # the testing branch is deployed without a boot entry
+            testing = (builtins.head (nixos { }).services.comin.remotes).branches.testing.operation;
           };
           expected = expected // {
             unit = true;
+            testing = "test";
           };
         };
 
@@ -124,9 +127,12 @@
         test-darwin-comin-follows-the-branch = {
           expr = summary (darwin { }) // {
             daemon = (darwin { }).launchd.daemons ? comin;
+            # darwin has no `test`: activate-system re-applied the profile's system
+            testing = (builtins.head (darwin { }).services.comin.remotes).branches.testing.operation;
           };
           expected = expected // {
             daemon = true;
+            testing = "switch";
           };
         };
 
