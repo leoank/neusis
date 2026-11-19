@@ -1681,11 +1681,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1795025576,
-        "narHash": "sha256-9Y7pXtCl2+c01RPLeMQgs1o1JQdQTns2WctpQaZcjXU=",
+        "lastModified": 1795108222,
+        "narHash": "sha256-2TVYmpvEk66a5GJQGkCiH9aIEkWxvC5ijsRCp6t2h2U=",
         "owner": "leoank",
         "repo": "yajna",
-        "rev": "c0073cf485b43eecb234a45ef53b1bcd2039146a",
+        "rev": "f7ddad43007891aa64e9dba66decf56601d22ed1",
         "type": "github"
       },
       "original": {
