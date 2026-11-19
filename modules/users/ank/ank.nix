@@ -680,6 +680,7 @@
         self.neusis.users.ank.hmBundles.casks
         self.neusis.users.ank.hmBundles.secrets
         self.neusis.users.ank.hmBundles.mail
+        self.neusis.users.ank.hmBundles.tailnet-admin
         ./_packages.nix
       ];
       # Headless cloud host: shell/editor/CLI bundles only — no GUI, casks

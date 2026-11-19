@@ -95,6 +95,15 @@
             tailscale = {
               inherit (cfg.neusis.services.tailscale) enable defaultProfile;
               profiles = builtins.attrNames cfg.neusis.services.tailscale.profiles;
+              # the all-permission clients, ank's home secrets here only (ghost001's and
+              # curiosity's tests check their absence), with the auth-key tool
+              authkeyTool = t.hasPkg "neusis-ts-authkey" home.home.packages;
+              adminClients = builtins.filter (n: builtins.hasAttr n home.age.secrets) [
+                "runxiTsClientId"
+                "runxiTsClientSecret"
+                "leoankTsClientId"
+                "leoankTsClientSecret"
+              ];
             };
             homebrew = cfg.homebrew.enable;
             ssh = cfg.services.openssh.enable;
@@ -119,6 +128,13 @@
                 "leoank"
                 "runxi"
                 "shntnu"
+              ];
+              authkeyTool = true;
+              adminClients = [
+                "runxiTsClientId"
+                "runxiTsClientSecret"
+                "leoankTsClientId"
+                "leoankTsClientSecret"
               ];
             };
             homebrew = true;
