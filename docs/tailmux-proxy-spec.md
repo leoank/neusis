@@ -1,8 +1,8 @@
 # Multi-tailnet application proxy — implementation spec
 
 **Working name:** `tsmux` (tailnet-mux; rename freely).
-**Status:** design spec for a *separate* build effort (hand-off prompt at the
-end of this file).
+**Status:** superseded by sandhi (`github:leoank/sandhi`, ADR-0021); kept as history,
+nothing is built from it.
 **Date:** 2026-08-12.
 
 ## 1. Why this exists

@@ -13,7 +13,7 @@ and never renumbered. ADR-0002 to ADR-0014 were backfilled on 2026-11-03 from
 | [ADR-0005](ADR-0005-opt-in-modules-and-features.md) | Modules take data as options and do nothing until enabled; features are config-only; users and machines opt in | accepted |
 | [ADR-0006](ADR-0006-agenix-rekey-secrets.md) | agenix-rekey with an external master identity, rekeyed files per host, cloud host keys generated ahead | accepted |
 | [ADR-0007](ADR-0007-test-ladder.md) | T0–T3 verification ladder: nix-unit over a mirrored tree, flake checks, NixOS VM tests | accepted |
-| [ADR-0008](ADR-0008-one-tailnet-with-profiles.md) | One system tailnet with switchable profiles; concurrent tailnets left to an application proxy | accepted |
+| [ADR-0008](ADR-0008-one-tailnet-with-profiles.md) | One system tailnet with switchable profiles; concurrent tailnets left to an application proxy | accepted (proxy superseded by ADR-0021) |
 | [ADR-0009](ADR-0009-archive-v1.md) | v1 archived (branch, tag, old_modules/), not deleted | accepted |
 | [ADR-0010](ADR-0010-opentofu-terranix-encrypted-state.md) | OpenTofu through terranix, Nix-pinned providers, encrypted state in git | accepted |
 | [ADR-0011](ADR-0011-base-image-and-bootstrap.md) | One base image per architecture plus neusis cloud bootstrap; nixos-anywhere as fallback | accepted |
@@ -26,6 +26,7 @@ and never renumbered. ADR-0002 to ADR-0014 were backfilled on 2026-11-03 from
 | [ADR-0018](ADR-0018-kalam-zero-no-bundle-inline-mini.md) | kalam-zero has no plugin bundle; it inlines mini's editing set, mini.pick and mini.clue, active on Neovim 0.10+ | accepted |
 | [ADR-0019](ADR-0019-mail-maildir-notmuch-aerc.md) | ank's mail is a local maildir: mbsync syncs it, notmuch indexes it, aerc reads it, agents read it through notmuch | proposed |
 | [ADR-0020](ADR-0020-curiosity-live-disk-host-key-from-a-data-drive.md) | curiosity is a live disk whose host key comes from a data drive in the initrd; its N1X support comes from anvesana | proposed |
+| [ADR-0021](ADR-0021-concurrent-networks-through-sandhi.md) | Concurrent tailnets come from sandhi (DNS and proxy, both directions, own repo), not the tsmux proxy | accepted |
 
 Each record:
 
