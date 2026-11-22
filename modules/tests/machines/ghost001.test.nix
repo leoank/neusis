@@ -352,6 +352,54 @@
           };
         };
 
+        # sandhi (users/ank/sandhi.nix, ADR-0021): ghost001 on leoank as `sandhi-ghost001`,
+        # sshd published inward; its leoank key is a system secret owned by ank (no home
+        # secrets here), and the user service runs with nobody logged in (linger).
+        test-sandhi = {
+          expr =
+            let
+              b = home.services.sandhi.backends;
+              s = home.systemd.user.services.sandhi;
+            in
+            {
+              leoank = {
+                inherit (b.leoank) forwards domains;
+                inherit (b.leoank.tailnet) hostname authKeyFile ephemeral;
+              };
+              backends = builtins.attrNames b;
+              onPath = t.hasPkg "sandhi" home.home.packages;
+              sshInclude = home.home.file.".ssh/config.d/sandhi".text;
+              keyOwner = cfg.age.secrets.sandhiLeoankTsAuthKey.owner;
+              key = cfg.age.secrets.sandhiLeoankTsAuthKey.rekeyFile;
+              restart = s.Service.Restart;
+              linger = cfg.users.users.ank.linger;
+            };
+          expected = {
+            leoank = {
+              forwards = [
+                {
+                  port = 22;
+                  to = "127.0.0.1:22";
+                }
+              ];
+              domains = [ ];
+              hostname = "sandhi-ghost001";
+              authKeyFile = cfg.age.secrets.sandhiLeoankTsAuthKey.path;
+              ephemeral = false;
+            };
+            backends = [ "leoank" ];
+            onPath = true;
+            sshInclude = ''
+              Host *.leoank
+                ProxyCommand ${lib.getExe home.services.sandhi.package} connect %h %p
+            '';
+            keyOwner = "ank";
+            key = ../../secrets/anklab/leoankTsAuthKey.age;
+            restart = "always";
+            linger = true;
+          };
+        };
+
         test-no-failed-assertions = {
           expr = {
             system = t.failedAssertions cfg;

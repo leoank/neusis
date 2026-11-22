@@ -417,6 +417,55 @@
           };
         };
 
+        # sandhi (users/ank/sandhi.nix, ADR-0021): rogue on leoank as `sandhi-rogue`
+        # whatever its system tailnet, sshd published inward, `*.leoank` through
+        # `sandhi connect` in ~/.ssh/config.d/sandhi, which rogue's hand-written
+        # ~/.ssh/config includes by hand (home-manager does not manage it here).
+        test-sandhi = {
+          expr =
+            let
+              b = home.services.sandhi.backends;
+              agent = home.launchd.agents.sandhi;
+            in
+            {
+              leoank = {
+                inherit (b.leoank) forwards domains;
+                inherit (b.leoank.tailnet) hostname authKeyFile ephemeral;
+              };
+              backends = builtins.attrNames b;
+              onPath = t.hasPkg "sandhi" home.home.packages;
+              sshInclude = home.home.file.".ssh/config.d/sandhi".text;
+              keyPath = home.age.secrets.sandhiLeoankTsAuthKey.path;
+              key = home.age.secrets.sandhiLeoankTsAuthKey.rekeyFile;
+              agent = agent.enable && agent.config.KeepAlive;
+              sshManaged = home.programs.ssh.enable;
+            };
+          expected = {
+            leoank = {
+              forwards = [
+                {
+                  port = 22;
+                  to = "127.0.0.1:22";
+                }
+              ];
+              domains = [ ];
+              hostname = "sandhi-rogue";
+              authKeyFile = "/Users/ank/.config/sandhi/leoank-authkey";
+              ephemeral = false;
+            };
+            backends = [ "leoank" ];
+            onPath = true;
+            sshInclude = ''
+              Host *.leoank
+                ProxyCommand ${lib.getExe home.services.sandhi.package} connect %h %p
+            '';
+            keyPath = "/Users/ank/.config/sandhi/leoank-authkey";
+            key = ../../secrets/anklab/leoankTsAuthKey.age;
+            agent = true;
+            sshManaged = false;
+          };
+        };
+
         test-no-failed-assertions = {
           expr = {
             system = t.failedAssertions cfg;

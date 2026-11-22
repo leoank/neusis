@@ -695,6 +695,7 @@
         self.neusis.users.ank.hmBundles.terminal-life
         self.neusis.users.ank.hmBundles.agent-harness
         self.neusis.users.ank.hmBundles.saarthi-node
+        self.neusis.users.ank.hmBundles.sandhi-rogue
         self.neusis.users.ank.hmBundles.darwin-tools
         self.neusis.users.ank.hmBundles.theming
         self.neusis.users.ank.hmBundles.browsers
@@ -715,6 +716,7 @@
         # Claude Code and the hooks for the saarthi node's sessions.
         self.neusis.users.ank.hmBundles.agent-harness
         self.neusis.users.ank.hmBundles.saarthi-node-ghost001
+        self.neusis.users.ank.hmBundles.sandhi-ghost001
         self.neusis.users.ank.hmBundles.server
       ];
       # N1X laptop live disk (GNOME): the workstation bundles for sessions on the machine. Its
@@ -731,6 +733,7 @@
         self.neusis.users.ank.hmBundles.github-ssh-curiosity
         self.neusis.users.ank.hmBundles.agent-harness
         self.neusis.users.ank.hmBundles.saarthi-node-curiosity
+        self.neusis.users.ank.hmBundles.sandhi-curiosity
       ];
     };
   };

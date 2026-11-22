@@ -153,6 +153,55 @@
             failed = [ ];
           };
         };
+
+        # sandhi (users/ank/sandhi.nix, ADR-0021): curiosity on leoank as `sandhi-curiosity`,
+        # ephemeral since the live disk loses the identity at every reboot; it starts after
+        # the agenix user unit decrypts the key a fresh join needs, and the home-manager
+        # ssh config includes the `*.leoank` block.
+        test-sandhi = {
+          expr =
+            let
+              b = home.services.sandhi.backends;
+              u = home.systemd.user.services.sandhi.Unit;
+            in
+            {
+              leoank = {
+                inherit (b.leoank) forwards domains;
+                inherit (b.leoank.tailnet) hostname authKeyFile ephemeral;
+              };
+              backends = builtins.attrNames b;
+              onPath = t.hasPkg "sandhi" home.home.packages;
+              sshInclude = home.home.file.".ssh/config.d/sandhi".text;
+              key = home.age.secrets.sandhiLeoankTsAuthKey.rekeyFile;
+              after = u.After;
+              sshIncludes = home.programs.ssh.enable && builtins.elem "config.d/sandhi" home.programs.ssh.includes;
+              failed = t.failedAssertions home;
+            };
+          expected = {
+            leoank = {
+              forwards = [
+                {
+                  port = 22;
+                  to = "127.0.0.1:22";
+                }
+              ];
+              domains = [ ];
+              hostname = "sandhi-curiosity";
+              authKeyFile = home.age.secrets.sandhiLeoankTsAuthKey.path;
+              ephemeral = true;
+            };
+            backends = [ "leoank" ];
+            onPath = true;
+            sshInclude = ''
+              Host *.leoank
+                ProxyCommand ${lib.getExe home.services.sandhi.package} connect %h %p
+            '';
+            key = ../../secrets/anklab/leoankTsAuthKey.age;
+            after = [ "agenix.service" ];
+            sshIncludes = true;
+            failed = [ ];
+          };
+        };
       };
     };
 }

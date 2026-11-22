@@ -505,6 +505,27 @@
         "type": "github"
       }
     },
+    "flake-parts_10": {
+      "inputs": {
+        "nixpkgs-lib": [
+          "terranix",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1793576659,
+        "narHash": "sha256-V1h85lUaJBQoHFrB2vpXZOE0Ju1MYSnIpsehoVZYlDo=",
+        "owner": "hercules-ci",
+        "repo": "flake-parts",
+        "rev": "ea2630b7470978622c7689a1ff75d2b389175399",
+        "type": "github"
+      },
+      "original": {
+        "owner": "hercules-ci",
+        "repo": "flake-parts",
+        "type": "github"
+      }
+    },
     "flake-parts_2": {
       "inputs": {
         "nixpkgs-lib": [
@@ -630,16 +651,16 @@
     "flake-parts_8": {
       "inputs": {
         "nixpkgs-lib": [
-          "stylix",
+          "sandhi",
           "nixpkgs"
         ]
       },
       "locked": {
-        "lastModified": 1788450739,
-        "narHash": "sha256-glZLQlzIn1fXH6PazR2iUmTo7kzzyYSshrWhLS9TqCU=",
+        "lastModified": 1793576659,
+        "narHash": "sha256-V1h85lUaJBQoHFrB2vpXZOE0Ju1MYSnIpsehoVZYlDo=",
         "owner": "hercules-ci",
         "repo": "flake-parts",
-        "rev": "31729ca8cbdb4fa927b34e5f4353e6a83f39e993",
+        "rev": "ea2630b7470978622c7689a1ff75d2b389175399",
         "type": "github"
       },
       "original": {
@@ -651,16 +672,16 @@
     "flake-parts_9": {
       "inputs": {
         "nixpkgs-lib": [
-          "terranix",
+          "stylix",
           "nixpkgs"
         ]
       },
       "locked": {
-        "lastModified": 1793576659,
-        "narHash": "sha256-V1h85lUaJBQoHFrB2vpXZOE0Ju1MYSnIpsehoVZYlDo=",
+        "lastModified": 1788450739,
+        "narHash": "sha256-glZLQlzIn1fXH6PazR2iUmTo7kzzyYSshrWhLS9TqCU=",
         "owner": "hercules-ci",
         "repo": "flake-parts",
-        "rev": "ea2630b7470978622c7689a1ff75d2b389175399",
+        "rev": "31729ca8cbdb4fa927b34e5f4353e6a83f39e993",
         "type": "github"
       },
       "original": {
@@ -1223,6 +1244,7 @@
         "nixvim": "nixvim",
         "pumas-tap": "pumas-tap",
         "saarthi": "saarthi",
+        "sandhi": "sandhi",
         "stylix": "stylix",
         "terranix": "terranix",
         "whatcable-tap": "whatcable-tap",
@@ -1294,6 +1316,30 @@
         "type": "github"
       }
     },
+    "sandhi": {
+      "inputs": {
+        "flake-parts": "flake-parts_8",
+        "nixpkgs": [
+          "nixpkgs-unstable"
+        ],
+        "yajna": [
+          "yajna"
+        ]
+      },
+      "locked": {
+        "lastModified": 1795229042,
+        "narHash": "sha256-9psYGoIUM8x8EPCWPgYaZLprR5ILCYDfCWCCGGs0pmM=",
+        "owner": "leoank",
+        "repo": "sandhi",
+        "rev": "567ab05192526c43c44cd5ca34747ca3344d06e1",
+        "type": "github"
+      },
+      "original": {
+        "owner": "leoank",
+        "repo": "sandhi",
+        "type": "github"
+      }
+    },
     "stylix": {
       "inputs": {
         "base16": "base16",
@@ -1301,7 +1347,7 @@
         "base16-helix": "base16-helix",
         "base16-vim": "base16-vim",
         "firefox-gnome-theme": "firefox-gnome-theme",
-        "flake-parts": "flake-parts_8",
+        "flake-parts": "flake-parts_9",
         "gnome-shell": "gnome-shell",
         "nixpkgs": [
           "nixpkgs"
@@ -1435,7 +1481,7 @@
     },
     "terranix": {
       "inputs": {
-        "flake-parts": "flake-parts_9",
+        "flake-parts": "flake-parts_10",
         "import-tree": "import-tree_3",
         "nixpkgs": [
           "nixpkgs"

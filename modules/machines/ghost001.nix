@@ -113,6 +113,12 @@
           rekeyFile = ../secrets/ank/saarthiGhost001ClientToken.age;
           owner = "ank";
         };
+        # ank's sandhi on leoank (users/ank/sandhi.nix: sandhi-ghost001): anklab's leoank
+        # key, for the dutavas's first join and if the tailnet logs it out.
+        age.secrets.sandhiLeoankTsAuthKey = {
+          rekeyFile = ../secrets/anklab/leoankTsAuthKey.age;
+          owner = "ank";
+        };
 
         # The 150 GB block volume from the `oci-anklab` stack (formatted
         # once by hand: `mkfs.ext4 -L data /dev/sdb`), for application

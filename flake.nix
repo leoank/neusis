@@ -83,6 +83,13 @@
       url = "github:leoank/saarthi";
       inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
+    sandhi = {
+      url = "github:leoank/sandhi";
+      inputs = {
+        nixpkgs.follows = "nixpkgs-unstable";
+        yajna.follows = "yajna";
+      };
+    };
     stylix = {
       url = "github:danth/stylix/release-26.05";
       inputs.nixpkgs.follows = "nixpkgs";
