@@ -152,30 +152,52 @@ are reading is a symlink into `/nix/store/...-home-manager-files/`;
 
 ## 7. Lab Notebook (yajna)
 
-**Research work is recorded in a yajna notebook. Ask before starting a project without one.**
+**Research and design work is recorded in a yajna notebook, as it happens. Important decisions rest on an experiment that was run first.**
 
-`yajna` (github:leoank/yajna) is my markdown-first lab notebook: a repo
-with `yajna.toml` holds pages for projects, experiments, runs, protocols,
-materials and a daily log under `lab/`, created and checked by the `yajna`
-CLI. My notebook is the private `manthan` repo; a project may also carry
-its own single-project notebook inside its code tree. The Claude plugin
-`yajna` (installed on my machines) brings the `yajna` skill and the
-`/yajna:project`, `/yajna:code-project`, `/yajna:bio-project`,
-`/yajna:ml-project` and `/yajna:hardware-project` commands.
+`yajna` (github:leoank/yajna) is my markdown-first lab notebook: pages
+with typed frontmatter under `notes/` in a repo with `yajna.toml`,
+created and checked by the `yajna` CLI. A notebook is either a `lab`
+(many projects; mine is the private `manthan`, the default in
+`~/.config/yajna/config.toml`) or a `project` notebook inside a code
+repo, with its design in `docs/` (architecture + ADRs). `yajna repos`
+lists the notebooks this machine knows.
 
-- When the directory has a `yajna.toml`, load the `yajna` skill and follow
-  it: identify as `agent:<name>`, create pages only through the CLI, log
-  what you did, record a session page, and keep runs reproducible.
+- **Load the skill and follow it.** Where there is a `yajna.toml`, use
+  the repo's own `.claude/skills/yajna/SKILL.md` (written by `yajna
+  skill`), else the `yajna` plugin's skill. If the repo's copy is older
+  than the CLI (it lacks commands the CLI has), say so rather than
+  following the stale part. Create pages only through the CLI.
+- **Identify as `agent:<harness>`** (`YAJNA_AUTHOR=agent:claude`), or
+  as `.yajna/author` names you in a `yajna worktree`. Open a session
+  page (`yajna new agent "<task>"`) for each task I hand you, before the
+  work, and log its start, surprises and finish with `yajna log`.
+- **Experiment before deciding.** When an important design decision
+  or code change rests on an assumption nobody has checked against the
+  real thing (an OS or tool behaviour, an API, an export format, a size
+  or speed), stop and propose the experiment. Create the `EXP` page
+  (question, predictions, success criteria) and a `RUN` with a script
+  *before* probing, run it, record it (`yajna run record` / `yajna
+  result`), and only then decide or build. A shell probe written up
+  afterwards does not count. Small mechanical edits need none.
+- **Humans sign off.** Your changes go under a `REV` review; answer or
+  address threads, never resolve or approve them. Curated pages you
+  edit get `review: pending`; an experiment's *Conclusion* is mine to
+  write: propose it in the log or the session page.
+- **Keep *Progress* current**: in `PHS` phase pages where the project
+  has them, else the project page's checklist (migrating to phases is
+  mine to ask for); tick items as work lands. Large files go to `yajna
+  data`, never git.
 - When I ask you to start something new (a project, an experiment, a
   spike, a piece of software or hardware) and no `yajna.toml` is in
   sight, ask me first whether it should live in the notebook: as a new
   project in `manthan` (`/yajna:project` and its variants interview me
-  before creating anything), as a project-shaped notebook inside the new
-  repo (`yajna init project`), or not at all. Do not decide this
-  yourself, and do not scaffold a notebook unasked.
-- Research-shaped questions ("what did we find about X", "which runs of
-  EXP-0007 did best") are answered from the notebook (`yajna timeline`,
-  `yajna tree`, `yajna runs`), not from memory.
+  before creating anything), as a project notebook inside the new repo
+  (`yajna init project`), or not at all. Do not decide this yourself,
+  and do not scaffold a notebook unasked. From any directory, `yajna
+  log|todo --in <notebook>` writes to a notebook without changing into it.
+- Research-shaped questions ("what did we find about X", "which runs
+  of EXP-20261021-0k3m9x did best") are answered from the notebook
+  (`yajna show`, `timeline`, `tree`, `runs`), not from memory.
 
 ---
 
