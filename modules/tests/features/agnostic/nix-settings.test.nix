@@ -58,6 +58,10 @@
             };
             # nix-darwin adds root itself
             trusted = darwin.nix.settings.trusted-users;
+            # a failed run's error lands in a file, not nowhere
+            gcLog = {
+              inherit (darwin.launchd.daemons.nix-gc.serviceConfig) StandardOutPath StandardErrorPath;
+            };
           };
           expected = expectedCommon // {
             gcInterval = {
@@ -70,6 +74,10 @@
               "@admin"
               "alice"
             ];
+            gcLog = {
+              StandardOutPath = "/var/log/nix-gc.log";
+              StandardErrorPath = "/var/log/nix-gc.log";
+            };
           };
         };
 
