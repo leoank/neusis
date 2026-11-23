@@ -1,0 +1,13 @@
+rcodesign: apple-codesign 0.29.0
+certificate sha1: b9d75e1050b775f2e9b56cc60a7957a5c9dab973
+adhoc build 1:  # designated => cdhash H"9dd8e01cdd6630bb8f7a5c58a53d1cf2d0a9e39a"
+adhoc build 2:  # designated => cdhash H"63d8c6fe89e0222f1e619f52fcfb87c3fb24d65a"
+signed build 1: designated => identifier "dev.leoank.sigtest" and certificate root = H"b9d75e1050b775f2e9b56cc60a7957a5c9dab973"
+signed build 2: designated => identifier "dev.leoank.sigtest" and certificate root = H"b9d75e1050b775f2e9b56cc60a7957a5c9dab973"
+embedded: yes
+same requirement: yes
+no cdhash in it: yes
+build 2 satisfies build 1's requirement: yes
+adhoc build 2 satisfies it: no
+strict verify: ok
+signed builds run: build 1 / build 2

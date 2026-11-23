@@ -46,8 +46,11 @@ open items with the rest.
 - [ ] Mail 1: `hmBundles.mail` on rogue: four accounts synced by mbsync, indexed by notmuch, read in aerc, with `homeModules.mail-sync` and the password secrets (ADR-0019)
 - [ ] Mail 2: real passwords in the secrets, Cambridge signed in through oama ([[EXP-20261106-2s4hg4]]), all four accounts syncing on rogue
 - [ ] Mail 3: agents read mail through notmuch and draft or send replies
+- [ ] Stable signing 1: darwin binaries signed at activation with `rcodesign` from agenix-held self-signed keys (root-only key for kanata, a home key for saarthi's node and kitty), so macOS keeps their grants across rebuilds; an ADR first ([[EXP-20261123-gmpz81]] showed the requirement stays the same)
+- [ ] Stable signing 2: a kanata rebuild on rogue keeps Input Monitoring without touching System Settings
 
 ## Open questions
+- Does TCC keep a real grant (Input Monitoring, Local Network, App Management) for a binary re-signed by rcodesign after a rebuild, and does rcodesign sign kitty.app's nested frameworks cleanly? ([[EXP-20261123-gmpz81]] checked only the requirement)
 - Does comin's darwin module survive nix-darwin removing the `activate-user` stub? (auto-update spec R1)
 - Can a host evaluate from comin's checkout with no master identity? (R2)
 - Do comin retention and `nix.gc.automatic` agree? (R6)
@@ -77,3 +80,4 @@ One line per experiment after its link, what it asks and what came of it; `yajna
 rejects a bare link here. Newest last.
 - [[EXP-20261103-g9kpxs]] can nixvim emit kalam-zero's init.lua? Yes, with five options; the file passes the headless test on 0.8.3–0.12.4 (conclusion pending ank)
 - [[EXP-20261106-2s4hg4]] can oama sign ak2396@cam.ac.uk in to Microsoft 365 IMAP and SMTP with Thunderbird's client id? Planned: needs ank's one-time device-code sign-in
+- [[EXP-20261123-gmpz81]] does rcodesign, signing from a self-signed PEM key, give every build the same designated requirement? Yes: identifier + certificate root, embedded, no cdhash (conclusion pending ank)
