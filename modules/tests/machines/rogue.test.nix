@@ -81,7 +81,7 @@
 
               [repos]
               manthan = "/Users/ank/workspace/chaos/manthan/main"
-              saarthi = "/Users/ank/workspace/hub/leoank/saarthi"
+              saarthi = "/Users/ank/workspace/repos/leoank/saarthi/main"
               sandhi = "/Users/ank/workspace/repos/leoank/sandhi/main"
               yajna = "/Users/ank/workspace/chaos/yajna/main"
             '';
