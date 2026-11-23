@@ -75,9 +75,13 @@ one-line instructions under headings such as *Runs*.
 - **Link with `[[ID]]`**, `[[ID|label]]`, `[[PRO-0012@3]]` for a protocol version,
   `[[ns/ID]]` into another repo listed in `[repos]`. A link to an unknown ID fails
   validation. Cite papers as `@citekey` from `references/library.bib`.
-- **Keep *Progress* current.** The project page's *Progress* checklist is the quick view
-  of what is planned and done: tick an item when its work lands, add one when the plan
-  grows, never delete a done item.
+- **Keep *Progress* current.** A project's phases are `PHS` pages, listed one line each on
+  the project page's *Progress*; the work is the checklist on the phase's page: tick an
+  item when its work lands, add one when the plan grows, never delete a done item.
+  `yajna new phase "<title>" --project PRJ-…` adds a phase, `yajna phase start PHS-…`
+  and `phase done PHS-…` record the commits a review of it spans. A project whose
+  *Progress* is still a flat checklist is migrated with `yajna phase migrate PRJ-…`
+  (`--dry-run` first) only when the human asks.
 - **A code project's design lives with its code.** `yajna new project --code` creates
   `code/<slug>/docs/architecture.md` and `code/<slug>/docs/decisions/` (in a `project`
   repo, `docs/` at the root). Keep the architecture current when the design changes, and
@@ -99,6 +103,14 @@ one-line instructions under headings such as *Runs*.
   review that covers it), never you. Rewrite *Current belief*;
   append everywhere else. The *Conclusion* of an experiment is written
   once, by a human: propose it in the log or the `AGS` page instead.
+- **A codified protocol's steps are generated.** A `PRO` page with `stage: codified` gets
+  its `## Steps` from the Python file in `source:` (`notes/protocols/PRO-0012/protocol.py`).
+  Change the code, bump `version` in its `metadata` and on the page together, then
+  `yajna-protocol page <page>`; never edit those steps by hand. `yajna-protocol render
+  <file> -p name=value` shows the steps for a run's parameters.
+- **Threads `@ work`** are on lines you have not committed yet, often written from the
+  phone: change them, and once you commit, `yajna review update REV-…` moves the thread to
+  that commit; address it with that commit as for any thread.
 - **Your changes go under a review.** Keep one `REV` page for the piece of work you are
   doing and add to it rather than opening one per change. Look first: `yajna review list
   --open` and `yajna review todo`; continue the unfinished review of your work when there
@@ -120,8 +132,15 @@ one-line instructions under headings such as *Runs*.
   `git worktree add ../fix-REV-… -b fix/REV-… <head>`, commit the fixes there, address
   the threads with those commits, and tell the human to run `yajna review update REV-…
   --to fix/REV-…` (the next round is then the fixes alone) and to merge the branch.
-- **Large files never go into git history.** Results that matter become `ART` pages;
-  ask before adding anything over a few MB.
+- **Large files never go into git history.** Results that matter become `ART` pages:
+  `yajna data add <file> --project PRJ-… [--run RUN-…]` stores the file in this machine's
+  data store and writes the page (a folder, such as an imaging session, becomes one
+  bundle page; `data get ART-… --only '<glob>'` writes out part of it); `yajna data push` copies it to the notebook's other
+  stores (`[data] push` in `yajna.toml`) and `yajna data get ART-…` brings it back. A
+  run's large outputs are stored when `run record --outputs` records them; `yajna data get
+  RUN-…` brings them back. Run `yajna data check --staged` before committing and store what
+  it lists instead; ask before adding anything over a few MB to git itself. Never run
+  `yajna data drop` or `data free` unless the human asks: they remove data.
 - **Never delete.** Mark `status: abandoned` or `aborted`; git history is the record.
 
 ## Working in a worktree
@@ -154,9 +173,10 @@ Design work is recorded as it is done, not reconstructed afterwards.
   speed. Its predictions say what result changes the plan, and it runs before the step
   that depends on it. Check what an external system really returns before designing a
   round trip on it.
-- **The plan goes on the project page**: a *Progress* item per buildable step, naming the
-  experiment that de-risks it; new questions in *Open questions*; the experiments with
-  their one-line descriptions.
+- **The plan goes in phases**: a `PHS` page per phase (`yajna new phase`), its *Goal*
+  saying what it is for and its *Progress* an item per buildable step, naming the
+  experiment that de-risks it; the project page lists the phases, new questions in *Open
+  questions* and the experiments with their one-line descriptions.
 - **When an approach is dropped**, add a line to *Lessons* (or *What not to try again*):
   what was tried, why it failed, with links. A safety check that trusts a record of an
   action instead of looking at its result is a typical entry.
