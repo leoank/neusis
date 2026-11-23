@@ -38,6 +38,15 @@
       isLinux = options ? systemd;
       parentAppDir = "/Applications/.Nix-Karabiner";
 
+      # The driver daemon runs from a copy outside the store. macOS's App Management
+      # protects a signed app bundle once it has run, so a store copy could never be
+      # deleted again and stopped every nix-collect-garbage at it (rogue, 2026-11-22).
+      # A folder per driver build: an old, protected copy never has to be overwritten.
+      driver = cfg.package.passthru.darwinDriver;
+      daemonAppRoot = "/Library/Application Support/Nix-Karabiner";
+      daemonAppDir = "${daemonAppRoot}/${baseNameOf driver}";
+      daemonApp = "${daemonAppDir}/Karabiner-VirtualHIDDevice-Daemon.app";
+
       mkName = name: "kanata-${name}";
 
       # Darwin-side config synthesis. Mirrors nixpkgs's `mkConfig` but
@@ -232,6 +241,16 @@
             rm -rf ${parentAppDir}
             mkdir -p ${parentAppDir}
             cp -Rf ${cfg.package.passthru.darwinDriver}/Applications/.Karabiner-VirtualHIDDevice-Manager.app ${parentAppDir}
+
+            if [ ! -d "${daemonApp}" ]; then
+              mkdir -p "${daemonAppDir}"
+              cp -R "${driver}/Library/Application Support/org.pqrs/Karabiner-DriverKit-VirtualHIDDevice/Applications/Karabiner-VirtualHIDDevice-Daemon.app" "${daemonAppDir}/"
+            fi
+            for d in "${daemonAppRoot}"/*; do
+              [ "$d" = "${daemonAppDir}" ] && continue
+              rm -rf "$d" 2>/dev/null \
+                || echo "kanata: could not remove $d (macOS App Management); delete it from a terminal allowed to modify apps" >&2
+            done
           '';
 
           # Activate the kernel extension on user login.
@@ -252,7 +271,7 @@
               Karabiner-DriverKit-VirtualHIDDevice-Daemon = {
                 serviceConfig = {
                   ProgramArguments = [
-                    "${cfg.package.passthru.darwinDriver}/Library/Application Support/org.pqrs/Karabiner-DriverKit-VirtualHIDDevice/Applications/Karabiner-VirtualHIDDevice-Daemon.app/Contents/MacOS/Karabiner-VirtualHIDDevice-Daemon"
+                    "${daemonApp}/Contents/MacOS/Karabiner-VirtualHIDDevice-Daemon"
                   ];
                   ProcessType = "Interactive";
                   Label = "org.pqrs.Karabiner-DriverKit-VirtualHIDDevice-Daemon";

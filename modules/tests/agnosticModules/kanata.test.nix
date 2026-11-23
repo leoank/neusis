@@ -58,6 +58,20 @@
             binary = builtins.head (daemonArgs darwin "kanata-default");
             activator = darwin.launchd.user.agents ? activate_karabiner_system_ext;
             stagesDriver = lib.hasInfix "/Applications/.Nix-Karabiner" darwin.system.activationScripts.preActivation.text;
+            # the driver daemon runs from a staged copy, never from the store, where
+            # App Management would make it undeletable and stop the GC
+            driverDaemon =
+              let
+                # hasInfix builds a regex, which may not carry the driver's store context
+                bin = builtins.unsafeDiscardStringContext (
+                  builtins.head (daemonArgs darwin "Karabiner-DriverKit-VirtualHIDDevice-Daemon")
+                );
+              in
+              {
+                staged = lib.hasPrefix "/Library/Application Support/Nix-Karabiner/" bin;
+                outsideStore = !lib.hasPrefix builtins.storeDir bin;
+                copied = lib.hasInfix (builtins.dirOf (builtins.dirOf (builtins.dirOf bin))) darwin.system.activationScripts.preActivation.text;
+              };
             failed = t.failedAssertions darwin;
           };
           expected = {
@@ -71,6 +85,11 @@
             binary = "/run/current-system/sw/bin/kanata";
             activator = true;
             stagesDriver = true;
+            driverDaemon = {
+              staged = true;
+              outsideStore = true;
+              copied = true;
+            };
             failed = [ ];
           };
         };
