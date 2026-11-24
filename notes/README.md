@@ -78,7 +78,7 @@ What was tried and dropped, and why, so nobody tries it again.
 ## Experiments
 One line per experiment after its link, what it asks and what came of it; `yajna validate`
 rejects a bare link here. Newest last.
-- [[EXP-20261103-g9kpxs]] can nixvim emit kalam-zero's init.lua? Yes, with five options; the file passes the headless test on 0.8.3–0.12.4 (conclusion pending ank)
-- [[EXP-20261106-2s4hg4]] can oama sign ak2396@cam.ac.uk in to Microsoft 365 IMAP and SMTP with Thunderbird's client id? Planned: needs ank's one-time device-code sign-in
-- [[EXP-20261123-gmpz81]] does rcodesign, signing from a self-signed PEM key, give every build the same designated requirement? Yes: identifier + certificate root, embedded, no cdhash (conclusion pending ank)
-- [[EXP-20261124-10vsty]] does an image edited in place show its new contents in kalam after dropping snacks' cache and loaded images? Yes headless (a JPEG's conversion goes stale, a PNG has none); the redraw in kitty is still to check, behind :KalamImageRefresh
+- [[EXP-20261103-g9kpxs]] can nixvim emit kalam-zero's init.lua? Yes, with five options; the file passes the headless test on 0.8.3–0.12.4 (concluded positive, draft for ank)
+- [[EXP-20261106-2s4hg4]] can oama sign ak2396@cam.ac.uk in to Microsoft 365 IMAP and SMTP with Thunderbird's client id? Sign-in, IMAP and renewal yes; SMTP from aerc still to try
+- [[EXP-20261123-gmpz81]] does rcodesign, signing from a self-signed PEM key, give every build the same designated requirement? Yes: identifier + certificate root, embedded, no cdhash (concluded positive, draft for ank)
+- [[EXP-20261124-10vsty]] does an image edited in place show its new contents in kalam after dropping snacks' cache and loaded images? Yes headless: a JPEG's conversion goes stale, a PNG has none (concluded positive, draft for ank); the redraw in kitty is a todo

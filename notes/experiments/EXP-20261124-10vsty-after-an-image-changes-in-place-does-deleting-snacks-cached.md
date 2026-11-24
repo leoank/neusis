@@ -4,8 +4,8 @@ type: experiment
 schema_version: 1
 title: After an image changes in place, does deleting snacks' cached conversion and clearing its in-memory images make snacks show the new contents?
 project: PRJ-0001
-status: active            # planned | active | paused | concluded | abandoned
-outcome: null             # null | positive | negative | inconclusive | infra
+status: concluded            # planned | active | paused | concluded | abandoned
+outcome: positive             # null | positive | negative | inconclusive | infra
 influenced_by: []
 created: 2026-11-24
 author: agent:claude
@@ -64,4 +64,14 @@ the inline update (`BufWinEnter`) because `:edit` keeps `vim.b.snacks_image_atta
 would not re-attach; that path is read from snacks' code, not yet seen working.
 
 ## Conclusion
-Written once, by a human, when status becomes `concluded`.
+Yes, for what snacks keeps. A JPEG (any format snacks converts) is converted into
+`snacks/image/<hash of the path>-<name>.png`; after the source changes in place the
+conversion stays stale, and once it is deleted the next conversion has the new contents. A
+PNG is used as is, so it has no stale copy on disk. For both, `Snacks.image.image.new`
+returns the old loaded image until `Snacks.image.image.clear()`, a new one after it
+([[RUN-20261124-10vt37]]; a first PNG-only run suggested no staleness at all, which the JPEG
+case corrected). For the project this is what `:KalamImageRefresh` does (1437e2f), plus
+re-placing the buffer's images, since `:edit` would not re-attach a document. Not shown
+headless: kitty drawing the new picture after the command, a check of the command left to
+ank.
+

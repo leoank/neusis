@@ -4,8 +4,8 @@ type: experiment
 schema_version: 1
 title: Does a binary signed by rcodesign with a self-signed PEM key keep the same designated requirement across rebuilds?
 project: PRJ-0001
-status: active            # planned | active | paused | concluded | abandoned
-outcome: null             # null | positive | negative | inconclusive | infra
+status: concluded            # planned | active | paused | concluded | abandoned
+outcome: positive             # null | positive | negative | inconclusive | infra
 influenced_by: []
 created: 2026-11-23
 author: agent:claude
@@ -54,4 +54,14 @@ rejects a bare link here. Metric runs also land in results.tsv.
 - [[RUN-20261123-gmqqh7]] two builds signed by rcodesign from a PEM key: same embedded requirement (identifier + certificate root, no cdhash), cross-verified; every criterion met
 
 ## Conclusion
-Written once, by a human, when status becomes `concluded`.
+Yes. rcodesign 0.29.0, signing from a self-signed PEM key and certificate with no keychain
+and a fixed `--binary-identifier`, embeds the designated requirement
+`identifier "<id>" and certificate root = H"<cert sha1>"` (no cdhash), the same for two
+different builds; each build satisfies the other's requirement, an ad-hoc build does not,
+and both verify and run ([[RUN-20261123-gmqqh7]], with a hand probe before it giving the
+same). rcodesign's `--help` says it adds a requirement automatically only for Apple-issued
+certificates, yet it did here, so no `csreq` step is needed. For the project: macOS grants
+keyed on that requirement can survive rebuilds, which ADR-0022 (proposed) builds on. Not
+shown here: a real TCC grant surviving a rebuild (Progress, *Stable signing 2*) and signing
+an app bundle with nested frameworks (kitty).
+

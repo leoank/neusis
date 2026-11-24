@@ -4,15 +4,15 @@ type: experiment
 schema_version: 1
 title: Can nixvim emit an init.lua for kalam-zero that runs on a machine without Nix?
 project: PRJ-0001
-status: active            # planned | active | paused | concluded | abandoned
-outcome: null             # null | positive | negative | inconclusive | infra
+status: concluded            # planned | active | paused | concluded | abandoned
+outcome: positive             # null | positive | negative | inconclusive | infra
 influenced_by: []
 created: 2026-11-03
 author: agent:claude
 protocols: []
 materials: []
 tags: [kalam, kalam-zero]
-review: approved
+review: pending
 approval: {by: ank, on: 2026-11-03, in: REV-20261103-hv2prm}
 ---
 
@@ -43,4 +43,13 @@ rejects a bare link here. Metric runs also land in results.tsv.
 - [[RUN-20261103-h3sjsx]] the generated file, oil inlined, passes all 97 headless checks on 0.8.3, 0.9.5, 0.10.4, 0.11.7 and 0.12.4 (0.8 started with `-u`)
 
 ## Conclusion
-Written once, by a human, when status becomes `concluded`.
+Yes. nixvim can emit kalam-zero's `init.lua` from the same modules as kalam: nixvim's
+defaults leak two store paths (the python3 and ruby hosts) and two runtimepath edits, and
+five options remove them (`wrapRc = false`, `impureRtp = true`, `luaLoader.enable = null`,
+`withPython3 = false`, `withRuby = false`; [[RUN-20261103-g9nmnp]]). The generated file, with
+oil.nvim inlined, passes all 97 headless checks on Neovim 0.8.3, 0.9.5, 0.10.4, 0.11.7 and
+0.12.4 ([[RUN-20261103-h3sjsx]]); 0.8 needs `-u`, as it ignores `NVIM_APPNAME`, which the
+install instructions already say. For the project this settled kalam-zero's shape: it
+reuses base's keymaps rather than a hand-written Lua file (ADR-0016), and carried kalam-zero
+1–5 (ADR-0017, ADR-0018). Not covered: macOS release builds and aarch64 before 0.10.
+

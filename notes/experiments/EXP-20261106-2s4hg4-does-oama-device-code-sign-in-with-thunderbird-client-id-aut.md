@@ -4,7 +4,7 @@ type: experiment
 schema_version: 1
 title: Does oama device-code sign-in with Thunderbird client id authorize ak2396@cam.ac.uk for IMAP and SMTP?
 project: PRJ-0001
-status: planned           # planned | active | paused | concluded | abandoned
+status: active           # planned | active | paused | concluded | abandoned
 outcome: null             # null | positive | negative | inconclusive | infra
 influenced_by: []
 created: 2026-11-06
@@ -48,6 +48,7 @@ fallback is to forward Cambridge mail to another account.
 ## Runs
 One line per run after its link, what was tried and what it showed; `yajna validate`
 rejects a bare link here. Metric runs also land in results.tsv.
+- [[RUN-20261124-28pd9s]] sign-in with --device passed (2026-11-06, oama 0.22.0 to store the token); 18 days on, IMAP sync and token renewal work; SMTP not tried yet
 
 ## Conclusion
 Written once, by a human, when status becomes `concluded`.
