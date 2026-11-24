@@ -70,7 +70,12 @@
             "/srv" = 85;
           };
           notify = {
-            inherit (config.neusis.services.auto-update.notify) environmentFile ntfyUrl emailFrom emailTo;
+            inherit (config.neusis.services.auto-update.notify)
+              environmentFile
+              ntfyUrl
+              emailFrom
+              emailTo
+              ;
           };
         };
 
@@ -117,6 +122,19 @@
         # key, for the dutavas's first join and if the tailnet logs it out.
         age.secrets.sandhiLeoankTsAuthKey = {
           rekeyFile = ../secrets/anklab/leoankTsAuthKey.age;
+          owner = "ank";
+        };
+
+        age.secrets.nityaMicrosoftToken = {
+          rekeyFile = ../secrets/ank/nityaMicrosoftPersonalToken.age;
+          owner = "ank";
+        };
+        # age.secrets.nityaGoogleToken= {
+        #   rekeyFile = ../secrets/ank/nityaGooglePersonalToken.age;
+        #   owner = "ank";
+        # };
+        age.secrets.nityaGoogleClient = {
+          rekeyFile = ../secrets/ank/nityaGoogleClient.age;
           owner = "ank";
         };
 

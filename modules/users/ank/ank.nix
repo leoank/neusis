@@ -352,6 +352,19 @@
         rekeyFile = ../../secrets/ank/ociTfEnv.age;
         path = "${config.home.homeDirectory}/.config/neusis/tf.env";
       };
+      age.secrets.nityaMicrosoftToken = {
+        rekeyFile = ../../secrets/ank/nityaMicrosoftPersonalToken.age;
+        path = "${config.home.homeDirectory}/.config/nitya/msft_personal_token.json";
+      };
+      # age.secrets.nityaGoogleToken = {
+      #   rekeyFile = ../../secrets/ank/nityaGoogleToken.age;
+      #   path = "${config.home.homeDirectory}/.config/nitya/google_token.json";
+      # };
+      age.secrets.nityaGoogleClient = {
+        rekeyFile = ../../secrets/ank/nityaGoogleClient.age;
+        path = "${config.home.homeDirectory}/.config/nitya/google_client.json";
+      };
+
     };
 
   # saarthi node — the daemon that observes and gates this machine's Claude Code
