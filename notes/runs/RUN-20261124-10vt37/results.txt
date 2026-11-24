@@ -1,0 +1,10 @@
+source: pic.png
+1 red source:   err=nil file=pic.png colour=srgb(255,0,0)
+2 blue source:  same file=true colour=srgb(0,0,255)  (stale if still red)
+3 cache deleted: colour=srgb(0,0,255)
+4 image.new: same before clear=true, same after clear=false
+source: pic.jpg
+1 red source:   err=nil file=57058d75-pic.png colour=srgb(254,0,0)
+2 blue source:  same file=true colour=srgb(254,0,0)  (stale if still red)
+3 cache deleted: colour=srgb(0,0,254)
+4 image.new: same before clear=true, same after clear=false
