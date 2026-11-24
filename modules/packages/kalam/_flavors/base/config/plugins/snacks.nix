@@ -160,6 +160,28 @@
     })
   '';
 
+  # :KalamImageRefresh shows images whose files changed on disk (EXP-20261124-10vsty).
+  # snacks names a converted image (jpg, svg, pdf, mermaid, …) after the source's path
+  # and reuses it while it exists, and keeps loaded images in memory, so an image
+  # edited in place kept its old picture. Drop the conversions and the loaded images,
+  # then place the current buffer's images again. No keymap, on purpose.
+  userCommands.KalamImageRefresh = {
+    desc = "Re-convert and redraw images whose files changed";
+    command.__raw = ''
+      function()
+        local buf = vim.api.nvim_get_current_buf()
+        vim.fn.delete(Snacks.image.config.cache, "rf")
+        Snacks.image.image.clear()
+        Snacks.image.placement.clean(buf)
+        if vim.bo[buf].filetype == "image" then
+          Snacks.image.buf.attach(buf)
+        else
+          vim.api.nvim_exec_autocmds("BufWinEnter", { buffer = buf })
+        end
+      end
+    '';
+  };
+
   keymaps =
     let
       # Tiny helper — every snacks binding wants the same shape and
