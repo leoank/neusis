@@ -180,6 +180,8 @@
               offWrapped = lib.hasInfix "saarthi" (plain (off.text or ""));
               name = on.name;
               atTerminal = lib.hasInfix "[ -t 0 ] && [ -t 1 ]" text;
+              # inside a `saarthi run` already (saarthi sets SAARTHI_RUN), claude runs directly
+              notNested = lib.hasInfix ''[ -z "''${SAARTHI_RUN:-}" ]'' text;
               runsSaarthi = lib.hasInfix (plain "${saarthi}/bin/saarthi run --command ") text;
               # every argument after `--`, and claude itself without a terminal
               forwardsArgs = lib.hasInfix "/bin/claude -- \"$@\"" text;
@@ -189,6 +191,7 @@
             offWrapped = false;
             name = "claude";
             atTerminal = true;
+            notNested = true;
             runsSaarthi = true;
             forwardsArgs = true;
             directOtherwise = true;

@@ -102,7 +102,7 @@
       claudeRunPkg = pkgs.writeShellApplication {
         name = "claude";
         text = ''
-          if [ -t 0 ] && [ -t 1 ]; then
+          if [ -t 0 ] && [ -t 1 ] && [ -z "''${SAARTHI_RUN:-}" ]; then
             exec ${lib.getExe' cfg.tools.claude.saarthi.package "saarthi"} run --command ${lib.getExe' claudePkg "claude"} -- "$@"
           fi
           exec ${lib.getExe' claudePkg "claude"} "$@"
