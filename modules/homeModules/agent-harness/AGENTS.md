@@ -181,8 +181,9 @@ lists the notebooks this machine knows.
   afterwards does not count. Small mechanical edits need none.
 - **Humans sign off.** Your changes go under a `REV` review; answer or
   address threads, never resolve or approve them. Curated pages you
-  edit get `review: pending`; an experiment's *Conclusion* is mine to
-  write: propose it in the log or the session page.
+  edit get `review: pending`. When you finish an experiment, write its
+  *Conclusion*, `status: concluded` and `outcome` as a draft (still
+  `review: pending`) for me to approve; never rewrite one I approved.
 - **Keep *Progress* current**: in `PHS` phase pages where the project
   has them, else the project page's checklist (migrating to phases is
   mine to ask for); tick items as work lands. Large files go to `yajna
