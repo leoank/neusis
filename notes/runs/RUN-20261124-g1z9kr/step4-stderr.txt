@@ -1,0 +1,1 @@
+age: error: open <scratch>/fixed/agenix.d/3/t.tmp: permission denied

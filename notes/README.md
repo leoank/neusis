@@ -48,6 +48,7 @@ open items with the rest.
 - [ ] Mail 3: agents read mail through notmuch and draft or send replies
 - [ ] Stable signing 1: darwin binaries signed at activation with `rcodesign` from agenix-held self-signed keys (root-only key for kanata, a home key for saarthi's node and kitty), so macOS keeps their grants across rebuilds; an ADR first ([[EXP-20261123-gmpz81]] showed the requirement stays the same)
 - [ ] Stable signing 2: a kanata rebuild on rogue keeps Input Monitoring without touching System Settings
+- [ ] agenix on darwin: the job runs once per load and recovers from a killed run (`keepalive.nix` + `wrapper.nix` from [[EXP-20261124-g1ym5w]] as a neusis module), checked by a switch of rogue
 
 ## Open questions
 - Does TCC keep a real grant (Input Monitoring, Local Network, App Management) for a binary re-signed by rcodesign after a rebuild, and does rcodesign sign kitty.app's nested frameworks cleanly? ([[EXP-20261123-gmpz81]] checked only the requirement)
@@ -82,3 +83,4 @@ rejects a bare link here. Newest last.
 - [[EXP-20261106-2s4hg4]] can oama sign ak2396@cam.ac.uk in to Microsoft 365 IMAP and SMTP with Thunderbird's client id? Sign-in, IMAP and renewal yes; SMTP from aerc still to try
 - [[EXP-20261123-gmpz81]] does rcodesign, signing from a self-signed PEM key, give every build the same designated requirement? Yes: identifier + certificate root, embedded, no cdhash (concluded positive, draft for ank)
 - [[EXP-20261124-10vsty]] does an image edited in place show its new contents in kalam after dropping snacks' cache and loaded images? Yes headless: a JPEG's conversion goes stale, a PNG has none (concluded positive, draft for ank); the redraw in kitty is a todo
+- [[EXP-20261124-g1ym5w]] why does agenix's darwin job rerun every ~10 s and wedge after a killed run, and does KeepAlive {SuccessfulExit=false} plus a wrapper clearing unfinished generations fix both? Yes: upstream's `Crashed = false` reruns it; the fixed job runs once per load and the wrapper heals a killed run (concluded positive, draft for ank)

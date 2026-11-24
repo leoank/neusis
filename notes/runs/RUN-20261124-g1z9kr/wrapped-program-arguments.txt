@@ -1,0 +1,10 @@
+  "ProgramArguments" => [
+    0 => "/bin/sh"
+    1 => "-c"
+    2 => "/bin/wait4path /nix/store && exec /bin/sh -c 'cur=$(basename "$(readlink "<scratch>/fixed/agenix")" 2>/dev/null) || cur=
+for g in "<scratch>/fixed/agenix.d"/*; do
+  [ -e "$g" ] && [ "${g##*/}" != "$cur" ] && rm -rf "$g"
+done
+exec "$0"
+' /nix/store/5xvlypj37rplhhxxcfcyvnzzx51iw56m-agenix-home-manager-mount-secrets/bin/agenix-home-manager-mount-secrets"
+  ]

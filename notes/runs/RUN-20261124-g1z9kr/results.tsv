@@ -1,0 +1,6 @@
+step	variant	runs	last_exit	generation	secret	expect	ok
+1-load	upstream	4	0	4	v1	runs >=3, exit 0, gen 4, secret v1	yes
+2-load	keepalive	1	0	1	v1	runs 1, exit 0, gen 1, secret v1	yes
+3-reload-new-secret	keepalive	1	0	2	v2	runs 1, exit 0, gen 2, secret v2	yes
+4-load-after-killed-run	keepalive	4	1	2	v2	runs >=3, exit 1, gen 2, secret v2	yes
+5-load-wrapped-after-killed-run	wrapped	1	0	3	v2	runs 1, exit 0, gen 3, secret v2	yes
