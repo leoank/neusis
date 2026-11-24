@@ -1,0 +1,3 @@
+inbox messages: 13903
+inbox files from the last 48 h: 16
+sent items written by aerc: 0
