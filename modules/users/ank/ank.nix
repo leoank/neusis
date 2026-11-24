@@ -356,10 +356,10 @@
         rekeyFile = ../../secrets/ank/nityaMicrosoftPersonalToken.age;
         path = "${config.home.homeDirectory}/.config/nitya/msft_personal_token.json";
       };
-      # age.secrets.nityaGoogleToken = {
-      #   rekeyFile = ../../secrets/ank/nityaGoogleToken.age;
-      #   path = "${config.home.homeDirectory}/.config/nitya/google_token.json";
-      # };
+      age.secrets.nityaGoogleToken = {
+        rekeyFile = ../../secrets/ank/nityaGooglePersonalToken.age;
+        path = "${config.home.homeDirectory}/.config/nitya/google_personal_token.json";
+      };
       age.secrets.nityaGoogleClient = {
         rekeyFile = ../../secrets/ank/nityaGoogleClient.age;
         path = "${config.home.homeDirectory}/.config/nitya/google_client.json";

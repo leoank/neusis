@@ -129,10 +129,10 @@
           rekeyFile = ../secrets/ank/nityaMicrosoftPersonalToken.age;
           owner = "ank";
         };
-        # age.secrets.nityaGoogleToken= {
-        #   rekeyFile = ../secrets/ank/nityaGooglePersonalToken.age;
-        #   owner = "ank";
-        # };
+        age.secrets.nityaGoogleToken = {
+          rekeyFile = ../secrets/ank/nityaGooglePersonalToken.age;
+          owner = "ank";
+        };
         age.secrets.nityaGoogleClient = {
           rekeyFile = ../secrets/ank/nityaGoogleClient.age;
           owner = "ank";
