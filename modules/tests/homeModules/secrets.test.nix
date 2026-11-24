@@ -80,6 +80,68 @@
           };
         };
 
+        # On darwin agenix's agent restarts only on failure and clears
+        # unfinished generations before its mount script runs
+        # (EXP-20261124-g1ym5w); elsewhere it is left as agenix ships it.
+        test-darwin-agenix-agent-runs-once-and-clears-unfinished-generations = {
+          expr =
+            let
+              withSecret = t.evalHm {
+                pkgs = testPkgs;
+                modules = [
+                  self.homeModules.secrets
+                  {
+                    neusis.service.secrets = {
+                      userPubkey = f.hostPubkey;
+                      masterIdentities = [
+                        {
+                          identity = "/Users/alice/.ssh/id_ed25519";
+                          pubkey = f.hostPubkey;
+                        }
+                      ];
+                    };
+                    # A plain agenix file: a rekeyFile would need a rekeyed copy for alice.
+                    age.secrets.token.file = ../_fixtures/placeholder.age;
+                  }
+                ];
+              };
+              agent = withSecret.launchd.agents.activate-agenix.config;
+              args = agent.ProgramArguments;
+            in
+            {
+              keepAlive = lib.filterAttrs (_: v: v != null) agent.KeepAlive;
+              wrapped =
+                builtins.length args == 4
+                &&
+                  lib.take 2 args == [
+                    "/bin/sh"
+                    "-c"
+                  ];
+              clears = lib.hasInfix ''rm -rf "$g"'' (lib.head (lib.drop 2 args ++ [ "" ]));
+              thenScript = lib.hasSuffix "agenix-home-manager-mount-secrets" (lib.last args);
+            };
+          expected =
+            if testPkgs.stdenv.hostPlatform.isDarwin then
+              {
+                keepAlive = {
+                  SuccessfulExit = false;
+                };
+                wrapped = true;
+                clears = true;
+                thenScript = true;
+              }
+            else
+              {
+                keepAlive = {
+                  Crashed = false;
+                  SuccessfulExit = false;
+                };
+                wrapped = false;
+                clears = false;
+                thenScript = true;
+              };
+        };
+
         # Importing the module means enabling it (it loads agenix-rekey,
         # which must be configured), so `enable` defaults to true …
         test-import-enables-by-default = {

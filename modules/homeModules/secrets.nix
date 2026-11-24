@@ -12,6 +12,7 @@
     {
       config,
       lib,
+      pkgs,
       inputs,
       ...
     }:
@@ -85,6 +86,33 @@
             # user instead (works in both integrated and standalone HM). A
             # second home of the same user with its own key sets its own dir.
             localStorageDir = lib.mkDefault (../secrets/rekeyed + "/hm/${config.home.username}");
+          };
+        })
+
+        # agenix's darwin agent (`activate-agenix`) as shipped has KeepAlive
+        # { Crashed = false; SuccessfulExit = false; }; launchd reads
+        # `Crashed = false` as "restart when it did not crash", so it
+        # re-decrypts every secret about every 10 s. And a run killed after
+        # age opened its output (a switch's bootout, a logout) leaves a
+        # read-only <name>.tmp in the next generation that every later run
+        # fails on. Restart only on failure, and clear unfinished
+        # generations before the mount script runs (it gets the script as
+        # $0). Shown on rogue by EXP-20261124-g1ym5w. Upstream: ryantm/agenix
+        # #372 (fix in PR #352) and #463; drop this when both are fixed.
+        (lib.mkIf (cfg.enable && config.age.enable && pkgs.stdenv.hostPlatform.isDarwin) {
+          launchd.agents.activate-agenix.config = {
+            KeepAlive = lib.mkForce { SuccessfulExit = false; };
+            ProgramArguments = lib.mkBefore [
+              "/bin/sh"
+              "-c"
+              ''
+                cur=$(basename "$(readlink "${config.age.secretsDir}")" 2>/dev/null) || cur=
+                for g in "${config.age.secretsMountPoint}"/*; do
+                  [ -e "$g" ] && [ "''${g##*/}" != "$cur" ] && rm -rf "$g"
+                done
+                exec "$0"
+              ''
+            ];
           };
         })
       ];
