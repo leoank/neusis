@@ -5,13 +5,31 @@
 ;; - tap-hold-release helps make the hold action more responsive
 ;; - pressing another key on the same half of the keyboard
 ;;   as the home row mod will activate an early tap action
+;;
+;; Holding space opens the nav layer, after the NAV layer of the
+;; miryoku keymap (keymaps repo), so both keyboards share the muscle memory:
+;;
+;;   q hrm on/off  w clipboard mac/linux    y redo  u paste  i copy  o cut  p undo
+;;   a cmd  s alt  d ctrl  f shift          h ←     j ↓      k ↑     l →    ; caps-word
+;;                                          n home  m pgdn   , pgup  . end
+;;
+;; - Space resolves as a hold only once another key is pressed *and released*
+;;   while it is down (tap-hold-release, miryoku's PERMISSIVE_HOLD), so a fast
+;;   `<space>w` vim leader still types space then w.
+;; - The clipboard keys send Cmd on macOS and Ctrl elsewhere; `w` swaps them
+;;   (for a Linux VM or remote desktop on a Mac, and the reverse).
+;; - `q` toggles the home row mods: off, a s d f j k l ; are plain letters
+;;   (gaming, or an app that fights the mod-taps). Space still opens nav.
 
 (defcfg
   process-unmapped-keys yes
 )
 (defsrc
   f1   f2   f3   f4   f5   f6   f7   f8   f9   f10   f11   f12
-  a   s   d   f   j   k   l   ;
+  q   w   e   r   t   y   u   i   o   p
+  a   s   d   f   g   h   j   k   l   ;
+  z   x   c   v   b   n   m   ,   .   /
+  spc
 )
 (defvar
   ;; Note: consider using different time values for your different fingers.
@@ -22,6 +40,7 @@
   hold-middle 230
   hold-ring   260
   hold-pinky  290
+  hold-thumb  200
 
   left-hand-keys (
     q w e r t
@@ -36,16 +55,60 @@
 )
 (deflayer base
   brdn  brup  _    _    _    _   prev  pp  next  mute  vold  volu
-  @a  @s  @d  @f  @j  @k  @l  @;
+  _   _   _   _   _   _   _   _   _   _
+  @a  @s  @d  @f  _   _   @j  @k  @l  @;
+  _   _   _   _   _   _   _   _   _   _
+  @spc
 )
 
+;; While typing fast (see @tap): no mods, and space is a plain space.
 (deflayer nomods
   f1   f2   f3   f4   f5   f6   f7   f8   f9   f10   f11   f12
-  a   s   d   f   j   k   l   ;
+  _   _   _   _   _   _   _   _   _   _
+  a   s   d   f   _   _   j   k   l   ;
+  _   _   _   _   _   _   _   _   _   _
+  spc
 )
+
+;; Home row mods switched off (nav q): plain letters, space still opens nav.
+(deflayer plain
+  brdn  brup  _    _    _    _   prev  pp  next  mute  vold  volu
+  _   _   _   _   _   _   _   _   _   _
+  a   s   d   f   _   _   j   k   l   ;
+  _   _   _   _   _   _   _   _   _   _
+  @spc
+)
+
+(deflayer nav
+  _    _    _    _    _    _    _    _    _    _     _     _
+  @hrm  @clp  _   _   _   @rdo  @pst  @cpy  @cut  @und
+  lmet  lalt  lctl  lsft  _   left  down  up  rght  @cw
+  _   _   _   _   _   home  pgdn  pgup  end  _
+  _
+)
+
 (deffakekeys
   to-base (layer-switch base)
 )
+;; Held (toggled on) = the clipboard keys use the other platform's modifier.
+(defvirtualkeys
+  clip-swap nop0
+)
+
+;; The platform's own clipboard modifier, and the other one.
+(platform (macos)
+  (defalias
+    cmod-own lmet
+    cmod-other lctl
+  )
+)
+(platform (linux win winiov2 wintercept)
+  (defalias
+    cmod-own lctl
+    cmod-other lmet
+  )
+)
+
 (defalias
   tap (multi
     (layer-switch nomods)
@@ -60,4 +123,22 @@
   k (tap-hold-release-keys $tap-time $hold-middle (multi k @tap) rctl $right-hand-keys)
   l (tap-hold-release-keys $tap-time $hold-ring (multi l @tap) ralt $right-hand-keys)
   ; (tap-hold-release-keys $tap-time $hold-pinky (multi ; @tap) rmet $right-hand-keys)
+
+  spc (tap-hold-release $tap-time $hold-thumb spc (layer-while-held nav))
+
+  ;; toggle the home row mods: base <-> plain
+  hrm (switch
+    ((base-layer base)) (layer-switch plain) break
+    () (layer-switch base) break
+  )
+
+  ;; clipboard: own platform's modifier unless clip-swap is on
+  clp (on-press toggle-virtualkey clip-swap)
+  und (switch ((input virtual clip-swap)) (multi @cmod-other z) break () (multi @cmod-own z) break)
+  cut (switch ((input virtual clip-swap)) (multi @cmod-other x) break () (multi @cmod-own x) break)
+  cpy (switch ((input virtual clip-swap)) (multi @cmod-other c) break () (multi @cmod-own c) break)
+  pst (switch ((input virtual clip-swap)) (multi @cmod-other v) break () (multi @cmod-own v) break)
+  rdo (switch ((input virtual clip-swap)) (multi @cmod-other lsft z) break () (multi @cmod-own lsft z) break)
+
+  cw (caps-word 2000)
 )
