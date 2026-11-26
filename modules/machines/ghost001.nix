@@ -133,6 +133,10 @@
           rekeyFile = ../secrets/ank/nityaGooglePersonalToken.age;
           owner = "ank";
         };
+        age.secrets.nityaICloudToken = {
+          rekeyFile = ../secrets/ank/nityaICloudPersonalToken.age;
+          owner = "ank";
+        };
         age.secrets.nityaGoogleClient = {
           rekeyFile = ../secrets/ank/nityaGoogleClient.age;
           owner = "ank";

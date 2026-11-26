@@ -360,6 +360,10 @@
         rekeyFile = ../../secrets/ank/nityaGooglePersonalToken.age;
         path = "${config.home.homeDirectory}/.config/nitya/google_personal_token.json";
       };
+      age.secrets.nityaICloudToken = {
+        rekeyFile = ../../secrets/ank/nityaICloudPersonalToken.age;
+        path = "${config.home.homeDirectory}/.config/nitya/icloud_personal_token.json";
+      };
       age.secrets.nityaGoogleClient = {
         rekeyFile = ../../secrets/ank/nityaGoogleClient.age;
         path = "${config.home.homeDirectory}/.config/nitya/google_client.json";
