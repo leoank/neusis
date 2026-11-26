@@ -125,6 +125,20 @@
           owner = "ank";
         };
 
+        # ank's atuin syncs with the key and session every machine shares (users/ank: the
+        # home `secrets` bundle, which ghost001 does not get), linked where atuin looks.
+        # Activation links them before ank's user services start.
+        age.secrets.atuinKey = {
+          rekeyFile = ../secrets/ank/atuinKey.age;
+          path = "/home/ank/.local/share/atuin/key";
+          owner = "ank";
+        };
+        age.secrets.atuinSession = {
+          rekeyFile = ../secrets/ank/atuinSession.age;
+          path = "/home/ank/.local/share/atuin/session";
+          owner = "ank";
+        };
+
         age.secrets.nityaMicrosoftToken = {
           rekeyFile = ../secrets/ank/nityaMicrosoftPersonalToken.age;
           owner = "ank";

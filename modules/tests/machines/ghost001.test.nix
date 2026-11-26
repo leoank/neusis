@@ -279,6 +279,27 @@
           };
         };
 
+        # ank's atuin syncs with the shared key and session, system secrets linked where
+        # atuin looks, since ghost001's home has no secrets bundle.
+        test-atuin-shares-key-and-session = {
+          expr = {
+            atuin = home.programs.atuin.enable;
+            key = { inherit (cfg.age.secrets.atuinKey) path owner; };
+            session = { inherit (cfg.age.secrets.atuinSession) path owner; };
+          };
+          expected = {
+            atuin = true;
+            key = {
+              path = "/home/ank/.local/share/atuin/key";
+              owner = "ank";
+            };
+            session = {
+              path = "/home/ank/.local/share/atuin/session";
+              owner = "ank";
+            };
+          };
+        };
+
         # The saarthi hub records on the data volume and pushes through a
         # self-hosted ntfy, reachable over the tailnet only.
         test-saarthi-hub = {
