@@ -948,6 +948,36 @@
         "type": "github"
       }
     },
+    "nitya": {
+      "inputs": {
+        "flake-parts": [
+          "flake-parts"
+        ],
+        "neusis": [],
+        "nixpkgs": [
+          "nixpkgs-unstable"
+        ],
+        "terranix": [
+          "terranix"
+        ],
+        "yajna": [
+          "yajna"
+        ]
+      },
+      "locked": {
+        "lastModified": 1795701822,
+        "narHash": "sha256-ZpvaaST5lqp20VWlbYOu7DrtPwQMfk2jfFELTZtU9J0=",
+        "owner": "leoank",
+        "repo": "nitya",
+        "rev": "0cdee310c6ce9efca177713be1cd32996f6a02bb",
+        "type": "github"
+      },
+      "original": {
+        "owner": "leoank",
+        "repo": "nitya",
+        "type": "github"
+      }
+    },
     "nix-darwin": {
       "inputs": {
         "nixpkgs": [
@@ -1238,6 +1268,7 @@
         "jail-nix": "jail-nix",
         "llm-agents": "llm-agents",
         "mac-app-util": "mac-app-util",
+        "nitya": "nitya",
         "nix-homebrew": "nix-homebrew",
         "nixpkgs": "nixpkgs_7",
         "nixpkgs-unstable": "nixpkgs-unstable",

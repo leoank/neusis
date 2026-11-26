@@ -68,6 +68,16 @@
       inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
     mac-app-util.url = "github:hraban/mac-app-util";
+    nitya = {
+      url = "github:leoank/nitya";
+      inputs = {
+        flake-parts.follows = "flake-parts";
+        neusis.follows = "";
+        nixpkgs.follows = "nixpkgs-unstable";
+        terranix.follows = "terranix";
+        yajna.follows = "yajna";
+      };
+    };
     nix-homebrew.url = "github:zhaofengli-wip/nix-homebrew";
     nixpkgs.url = "github:nixos/nixpkgs/nixos-26.05";
     nixpkgs-unstable.url = "github:nixos/nixpkgs/nixos-unstable";

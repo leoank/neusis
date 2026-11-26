@@ -45,6 +45,10 @@
           # reachable over the tailnet.
           inputs.saarthi.nixosModules.saarthi-hub
           self.neusis.features.nixos.saarthi-hub
+          # nitya's token probe (nitya EXP-20261123-bhfz49): the nitya flake's module,
+          # fed the age.secrets.nitya* below, every 6 hours.
+          inputs.nitya.nixosModules.token-probe
+          self.neusis.features.nixos.nitya-token-probe
           # Public hostnames under leoank.me (cloudflare-leoank stack).
           self.nixosModules.cloudflare-tunnel
           # auto-updates: comin follows ghost001's deploy group (stable,
