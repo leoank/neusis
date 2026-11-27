@@ -965,11 +965,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1795794587,
-        "narHash": "sha256-6jPWdVe041lZUaAQ3fqxcMqYTlIVmAsLMzlnjUYsKKc=",
+        "lastModified": 1795796871,
+        "narHash": "sha256-fDmu7KJq86WDlN25wPoaWAVvVMjhKvw5n2J9cv3kg7c=",
         "owner": "leoank",
         "repo": "nitya",
-        "rev": "c992157e598291e260fdb9407f78094b543f6d86",
+        "rev": "917bb147d7ecfc3a3841d9f27e5132e907e27be9",
         "type": "github"
       },
       "original": {
