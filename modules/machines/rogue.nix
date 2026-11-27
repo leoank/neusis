@@ -40,6 +40,14 @@
         ];
         age.secrets.autoUpdateNotify.rekeyFile = ../secrets/common/auto-update-notify.age;
         neusis.services.auto-update.notify.environmentFile = config.age.secrets.autoUpdateNotify.path;
+        # kanata runs a copy signed with neusis-codesign-system, so Input Monitoring
+        # survives rebuilds (ADR-0022, docs/darwin-signing.md). The key is root-only.
+        age.secrets.neusisCodesignSystem.rekeyFile = ../secrets/common/neusisCodesignSystem.age;
+        neusis.services.kanata.darwin.signing = {
+          enable = true;
+          keyFile = config.age.secrets.neusisCodesignSystem.path;
+          certFile = ../secrets/common/neusisCodesignSystem.crt;
+        };
         programs.zsh.enable = true;
         neusis.services.secrets = {
           enable = true;

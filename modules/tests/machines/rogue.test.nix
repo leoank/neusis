@@ -417,6 +417,29 @@
           };
         };
 
+        # kanata runs the copy signed with the root-only system key (ADR-0022), so
+        # Input Monitoring survives kanata rebuilds.
+        test-kanata-runs-signed-copy = {
+          expr = {
+            inherit (cfg.neusis.services.kanata.darwin.signing) enable identifier keyFile;
+            cert = baseNameOf (toString cfg.neusis.services.kanata.darwin.signing.certFile);
+            keyOwner = cfg.age.secrets.neusisCodesignSystem.owner;
+            keyMode = cfg.age.secrets.neusisCodesignSystem.mode;
+            runs = builtins.head cfg.launchd.daemons.kanata-default.serviceConfig.ProgramArguments;
+            signJob = cfg.launchd.daemons ? kanata-sign;
+          };
+          expected = {
+            enable = true;
+            identifier = "dev.leoank.kanata";
+            keyFile = "/run/agenix/neusisCodesignSystem";
+            cert = "neusisCodesignSystem.crt";
+            keyOwner = "0";
+            keyMode = "0400";
+            runs = "/Library/Application Support/neusis/signed/dev.leoank.kanata/kanata";
+            signJob = true;
+          };
+        };
+
         # nitya's node (users/ank/nitya.nix, nitya ADR-0016): `nitya-node` on PATH with
         # rogue's settings, the leoank key at a fixed path, the hourly audit check.
         test-nitya-node = {
