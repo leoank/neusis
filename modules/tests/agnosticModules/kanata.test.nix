@@ -225,6 +225,55 @@
             daemons = [ ];
           };
         };
+
+        # ADR-0022: with darwin.signing the daemons run a copy signed with a fixed
+        # identity, made by a launchd job of its own (agenix decrypts in a launchd daemon,
+        # not in activation), which signs the current package and restarts the daemons.
+        test-darwin-signing-runs-a-signed-copy = {
+          expr =
+            let
+              signed = darwinWith {
+                darwin.signing = {
+                  enable = true;
+                  keyFile = "/run/agenix/neusisCodesignSystem";
+                  certFile = ../_fixtures/placeholder.age;
+                };
+              };
+              job = signed.launchd.daemons.kanata-sign;
+              script = builtins.unsafeDiscardStringContext job.script;
+              has = s: lib.hasInfix s script;
+            in
+            {
+              runs = builtins.head (daemonArgs signed "kanata-default");
+              unsigned = builtins.head (daemonArgs darwin "kanata-default");
+              daemons = ourDaemons signed;
+              label = job.serviceConfig.Label;
+              runAtLoad = job.serviceConfig.RunAtLoad;
+              oneShot = !(job.serviceConfig ? KeepAlive) || job.serviceConfig.KeepAlive == null;
+              signsPackage = has "rcodesign sign" && has (builtins.unsafeDiscardStringContext (lib.getExe signed.neusis.services.kanata.package));
+              identifier = has "--binary-identifier dev.leoank.kanata ";
+              key = has "key=/run/agenix/neusisCodesignSystem";
+              restarts = has "launchctl kickstart -k system/org.nixos.kanata-default";
+              failed = t.failedAssertions signed;
+            };
+          expected = {
+            runs = "/Library/Application Support/neusis/signed/dev.leoank.kanata/kanata";
+            unsigned = "/run/current-system/sw/bin/kanata";
+            daemons = [
+              "Karabiner-DriverKit-VirtualHIDDevice-Daemon"
+              "kanata-default"
+              "kanata-sign"
+            ];
+            label = "org.neusis.kanata-sign";
+            runAtLoad = true;
+            oneShot = true;
+            signsPackage = true;
+            identifier = true;
+            key = true;
+            restarts = true;
+            failed = [ ];
+          };
+        };
       };
     };
 }

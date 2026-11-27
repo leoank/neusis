@@ -1,6 +1,6 @@
-# ADR-0022: darwin programs that need a privacy grant run a copy signed at activation with rcodesign, from self-signed keys kept in agenix
+# ADR-0022: darwin programs that need a privacy grant run a copy signed by a launchd job with rcodesign, from self-signed keys kept in agenix
 
-Status: proposed
+Status: accepted
 Date: 2026-11-24
 
 ## Context
@@ -42,17 +42,26 @@ Alternatives considered:
     (kanata);
   - `neusis-codesign-ank`: a home secret of ank's, for ank's programs (saarthi's node,
     kitty).
-  ank creates the keys with `agenix edit` (a recipe in the module's docs); no agent sees
-  the plaintext.
-- **A signing step at activation** (one darwin helper in neusis, used by the modules):
-  copy the store program to a fixed path outside the store, sign it with `rcodesign
-  sign --pem-file <key> --pem-file <cert> --binary-identifier <id>`, and do it only when the
-  store path changed (a stamp file beside the copy). The program then runs from that copy.
-  - System daemons sign in system activation, into `/Library/Application Support/neusis/
-    signed/<id>/`; ank's programs in home-manager activation, into
-    `~/Library/Application Support/neusis/signed/<id>/`.
+  ank creates the keys with `agenix edit` (the recipe is in `docs/darwin-signing.md`); no
+  agent sees the plaintext.
+- **A signing step in a launchd job of its own** (one darwin helper in neusis,
+  `neusis.lib.darwinSigning.mkSignScript`, used by the modules): sign the store program
+  straight into a fixed path outside the store with `rcodesign sign --pem-file <key>
+  --pem-file <cert> --timestamp-url none --binary-identifier <id> <program> <copy>`, only
+  when the store path changed (a stamp file beside the copy), then restart what runs it.
+  The program runs from that copy.
+  - Not an activation step (revised 2026-11-27, while building it): nix-darwin's agenix
+    decrypts in its `activate-agenix` launchd daemon, beside activation and at boot, so the
+    key may not exist yet when activation runs. The job waits for the key (up to a minute),
+    and its plist names the program, so a rebuild reloads and reruns it.
+  - No time-stamp server: rcodesign asks timestamp.apple.com by default; a grant needs no
+    timestamp, and signing must not depend on the network.
+  - System daemons' copies go to `/Library/Application Support/neusis/signed/<id>/` (a
+    launchd daemon signs them); ank's to `~/Library/Application Support/neusis/signed/<id>/`
+    (a launchd agent of his).
   - If signing fails (key missing, rcodesign error), keep the previous signed copy and
-    warn; with no previous copy, run the store program and warn. Never fail the switch.
+    warn; with no previous copy, run the store program and warn. Never fail the switch, and
+    never leave launchd retrying.
 - **Identifiers are fixed once and never changed**: `dev.leoank.kanata`,
   `dev.leoank.saarthi`, `dev.leoank.kitty`. A grant is tied to identifier and certificate.
 - **Order**: kanata first (the grant that hurts most, and a single binary), then saarthi's
@@ -62,7 +71,7 @@ Alternatives considered:
 ## Consequences
 - A grant is given once per machine and survives rebuilds, as long as the identifier and
   certificate stay the same. Rotating a certificate costs one re-grant per program.
-- Darwin activation needs `rcodesign`; the system key decrypts to `/run/agenix` (root
+- The signing jobs need `rcodesign`; the system key decrypts to `/run/agenix` (root
   only), ank's to ank's agenix directory.
 - Any process running as ank can read ank's key, so it could sign a program as saarthi's
   node or kitty and inherit their grants (Local Network, App Management). Accepted:

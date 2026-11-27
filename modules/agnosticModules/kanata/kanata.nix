@@ -17,7 +17,10 @@
 #
 # Darwin half adapted from:
 #   https://github.com/nix-darwin/nix-darwin/blob/7ebf95a73e3b54e0f9c48f50fde29e96257417ac/modules/services/karabiner-elements/default.nix
-{ ... }:
+#
+# `darwin.signing` (ADR-0022): the daemons run a copy of kanata signed with a fixed
+# identity, so macOS keeps its Input Monitoring grant across kanata rebuilds.
+{ self, ... }:
 {
   flake.agnosticModules.kanata =
     {
@@ -49,6 +52,13 @@
 
       mkName = name: "kanata-${name}";
 
+      # The signed copy the daemons run with `darwin.signing` (ADR-0022): a fixed path, since
+      # macOS keys a command-line program's grant on its path and its requirement.
+      signing = cfg.darwin.signing;
+      signedDir = "/Library/Application Support/neusis/signed/${signing.identifier}";
+      kanataBin =
+        if signing.enable then "${signedDir}/kanata" else "/run/current-system/sw/bin/kanata";
+
       # Darwin-side config synthesis. Mirrors nixpkgs's `mkConfig` but
       # without `linux-dev` / `linux-continue-if-no-devs-found` — those
       # are Linux-specific defcfg directives. If the user has supplied
@@ -68,7 +78,7 @@
       mkDarwinDaemon = name: keyboard: {
         serviceConfig = {
           ProgramArguments = [
-            "/run/current-system/sw/bin/kanata"
+            kanataBin
             "--cfg"
             (toString (mkDarwinConfig name keyboard))
           ]
@@ -163,6 +173,37 @@
             stage the Karabiner-VirtualHIDDevice driver app — any
             override needs to keep that passthru intact.
           '';
+        };
+
+        darwin.signing = {
+          enable = lib.mkEnableOption ''
+            running kanata from a copy signed with a fixed identity (Darwin only,
+            ADR-0022), so its Input Monitoring grant survives rebuilds. A launchd job
+            signs the copy with rcodesign whenever the package changes, and restarts the
+            daemons'';
+
+          keyFile = lib.mkOption {
+            type = lib.types.str;
+            example = "/run/agenix/neusisCodesignSystem";
+            description = ''
+              Runtime path to the PEM private key of the signing identity, readable by
+              root only (an agenix system secret). Never a store path.
+            '';
+          };
+
+          certFile = lib.mkOption {
+            type = lib.types.path;
+            description = "The identity's PEM certificate (public; may live in the repo).";
+          };
+
+          identifier = lib.mkOption {
+            type = lib.types.str;
+            default = "dev.leoank.kanata";
+            description = ''
+              The code-signing identifier. Part of the requirement macOS keys the grant
+              on: changing it costs a re-grant.
+            '';
+          };
         };
 
         keyboards = lib.mkOption {
@@ -282,6 +323,28 @@
               };
             }
             // lib.mapAttrs' (name: kbd: lib.nameValuePair (mkName name) (mkDarwinDaemon name kbd)) cfg.keyboards
+            # A job of its own rather than an activation step: agenix decrypts the key in
+            # its own launchd daemon, beside activation and at boot. Its plist names the
+            # package, so a kanata rebuild reloads (and so reruns) it.
+            // lib.optionalAttrs signing.enable {
+              kanata-sign = {
+                script = self.neusis.lib.darwinSigning.mkSignScript {
+                  inherit pkgs;
+                  inherit (signing) identifier keyFile certFile;
+                  name = "kanata";
+                  program = lib.getExe cfg.package;
+                  dir = signedDir;
+                  onChange = lib.concatMapStrings (
+                    name: "/bin/launchctl kickstart -k system/org.nixos.${mkName name} || true\n"
+                  ) (builtins.attrNames cfg.keyboards);
+                };
+                serviceConfig = {
+                  Label = "org.neusis.kanata-sign";
+                  RunAtLoad = true;
+                  StandardErrorPath = "/Library/Logs/kanata-sign.log";
+                };
+              };
+            }
           );
         })
       ];
