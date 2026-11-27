@@ -71,6 +71,24 @@ let
           default = null;
           description = "Device hostname advertised on this profile's tailnet (`--hostname`).";
         };
+        acceptRoutes = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = ''
+            Accept the subnet routes other devices on this profile's tailnet
+            advertise (`--accept-routes`). On Linux an accepted route wins
+            over the local network, so one overlapping the machine's own LAN
+            cuts it off. On NixOS this also needs `useRoutingFeatures`
+            "client" or "both" (the default "client" does).
+          '';
+        };
+        acceptDns = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = ''
+            Use the tailnet's DNS settings, MagicDNS included (`--accept-dns`).
+          '';
+        };
         extraUpFlags = lib.mkOption {
           type = lib.types.listOf lib.types.str;
           default = [ ];
@@ -145,9 +163,12 @@ let
   mkProfileScript =
     pkgs: lib: tsPackage: name: profile:
     let
-      upFlags =
-        profile.extraUpFlags
-        ++ lib.optionals (profile.hostName != null) [
+      upFlags = [
+        "--accept-routes=${lib.boolToString profile.acceptRoutes}"
+        "--accept-dns=${lib.boolToString profile.acceptDns}"
+      ]
+      ++ profile.extraUpFlags
+      ++ lib.optionals (profile.hostName != null) [
           "--hostname"
           profile.hostName
         ];

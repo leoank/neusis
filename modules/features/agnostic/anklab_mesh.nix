@@ -77,6 +77,8 @@
             clientIdFile = config.age.secrets.${n.clientId}.path;
             clientSecretFile = config.age.secrets.${n.clientSecret}.path;
             disableKeyExpiry = true;
+            # The tailnets' subnet routes (runxi's lab networks) reach every machine.
+            acceptRoutes = lib.mkDefault true;
           }
         ) profiles;
       };

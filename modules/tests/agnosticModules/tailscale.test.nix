@@ -236,10 +236,48 @@
           };
         };
 
+        # The profile's `tailscale up` states route and DNS acceptance every time, so
+        # a profile switch never inherits the previous profile's choice.
+        test-up-states-accept-routes-and-dns = {
+          expr =
+            let
+              upLine =
+                extra:
+                let
+                  cfg = t.evalNixos {
+                    modules = [
+                      self.nixosModules.tailscale
+                      enabled
+                      { neusis.services.tailscale.profiles.leoank = extra; }
+                    ];
+                  };
+                  script = builtins.head (
+                    builtins.filter (p: (p.name or "") == "neusis-ts-leoank") cfg.environment.systemPackages
+                  );
+                in
+                lib.findFirst (lib.hasPrefix "tailscale up ") null (
+                  lib.splitString "\n" (builtins.unsafeDiscardStringContext script.text)
+                );
+            in
+            {
+              defaults = upLine { };
+              set = upLine {
+                acceptRoutes = true;
+                acceptDns = false;
+              };
+            };
+          expected = {
+            defaults = "tailscale up '--accept-routes=false' '--accept-dns=true' --ssh --hostname fixture";
+            set = "tailscale up '--accept-routes=true' '--accept-dns=false' --ssh --hostname fixture";
+          };
+        };
+
         test-profile-option-defaults = {
           expr = {
             inherit (darwin.neusis.services.tailscale.profiles.cslab)
               hostName
+              acceptRoutes
+              acceptDns
               extraUpFlags
               ephemeral
               forceHostName
@@ -250,6 +288,8 @@
           };
           expected = {
             hostName = null;
+            acceptRoutes = false;
+            acceptDns = true;
             extraUpFlags = [ ];
             ephemeral = false;
             forceHostName = false;

@@ -128,6 +128,9 @@
                 (ts anklab).profiles.${n}.clientSecretFile
               ]);
               orgs = lib.unique (lib.mapAttrsToList (_: q: q.tailnetOrg) (ts anklab).profiles);
+              # every tailnet's subnet routes are accepted, its DNS kept
+              acceptRoutes = lib.mapAttrs (_: q: q.acceptRoutes) (ts anklab).profiles;
+              acceptDns = lib.unique (lib.mapAttrsToList (_: q: q.acceptDns) (ts anklab).profiles);
               hostName = p.hostName;
               forceHostName = p.forceHostName;
               disableKeyExpiry = p.disableKeyExpiry;
@@ -172,6 +175,12 @@
               ];
             };
             orgs = [ "-" ];
+            acceptRoutes = {
+              runxi = true;
+              leoank = true;
+              shntnu = true;
+            };
+            acceptDns = [ true ];
             hostName = "fixture-darwin";
             forceHostName = true;
             disableKeyExpiry = true;
