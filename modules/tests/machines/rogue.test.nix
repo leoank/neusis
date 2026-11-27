@@ -417,6 +417,37 @@
           };
         };
 
+        # nitya's node (users/ank/nitya.nix, nitya ADR-0016): `nitya-node` on PATH with
+        # rogue's settings, the leoank key at a fixed path, the hourly audit check.
+        test-nitya-node = {
+          expr =
+            let
+              n = home.services.nitya-node;
+              a = home.launchd.agents.nitya-node-audit;
+            in
+            {
+              inherit (n) enable hostname server authKeyFile stateDir;
+              key = home.age.secrets.nityaNodeTsAuthKey.rekeyFile;
+              onPath = t.hasPkg "nitya-node" home.home.packages;
+              check = lib.drop 1 a.config.ProgramArguments;
+              every = a.config.StartInterval;
+            };
+          expected = {
+            enable = true;
+            hostname = "nitya-node-rogue";
+            server = "nitya:7300";
+            authKeyFile = "/Users/ank/.config/nitya/leoank-authkey";
+            stateDir = "/Users/ank/.local/state/nitya-node";
+            key = ../../secrets/anklab/leoankTsAuthKey.age;
+            onPath = true;
+            check = [
+              "audit"
+              "verify"
+            ];
+            every = 3600;
+          };
+        };
+
         # sandhi (users/ank/sandhi.nix, ADR-0021): rogue on leoank as `sandhi-rogue`
         # whatever its system tailnet, sshd published inward, `*.leoank` through
         # `sandhi connect` in ~/.ssh/config.d/sandhi, which rogue's hand-written

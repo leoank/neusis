@@ -713,6 +713,7 @@
         self.neusis.users.ank.hmBundles.agent-harness
         self.neusis.users.ank.hmBundles.saarthi-node
         self.neusis.users.ank.hmBundles.sandhi-rogue
+        self.neusis.users.ank.hmBundles.nitya-node-rogue
         self.neusis.users.ank.hmBundles.darwin-tools
         self.neusis.users.ank.hmBundles.theming
         self.neusis.users.ank.hmBundles.browsers

@@ -49,6 +49,9 @@
           # fed the age.secrets.nitya* below, every 6 hours.
           inputs.nitya.nixosModules.token-probe
           self.neusis.features.nixos.nitya-token-probe
+          # nitya's server (nitya ADR-0016): `nitya` on leoank, fed the two secrets below.
+          inputs.nitya.nixosModules.server
+          self.neusis.features.nixos.nitya-server
           # Public hostnames under leoank.me (cloudflare-leoank stack).
           self.nixosModules.cloudflare-tunnel
           # auto-updates: comin follows ghost001's deploy group (stable,
@@ -155,6 +158,11 @@
           rekeyFile = ../secrets/ank/nityaICloudPersonalToken.age;
           owner = "ank";
         };
+        # nitya's server (features/nixos/nitya-server.nix): anklab's leoank key for its first
+        # join as `nitya`, and its sync-delegate key (an age identity), both root's, read by
+        # systemd and handed to the unit as credentials.
+        age.secrets.nityaServerTsAuthKey.rekeyFile = ../secrets/anklab/leoankTsAuthKey.age;
+        age.secrets.nityaDelegateKey.rekeyFile = ../secrets/ank/nityaDelegateKey.age;
         age.secrets.nityaGoogleClient = {
           rekeyFile = ../secrets/ank/nityaGoogleClient.age;
           owner = "ank";

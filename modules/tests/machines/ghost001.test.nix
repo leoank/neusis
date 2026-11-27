@@ -373,6 +373,39 @@
           };
         };
 
+        # nitya's server (features/nixos/nitya-server.nix, nitya ADR-0016): `nitya` on leoank,
+        # the leoank key and the delegate key as credentials from root's agenix secrets.
+        test-nitya-server = {
+          expr =
+            let
+              s = cfg.systemd.services.nitya-server.serviceConfig;
+            in
+            {
+              on = cfg.services.nitya-server.enable;
+              creds = s.LoadCredential;
+              tsKey = cfg.age.secrets.nityaServerTsAuthKey.rekeyFile;
+              delegateKey = cfg.age.secrets.nityaDelegateKey.rekeyFile;
+              owners = map (n: cfg.age.secrets.${n}.owner) [
+                "nityaServerTsAuthKey"
+                "nityaDelegateKey"
+              ];
+            };
+          expected = {
+            on = true;
+            creds = [
+              "authkey:${cfg.age.secrets.nityaServerTsAuthKey.path}"
+              "delegate-key:${cfg.age.secrets.nityaDelegateKey.path}"
+            ];
+            tsKey = ../../secrets/anklab/leoankTsAuthKey.age;
+            delegateKey = ../../secrets/ank/nityaDelegateKey.age;
+            # agenix's default owner: root, by uid.
+            owners = [
+              "0"
+              "0"
+            ];
+          };
+        };
+
         # sandhi (users/ank/sandhi.nix, ADR-0021): ghost001 on leoank as `sandhi-ghost001`,
         # sshd published inward; its leoank key is a system secret owned by ank (no home
         # secrets here), and the user service runs with nobody logged in (linger).
