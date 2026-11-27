@@ -13,6 +13,10 @@
 #                                           sshd/tailscale keep one identity. The public half is
 #                                           `hostPubkey`; an age copy for the master identity is
 #                                           in secrets/bootstrap/curiosity/.
+#   config/curiosity/sandhi/leoank/tailscaled.state
+#                                           ank's sandhi identity on leoank (ADR-0023): copied
+#                                           to /var/lib/sandhi-ank in the initrd too, and saved
+#                                           back whenever it changes.
 # ank's own key (the master identity) stays off this machine. curiosity has a user key of its
 # own instead (curiosityUserKey, ank's ~/.ssh/id_ed25519 here): a system secret owned by ank,
 # decrypted with the host key, that decrypts ank's home-manager secrets (users/ank:
@@ -23,6 +27,8 @@
 { self, ... }:
 let
   sparkdata = "/dev/disk/by-label/SPARKDATA";
+  # ank's sandhi state as the initrd sees the root it is about to switch to.
+  sandhiState = "/sysroot/var/lib/sandhi-ank";
 in
 {
   flake-file.inputs.anvesana = {
@@ -131,6 +137,14 @@ in
             install -m 0600 "$k" /sysroot/etc/ssh/ssh_host_ed25519_key
             install -m 0644 "$k.pub" /sysroot/etc/ssh/ssh_host_ed25519_key.pub
             echo "host key copied"
+            # ank's sandhi identity, when one was saved (ADR-0023); a first boot has none and
+            # joins anew. tmpfiles hands it to ank before his session starts.
+            s=/run/sparkdata/config/curiosity/sandhi/leoank/tailscaled.state
+            if [ -f "$s" ]; then
+              mkdir -p ${sandhiState}/leoank
+              install -m 0600 "$s" ${sandhiState}/leoank/tailscaled.state
+              echo "sandhi identity copied"
+            fi
             umount /run/sparkdata
           else
             umount /run/sparkdata
@@ -174,6 +188,36 @@ in
           fsType = "exfat";
           options = [ "nofail" "x-systemd.automount" "uid=0" "gid=0" "fmask=0077" "dmask=0077" ];
         };
+        # ank's sandhi identity on leoank (users/ank/sandhi.nix: sandhi-curiosity, ADR-0023):
+        # the initrd copies it from SPARKDATA as root; tmpfiles (sysinit, before any user
+        # session) gives it to ank, and the path unit saves it back to SPARKDATA whenever
+        # tsnet rewrites it, which is also how a first join's identity gets there.
+        systemd.tmpfiles.rules = [
+          "d /var/lib/sandhi-ank 0700 ank users -"
+          "Z /var/lib/sandhi-ank - ank users -"
+        ];
+        systemd.paths.sandhi-state-save = {
+          wantedBy = [ "multi-user.target" ];
+          pathConfig.PathChanged = "/var/lib/sandhi-ank/leoank/tailscaled.state";
+        };
+        systemd.services.sandhi-state-save = {
+          description = "Save ank's sandhi identity on SPARKDATA";
+          # Also once at boot and at activation, so an identity that is not rewritten (one
+          # moved into place by hand) reaches SPARKDATA too.
+          wantedBy = [ "multi-user.target" ];
+          serviceConfig.Type = "oneshot";
+          script = ''
+            src=/var/lib/sandhi-ank/leoank/tailscaled.state
+            dst=/mnt/sparkdata/config/curiosity/sandhi/leoank
+            [ -e ${sparkdata} ] || { echo "SPARKDATA is not plugged in; not saved"; exit 0; }
+            [ -f "$src" ] || exit 0
+            mkdir -p "$dst"
+            cp "$src" "$dst/tailscaled.state.new"
+            mv -f "$dst/tailscaled.state.new" "$dst/tailscaled.state"
+            echo "saved"
+          '';
+        };
+
         # ank's user key here, the one system secret his home needs: ~/.ssh/id_ed25519 links to it
         # (users/ank: secrets-curiosity), so it decrypts his home-manager secrets (GitHub, atuin and
         # saarthi tokens, the signing and GitHub keys) and logs him in to his other machines.

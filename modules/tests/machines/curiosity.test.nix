@@ -154,10 +154,12 @@
           };
         };
 
-        # sandhi (users/ank/sandhi.nix, ADR-0021): curiosity on leoank as `sandhi-curiosity`,
-        # ephemeral since the live disk loses the identity at every reboot; it starts after
-        # the agenix user unit decrypts the key a fresh join needs, and the home-manager
-        # ssh config includes the `*.leoank` block.
+        # sandhi (users/ank/sandhi.nix, ADR-0021): curiosity on leoank as `sandhi-curiosity`;
+        # it starts after the agenix user unit decrypts the key a first join needs, and the
+        # home-manager ssh config includes the `*.leoank` block. Its identity outlives the
+        # live disk's reboots on SPARKDATA (ADR-0023): not ephemeral, kept in
+        # /var/lib/sandhi-ank, restored by the initrd, given to ank by tmpfiles, saved back
+        # by a path unit.
         test-sandhi = {
           expr =
             let
@@ -176,6 +178,12 @@
               after = u.After;
               sshIncludes = home.programs.ssh.enable && builtins.elem "config.d/sandhi" home.programs.ssh.includes;
               failed = t.failedAssertions home;
+              stateDir = home.services.sandhi.stateDir;
+              tmpfiles = builtins.filter (lib.hasInfix "sandhi") cfg.systemd.tmpfiles.rules;
+              restore = lib.hasInfix "install -m 0600 \"$s\" /sysroot/var/lib/sandhi-ank/leoank/tailscaled.state" cfg.boot.initrd.systemd.contents."/etc/curiosity-host-key.sh".text;
+              saveOn = cfg.systemd.paths.sandhi-state-save.pathConfig.PathChanged;
+              saveTo = lib.hasInfix "dst=/mnt/sparkdata/config/curiosity/sandhi/leoank" cfg.systemd.services.sandhi-state-save.script;
+              saveAtBoot = cfg.systemd.services.sandhi-state-save.wantedBy;
             };
           expected = {
             leoank = {
@@ -188,7 +196,7 @@
               domains = [ "tail73031.ts.net" ];
               hostname = "sandhi-curiosity";
               authKeyFile = home.age.secrets.sandhiLeoankTsAuthKey.path;
-              ephemeral = true;
+              ephemeral = false;
             };
             backends = [ "leoank" ];
             onPath = true;
@@ -200,6 +208,15 @@
             after = [ "agenix.service" ];
             sshIncludes = true;
             failed = [ ];
+            stateDir = "/var/lib/sandhi-ank";
+            tmpfiles = [
+              "d /var/lib/sandhi-ank 0700 ank users -"
+              "Z /var/lib/sandhi-ank - ank users -"
+            ];
+            restore = true;
+            saveOn = "/var/lib/sandhi-ank/leoank/tailscaled.state";
+            saveTo = true;
+            saveAtBoot = [ "multi-user.target" ];
           };
         };
       };

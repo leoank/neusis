@@ -28,6 +28,7 @@ and never renumbered. ADR-0002 to ADR-0014 were backfilled on 2026-11-03 from
 | [ADR-0020](ADR-0020-curiosity-live-disk-host-key-from-a-data-drive.md) | curiosity is a live disk whose host key comes from a data drive in the initrd; its N1X support comes from anvesana | proposed |
 | [ADR-0021](ADR-0021-concurrent-networks-through-sandhi.md) | Concurrent tailnets come from sandhi (DNS and proxy, both directions, own repo), not the tsmux proxy | accepted |
 | [ADR-0022](ADR-0022-stable-darwin-code-signing-from-agenix-keys.md) | darwin programs that need a privacy grant run a copy signed at activation with rcodesign, from self-signed keys in agenix (a root-only key for system daemons, ank's for ank's programs) | proposed |
+| [ADR-0023](ADR-0023-curiosity-keeps-its-sandhi-identity-on-sparkdata.md) | curiosity keeps ank's sandhi identity on SPARKDATA, restored in the initrd and saved back whenever it changes | proposed |
 
 Each record:
 

@@ -80,10 +80,11 @@
     };
   };
 
-  # curiosity: the live disk loses the dutavas's state at every reboot and joins anew, so the
-  # identity is ephemeral and the tailnet drops each old one instead of keeping it offline.
-  # The key is a home secret (secrets-curiosity), decrypted by the agenix user unit, which a
-  # fresh join needs: start after it.
+  # curiosity: the live disk loses everything at reboot, so the dutavas's state is saved on
+  # SPARKDATA and restored at boot by machines/curiosity.nix (ADR-0023); otherwise every boot
+  # joined a new device and the name went to `sandhi-curiosity-<n>`. The key is a home secret
+  # (secrets-curiosity), decrypted by the agenix user unit, which a first join needs: start
+  # after it.
   flake.neusis.users.ank.hmBundles.sandhi-curiosity =
     { config, ... }:
     {
@@ -92,10 +93,12 @@
         rekeyFile = ../../secrets/anklab/leoankTsAuthKey.age;
         path = "${config.home.homeDirectory}/.config/sandhi/leoank-authkey";
       };
+      # The state where machines/curiosity.nix restores it from SPARKDATA at boot and saves
+      # it back (ADR-0023); not ephemeral, or the tailnet would delete the saved device.
+      services.sandhi.stateDir = "/var/lib/sandhi-ank";
       services.sandhi.backends.leoank.tailnet = {
         hostname = "sandhi-curiosity";
         authKeyFile = config.age.secrets.sandhiLeoankTsAuthKey.path;
-        ephemeral = true;
       };
       systemd.user.services.sandhi.Unit = {
         Wants = [ "agenix.service" ];
