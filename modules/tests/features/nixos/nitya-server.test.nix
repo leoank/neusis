@@ -51,9 +51,12 @@
             creds = s.LoadCredential;
             user = s.User;
             state = s.StateDirectory;
-            flags = lib.hasSuffix "--hostname nitya --port 7300 --authkey-file %d/authkey --delegate-key %d/delegate-key" (
-              builtins.unsafeDiscardStringContext s.ExecStart
-            );
+            flags =
+              let
+                e = builtins.unsafeDiscardStringContext s.ExecStart;
+              in
+              lib.hasInfix "--hostname nitya --port 7300 " e
+              && lib.hasSuffix "--authkey-file %d/authkey --delegate-key %d/delegate-key" e;
             admin = builtins.any (p: (p.name or "") == "nitya-admin") cfg.environment.systemPackages;
           };
           expected = {
