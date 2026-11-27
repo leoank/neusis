@@ -55,6 +55,7 @@
       # The signed copy the daemons run with `darwin.signing` (ADR-0022): a fixed path, since
       # macOS keys a command-line program's grant on its path and its requirement.
       signing = cfg.darwin.signing;
+      logMaxKiB = 10240;
       signedDir = "/Library/Application Support/neusis/signed/${signing.identifier}";
       kanataBin =
         if signing.enable then "${signedDir}/kanata" else "/run/current-system/sw/bin/kanata";
@@ -323,6 +324,34 @@
               };
             }
             // lib.mapAttrs' (name: kbd: lib.nameValuePair (mkName name) (mkDarwinDaemon name kbd)) cfg.keyboards
+            # Keeps each kanata log under logMaxKiB, keeping one previous copy (`.0`).
+            # Not newsyslog: it rotates by renaming and can only signal a pid file,
+            # which kanata has none of, so kanata would keep writing to the renamed file.
+            # launchd opens the logs O_APPEND, so copying aside and truncating in place
+            # is safe while kanata runs.
+            // {
+              kanata-logtrim = {
+                script = lib.concatMapStrings (
+                  name:
+                  lib.concatMapStrings (
+                    stream:
+                    let
+                      log = "/Library/Logs/${mkName name}.${stream}.log";
+                    in
+                    ''
+                      if [ -f ${log} ] && [ "$(${pkgs.coreutils}/bin/stat -c %s ${log})" -gt $((${toString logMaxKiB} * 1024)) ]; then
+                        ${pkgs.coreutils}/bin/cp -f ${log} ${log}.0 && : > ${log}
+                      fi
+                    ''
+                  ) [ "out" "err" ]
+                ) (builtins.attrNames cfg.keyboards);
+                serviceConfig = {
+                  Label = "org.neusis.kanata-logtrim";
+                  RunAtLoad = true;
+                  StartCalendarInterval = [ { Hour = 4; Minute = 0; } ];
+                };
+              };
+            }
             # A job of its own rather than an activation step: agenix decrypts the key in
             # its own launchd daemon, beside activation and at boot. Its plist names the
             # package, so a kanata rebuild reloads (and so reruns) it.

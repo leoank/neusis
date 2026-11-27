@@ -79,6 +79,7 @@
             daemons = [
               "Karabiner-DriverKit-VirtualHIDDevice-Daemon"
               "kanata-default"
+              "kanata-logtrim"
             ];
             label = "org.nixos.kanata-default";
             cfgFile = toString ../../agnosticModules/kanata/custom.kbd;
@@ -107,6 +108,7 @@
               "Karabiner-DriverKit-VirtualHIDDevice-Daemon"
               "kanata-external"
               "kanata-laptop"
+              "kanata-logtrim"
             ];
             laptopCfgIsStoreFile = true;
             externalArgs = [
@@ -115,6 +117,47 @@
               "6666"
             ];
             externalCfg = toString ../_fixtures/placeholder.age;
+          };
+        };
+
+        # The logs are kept under 10 MiB by copy-and-truncate (launchd opens them
+        # O_APPEND), not newsyslog, which would rename a file kanata keeps writing to;
+        # and the shipped config does not log every layer switch.
+        test-darwin-logs-are-trimmed = {
+          expr =
+            let
+              job = twoBoards.launchd.daemons.kanata-logtrim;
+              script = builtins.unsafeDiscardStringContext job.script;
+              trims = log: lib.hasInfix ": > ${log}" script && lib.hasInfix "cp -f ${log} ${log}.0" script;
+            in
+            {
+              label = job.serviceConfig.Label;
+              daily = map (i: { inherit (i) Hour Minute; }) job.serviceConfig.StartCalendarInterval;
+              logs = map trims [
+                "/Library/Logs/kanata-laptop.out.log"
+                "/Library/Logs/kanata-laptop.err.log"
+                "/Library/Logs/kanata-external.out.log"
+                "/Library/Logs/kanata-external.err.log"
+              ];
+              limit = lib.hasInfix "-gt $((10240 * 1024))" script;
+              quietLayers = lib.hasInfix "log-layer-changes no" (builtins.readFile ../../agnosticModules/kanata/custom.kbd);
+            };
+          expected = {
+            label = "org.neusis.kanata-logtrim";
+            daily = [
+              {
+                Hour = 4;
+                Minute = 0;
+              }
+            ];
+            logs = [
+              true
+              true
+              true
+              true
+            ];
+            limit = true;
+            quietLayers = true;
           };
         };
 
@@ -268,6 +311,7 @@
             daemons = [
               "Karabiner-DriverKit-VirtualHIDDevice-Daemon"
               "kanata-default"
+              "kanata-logtrim"
               "kanata-sign"
             ];
             label = "org.neusis.kanata-sign";

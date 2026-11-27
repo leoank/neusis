@@ -23,6 +23,9 @@
 
 (defcfg
   process-unmapped-keys yes
+  ;; the home row mods switch base<->nomods on nearly every keystroke; logging
+  ;; each switch (with the whole layer) filled the log by ~20 MB in a week
+  log-layer-changes no
 )
 (defsrc
   f1   f2   f3   f4   f5   f6   f7   f8   f9   f10   f11   f12
