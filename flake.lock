@@ -1358,11 +1358,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1795796650,
-        "narHash": "sha256-/5sCEiSqpZThSgtuiopR2ISPEArE+iKC40v78Og3Sew=",
+        "lastModified": 1795800119,
+        "narHash": "sha256-aqnORb74oHY8WB6RIiboRGFV32WDxxejHvyWI5B4Du8=",
         "owner": "leoank",
         "repo": "sandhi",
-        "rev": "eef36e5ab796a2e0a28f124784f231422866692f",
+        "rev": "45f1290df5ef8ec3432cfb3f3465ff75e2926474",
         "type": "github"
       },
       "original": {
