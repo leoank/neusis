@@ -185,7 +185,7 @@
                   to = "127.0.0.1:22";
                 }
               ];
-              domains = [ ];
+              domains = [ "tail73031.ts.net" ];
               hostname = "sandhi-curiosity";
               authKeyFile = home.age.secrets.sandhiLeoankTsAuthKey.path;
               ephemeral = true;
@@ -193,7 +193,7 @@
             backends = [ "leoank" ];
             onPath = true;
             sshInclude = ''
-              Host *.leoank
+              Host *.leoank *.tail73031.ts.net
                 ProxyCommand ${lib.getExe home.services.sandhi.package} connect %h %p
             '';
             key = ../../secrets/anklab/leoankTsAuthKey.age;

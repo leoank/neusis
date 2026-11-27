@@ -34,6 +34,8 @@
       services.sandhi = {
         enable = true;
         backends.leoank = {
+          # leoank's MagicDNS domain, so `<peer>.tail73031.ts.net` goes through sandhi too.
+          domains = [ "tail73031.ts.net" ];
           forwards = [
             {
               port = 22;
@@ -46,7 +48,7 @@
 
       # The binary by its store path: ssh may run from a GUI app without the profile on PATH.
       home.file.".ssh/config.d/sandhi".text = ''
-        Host *.leoank
+        Host *.leoank *.tail73031.ts.net
           ProxyCommand ${lib.getExe config.services.sandhi.package} connect %h %p
       '';
       programs.ssh.includes = [ "config.d/sandhi" ];

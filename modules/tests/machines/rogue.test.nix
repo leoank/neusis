@@ -479,7 +479,7 @@
                   to = "127.0.0.1:22";
                 }
               ];
-              domains = [ ];
+              domains = [ "tail73031.ts.net" ];
               hostname = "sandhi-rogue";
               authKeyFile = "/Users/ank/.config/sandhi/leoank-authkey";
               ephemeral = false;
@@ -487,7 +487,7 @@
             backends = [ "leoank" ];
             onPath = true;
             sshInclude = ''
-              Host *.leoank
+              Host *.leoank *.tail73031.ts.net
                 ProxyCommand ${lib.getExe home.services.sandhi.package} connect %h %p
             '';
             keyPath = "/Users/ank/.config/sandhi/leoank-authkey";
