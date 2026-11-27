@@ -253,7 +253,13 @@
               signsPackage = has "rcodesign sign" && has (builtins.unsafeDiscardStringContext (lib.getExe signed.neusis.services.kanata.package));
               identifier = has "--binary-identifier dev.leoank.kanata ";
               key = has "key=/run/agenix/neusisCodesignSystem";
-              restarts = has "launchctl kickstart -k system/org.nixos.kanata-default";
+              # reloads rather than kickstarts: a kickstart hangs on a daemon launchd
+              # parked before the copy existed (2026-11-27)
+              reloads =
+                has "launchctl bootout system/org.nixos.kanata-default"
+                && has "launchctl bootstrap system /Library/LaunchDaemons/org.nixos.kanata-default.plist";
+              noKickstart = !has "kickstart";
+              bounded = has "timeout 20 /bin/launchctl bootout";
               failed = t.failedAssertions signed;
             };
           expected = {
@@ -270,7 +276,9 @@
             signsPackage = true;
             identifier = true;
             key = true;
-            restarts = true;
+            reloads = true;
+            noKickstart = true;
+            bounded = true;
             failed = [ ];
           };
         };

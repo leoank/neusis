@@ -334,8 +334,20 @@
                   name = "kanata";
                   program = lib.getExe cfg.package;
                   dir = signedDir;
+                  # Reload, not `kickstart -k`: on the first switch the daemon is loaded
+                  # before the copy exists, launchd parks it waiting for the executable
+                  # and never notices it appear, and a kickstart then hangs (2026-11-27).
+                  # Bounded by timeouts, so the job always exits.
                   onChange = lib.concatMapStrings (
-                    name: "/bin/launchctl kickstart -k system/org.nixos.${mkName name} || true\n"
+                    name:
+                    let
+                      label = "org.nixos.${mkName name}";
+                    in
+                    ''
+                      ${pkgs.coreutils}/bin/timeout 20 /bin/launchctl bootout system/${label} || true
+                      ${pkgs.coreutils}/bin/timeout 20 /bin/launchctl bootstrap system /Library/LaunchDaemons/${label}.plist \
+                        || warn "could not reload ${label}"
+                    ''
                   ) (builtins.attrNames cfg.keyboards);
                 };
                 serviceConfig = {
